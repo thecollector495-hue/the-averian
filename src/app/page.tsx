@@ -75,15 +75,15 @@ const allBirds = [
 
 export default function BirdsPage() {
   const [search, setSearch] = useState('');
-  const [filterCategory, setFilterCategory] = useState('all');
+  const [filterCategory, setFilterCategory] = useState('Bird');
 
   const filteredBirds = allBirds.filter(bird => {
     const matchesSearch = bird.name.toLowerCase().includes(search.toLowerCase()) || bird.species.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = filterCategory === 'all' || bird.category === filterCategory;
+    const matchesCategory = bird.category === filterCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const categories = ['all', 'Bird', 'Cage', 'Pair'];
+  const categories = ['Bird', 'Cage', 'Pair'];
 
   return (
     <div className="container mx-auto p-4 sm:p-6 md:p-8">
@@ -107,7 +107,7 @@ export default function BirdsPage() {
             <SelectContent>
               {categories.map(category => (
                 <SelectItem key={category} value={category}>
-                  {category === 'all' ? 'All Types' : category}
+                  {category}
                 </SelectItem>
               ))}
             </SelectContent>

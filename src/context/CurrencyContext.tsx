@@ -1,8 +1,10 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 export const currencies = [
+  { code: 'ZAR', name: 'South African Rand', symbol: 'R' },
   { code: 'USD', name: 'United States Dollar', symbol: '$' },
   { code: 'EUR', name: 'Euro', symbol: '€' },
   { code: 'JPY', name: 'Japanese Yen', symbol: '¥' },
@@ -29,14 +31,16 @@ interface CurrencyContextType {
 
 const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);
 
+const defaultCurrency = currencies.find(c => c.code === 'ZAR') || currencies[0];
+
 export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
-  const [currency, setCurrencyState] = useState<Currency>(currencies[0]);
+  const [currency, setCurrencyState] = useState<Currency>(defaultCurrency);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     const savedCurrencyCode = localStorage.getItem('app-currency');
     if (savedCurrencyCode) {
-      const savedCurrency = currencies.find(c => c.code === savedCurrencyCode) || currencies[0];
+      const savedCurrency = currencies.find(c => c.code === savedCurrencyCode) || defaultCurrency;
       setCurrencyState(savedCurrency);
     }
     setIsLoaded(true);

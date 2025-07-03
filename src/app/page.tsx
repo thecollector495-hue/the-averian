@@ -81,7 +81,23 @@ const birdFormSchema = z.object({
 
 type BirdFormValues = z.infer<typeof birdFormSchema>;
 
-type Bird = BirdFormValues & { id: string, category: 'Bird' | 'Cage' | 'Pair' };
+type Bird = BirdFormValues & { id: string, category: 'Bird' };
+
+type Cage = {
+  id: string;
+  name: string;
+  category: 'Cage';
+  birdIds: string[];
+};
+
+type Pair = {
+  id: string;
+  category: 'Pair';
+  maleId: string;
+  femaleId: string;
+};
+
+type CollectionItem = Bird | Cage | Pair;
 
 
 function MultiSelectPopover({ field, options, placeholder }: { field: ControllerRenderProps<any, any>, options: { value: string; label: string }[], placeholder: string }) {
@@ -212,7 +228,7 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds }:
     const birdToSave: Bird = {
       ...data,
       id: initialData?.id || Date.now().toString(),
-      category: initialData?.category || 'Bird',
+      category: 'Bird',
     };
     onSave(birdToSave);
     onOpenChange(false);
@@ -464,66 +480,28 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds }:
 
 const initialBirds: Bird[] = [
   {
-    id: '1',
-    species: 'Turdus migratorius',
-    subspecies: 'T. m. migratorius',
-    ringNumber: 'A123',
-    unbanded: false,
-    category: 'Bird',
-    sex: 'male',
-    age: 2,
-    visualMutations: ['Opaline'],
-    splitMutations: ['Cinnamon'],
-    fatherId: undefined, motherId: undefined, mateId: '4', offspringIds: ['3'],
-    paidPrice: 150,
-    estimatedValue: 200,
+    id: '1', species: 'Turdus migratorius', subspecies: 'T. m. migratorius', ringNumber: 'A123', unbanded: false, category: 'Bird', sex: 'male', age: 2, visualMutations: ['Opaline'], splitMutations: ['Cinnamon'], fatherId: undefined, motherId: undefined, mateId: '4', offspringIds: ['3'], paidPrice: 150, estimatedValue: 200,
   },
   {
-    id: '2',
-    species: 'Cyanocitta cristata',
-    subspecies: undefined,
-    ringNumber: 'B456',
-    unbanded: false,
-    category: 'Bird',
-    sex: 'female',
-    age: 3,
-    visualMutations: [],
-    splitMutations: ['Lutino'],
-    fatherId: undefined, motherId: undefined, mateId: undefined, offspringIds: [],
-    paidPrice: 80,
-    estimatedValue: 120,
+    id: '2', species: 'Cyanocitta cristata', subspecies: undefined, ringNumber: 'B456', unbanded: false, category: 'Bird', sex: 'female', age: 3, visualMutations: [], splitMutations: ['Lutino'], fatherId: undefined, motherId: undefined, mateId: undefined, offspringIds: [], paidPrice: 80, estimatedValue: 120,
   },
   {
-    id: '3',
-    species: 'Turdus migratorius',
-    subspecies: undefined,
-    ringNumber: undefined,
-    unbanded: true,
-    category: 'Pair',
-    sex: 'unsexed',
-    age: 1,
-    visualMutations: [],
-    splitMutations: [],
-    fatherId: '1', motherId: '4', mateId: undefined, offspringIds: [],
-    paidPrice: 0,
-    estimatedValue: 50,
+    id: '3', species: 'Turdus migratorius', subspecies: undefined, ringNumber: undefined, unbanded: true, category: 'Bird', sex: 'unsexed', age: 1, visualMutations: [], splitMutations: [], fatherId: '1', motherId: '4', mateId: undefined, offspringIds: [], paidPrice: 0, estimatedValue: 50,
   },
   {
-    id: '4',
-    species: 'Turdus migratorius',
-    subspecies: 'T. m. achrusterus',
-    ringNumber: 'C789',
-    unbanded: false,
-    category: 'Bird',
-    sex: 'female',
-    age: 2,
-    visualMutations: ['Cinnamon'],
-    splitMutations: [],
-    fatherId: undefined, motherId: undefined, mateId: '1', offspringIds: ['3'],
-    paidPrice: 160,
-    estimatedValue: 220,
+    id: '4', species: 'Turdus migratorius', subspecies: 'T. m. achrusterus', ringNumber: 'C789', unbanded: false, category: 'Bird', sex: 'female', age: 2, visualMutations: ['Cinnamon'], splitMutations: [], fatherId: undefined, motherId: undefined, mateId: '1', offspringIds: ['3'], paidPrice: 160, estimatedValue: 220,
   },
 ];
+
+const initialPairs: Pair[] = [
+    { id: 'p1', category: 'Pair', maleId: '1', femaleId: '4' },
+];
+
+const initialCages: Cage[] = [
+    { id: 'c1', category: 'Cage', name: 'Breeding Cage A', birdIds: ['2', '3'] },
+];
+
+const initialItems: CollectionItem[] = [...initialBirds, ...initialPairs, ...initialCages];
 
 
 const BirdRelations = ({ bird, allBirds, onViewDetails }: { bird: Bird, allBirds: Bird[], onViewDetails: (bird: Bird) => void }) => {
@@ -665,14 +643,197 @@ function BirdDetailsDialog({ isOpen, onOpenChange, bird, allBirds, onViewDetails
     );
 }
 
+function BirdCard({ bird, allBirds, handleEditClick, handleViewDetails }: { bird: Bird, allBirds: Bird[], handleEditClick: (bird: Bird) => void, handleViewDetails: (bird: Bird) => void }) {
+  const { formatCurrency } = useCurrency();
+  const speciesInfo = speciesData[bird.species as keyof typeof speciesData];
+  const displayName = speciesInfo ? speciesInfo.name : bird.species;
+  return (
+    <Card key={bird.id} className="flex flex-col">
+      <CardHeader>
+        <CardTitle className="text-xl">{displayName}</CardTitle>
+        <CardDescription>{bird.species}{bird.subspecies && ` (${bird.subspecies})`}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex-grow space-y-4">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+          <div className="font-medium text-muted-foreground">Sex</div>
+          <div className="capitalize">{bird.sex}</div>
+
+          <div className="font-medium text-muted-foreground">Ring #</div>
+          <div>{bird.ringNumber || 'Unbanded'}</div>
+
+          <div className="font-medium text-muted-foreground">Age</div>
+           <div>
+              {bird.age !== undefined && bird.age !== null ? (
+                `${new Date().getFullYear() - bird.age} (${bird.age} ${bird.age === 1 ? 'year' : 'years'} old)`
+              ) : (
+                'N/A'
+              )}
+            </div>
+        </div>
+        
+        {(bird.visualMutations?.length > 0 || bird.splitMutations?.length > 0) && <Separator />}
+        
+        <div className="space-y-3">
+            {bird.visualMutations?.length > 0 && (
+                <div className="space-y-1">
+                    <p className="text-sm font-medium">Visual Mutations</p>
+                    <div className="flex flex-wrap gap-1">
+                        {bird.visualMutations.map(m => <Badge key={m} variant="outline">{m}</Badge>)}
+                    </div>
+                </div>
+            )}
+            {bird.splitMutations?.length > 0 && (
+                <div className="space-y-1">
+                    <p className="text-sm font-medium">Split Mutations</p>
+                    <div className="flex flex-wrap gap-1">
+                        {bird.splitMutations.map(m => <Badge key={m} variant="secondary">{m}</Badge>)}
+                    </div>
+                </div>
+            )}
+        </div>
+        <Accordion type="single" collapsible className="w-full pt-2">
+          <AccordionItem value="family-tree">
+            <AccordionTrigger className="py-3 text-sm font-medium">
+              <div className="flex items-center gap-3">
+                <Users2 className="h-4 w-4 text-primary" />
+                Family Tree
+              </div>
+            </AccordionTrigger>
+            <AccordionContent>
+              <BirdRelations bird={bird} allBirds={allBirds} onViewDetails={handleViewDetails} />
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="breeding-records">
+             <AccordionTrigger className="py-3 text-sm font-medium">
+              <div className="flex items-center gap-3">
+                <Egg className="h-4 w-4 text-primary" />
+                Breeding Records
+              </div>
+            </AccordionTrigger>
+            <AccordionContent>
+               <p className="text-muted-foreground px-4 py-2">Breeding records for this bird will be displayed here.</p>
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="financials">
+              <AccordionTrigger className="py-3 text-sm font-medium">
+              <div className="flex items-center gap-3">
+                  <Landmark className="h-4 w-4 text-primary" />
+                  Financials
+              </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                  <div className="px-4 py-2 text-sm space-y-2">
+                      <div className="flex justify-between">
+                          <span className="text-muted-foreground">Paid Price:</span>
+                          <span>{formatCurrency(bird.paidPrice)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                          <span className="text-muted-foreground">Est. Value:</span>
+                          <span>{formatCurrency(bird.estimatedValue)}</span>
+                      </div>
+                  </div>
+              </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </CardContent>
+      <CardFooter className="flex justify-end pt-0">
+          <Button variant="outline" size="sm" onClick={() => handleEditClick(bird)}>
+              <Pencil className="mr-2 h-4 w-4" /> Edit
+          </Button>
+      </CardFooter>
+    </Card>
+  )
+}
+
+function CageCard({ cage, allBirds, onViewDetails }: { cage: Cage, allBirds: Bird[], onViewDetails: (bird: Bird) => void }) {
+    const birdsInCage = allBirds.filter(b => cage.birdIds.includes(b.id));
+
+    const getBirdIdentifier = (bird: Bird) => {
+        const speciesName = speciesData[bird.species as keyof typeof speciesData]?.name;
+        const identifier = bird.ringNumber ? `(${bird.ringNumber})` : '(Unbanded)';
+        return `${speciesName} ${identifier}`;
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>{cage.name}</CardTitle>
+                <CardDescription>{birdsInCage.length} {birdsInCage.length === 1 ? 'bird' : 'birds'} in this cage</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-3">
+                    <h4 className="text-sm font-medium">Occupants</h4>
+                    {birdsInCage.length > 0 ? (
+                        <ul className="list-disc pl-5 space-y-1">
+                            {birdsInCage.map(bird => (
+                                <li key={bird.id}>
+                                    <Button variant="link" className="p-0 h-auto font-normal text-base" onClick={() => onViewDetails(bird)}>
+                                        {getBirdIdentifier(bird)}
+                                    </Button>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-muted-foreground text-sm">This cage is empty.</p>
+                    )}
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+function PairCard({ pair, allBirds, onViewDetails }: { pair: Pair, allBirds: Bird[], onViewDetails: (bird: Bird) => void }) {
+    const male = allBirds.find(b => b.id === pair.maleId);
+    const female = allBirds.find(b => b.id === pair.femaleId);
+
+    const BirdButton = ({ bird }: { bird: Bird | undefined }) => {
+        if (!bird) return <span className="text-muted-foreground">Bird not found</span>;
+        const speciesName = speciesData[bird.species as keyof typeof speciesData]?.name;
+        const identifier = bird.ringNumber ? `(${bird.ringNumber})` : '(Unbanded)';
+        return (
+            <Button variant="link" className="p-0 h-auto text-base font-normal text-left" onClick={() => onViewDetails(bird)}>
+                {speciesName} {identifier}
+            </Button>
+        );
+    }
+    
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Breeding Pair</CardTitle>
+                <CardDescription>
+                  {male ? speciesData[male.species as keyof typeof speciesData]?.name : 'Pair'}
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                 <div className="flex items-start gap-4">
+                    <Users2 className="h-5 w-5 text-primary mt-1" />
+                    <div className="grid gap-0.5">
+                        <div className="font-semibold text-sm">Male</div>
+                        <BirdButton bird={male} />
+                    </div>
+                </div>
+                 <div className="flex items-start gap-4">
+                    <Users2 className="h-5 w-5 text-primary mt-1" />
+                     <div className="grid gap-0.5">
+                        <div className="font-semibold text-sm">Female</div>
+                        <BirdButton bird={female} />
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
 export default function BirdsPage() {
-  const [birds, setBirds] = useState(initialBirds);
+  const [items, setItems] = useState<CollectionItem[]>(initialItems);
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('Bird');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBird, setEditingBird] = useState<Bird | null>(null);
   const [detailsBird, setDetailsBird] = useState<Bird | null>(null);
-  const { formatCurrency } = useCurrency();
+  
+  const allBirds = items.filter((item): item is Bird => item.category === 'Bird');
 
   const handleAddClick = () => {
     setEditingBird(null);
@@ -689,22 +850,27 @@ export default function BirdsPage() {
   };
 
   const handleSaveBird = (birdToSave: Bird) => {
-    setBirds(prevBirds => {
-      const birdExists = prevBirds.some(b => b.id === birdToSave.id);
-      if (birdExists) {
-        return prevBirds.map(b => b.id === birdToSave.id ? birdToSave : b);
+    setItems(prevItems => {
+      const itemExists = prevItems.some(b => b.id === birdToSave.id && b.category === 'Bird');
+      if (itemExists) {
+        return prevItems.map(b => b.id === birdToSave.id ? birdToSave : b);
       } else {
-        return [birdToSave, ...prevBirds];
+        return [birdToSave, ...prevItems];
       }
     });
   };
 
-  const filteredBirds = birds.filter(bird => {
+  const filteredItems = items.filter(item => {
+    if (item.category !== filterCategory) return false;
+
+    if (filterCategory !== 'Bird' || !search) {
+        return true;
+    }
+
+    const bird = item as Bird;
     const speciesName = speciesData[bird.species as keyof typeof speciesData]?.name || '';
     const birdIdentifier = `${speciesName} ${bird.species} ${bird.subspecies || ''} ${bird.ringNumber || ''} ${bird.age || ''} ${(bird.visualMutations || []).join(' ')} ${(bird.splitMutations || []).join(' ')}`.toLowerCase();
-    const matchesSearch = birdIdentifier.includes(search.toLowerCase());
-    const matchesCategory = bird.category === filterCategory;
-    return matchesSearch && matchesCategory;
+    return birdIdentifier.includes(search.toLowerCase());
   });
 
   const categories = ['Bird', 'Cage', 'Pair'];
@@ -716,13 +882,13 @@ export default function BirdsPage() {
         onOpenChange={setIsFormOpen}
         onSave={handleSaveBird}
         initialData={editingBird}
-        allBirds={birds}
+        allBirds={allBirds}
       />
       <BirdDetailsDialog
         isOpen={!!detailsBird}
         onOpenChange={(open) => !open && setDetailsBird(null)}
         bird={detailsBird}
-        allBirds={birds}
+        allBirds={allBirds}
         onViewDetails={handleViewDetails}
         onEdit={(bird) => {
             setDetailsBird(null);
@@ -740,10 +906,11 @@ export default function BirdsPage() {
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
-              placeholder="Search for birds by name, species, ring number, or mutation..."
+              placeholder={filterCategory === 'Bird' ? "Search for birds..." : `Cannot search in ${filterCategory}s`}
               className="pl-10"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              disabled={filterCategory !== 'Bird'}
             />
           </div>
           <Select value={filterCategory} onValueChange={setFilterCategory}>
@@ -761,112 +928,24 @@ export default function BirdsPage() {
         </div>
       </div>
       
-      {filteredBirds.length > 0 ? (
+      {filteredItems.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredBirds.map((bird) => {
-            const speciesInfo = speciesData[bird.species as keyof typeof speciesData];
-            const displayName = speciesInfo ? speciesInfo.name : bird.species;
-            return (
-              <Card key={bird.id} className="flex flex-col">
-                <CardHeader>
-                  <CardTitle className="text-xl">{displayName}</CardTitle>
-                  <CardDescription>{bird.species}{bird.subspecies && ` (${bird.subspecies})`}</CardDescription>
-                </CardHeader>
-                <CardContent className="flex-grow space-y-4">
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                    <div className="font-medium text-muted-foreground">Sex</div>
-                    <div className="capitalize">{bird.sex}</div>
-
-                    <div className="font-medium text-muted-foreground">Ring #</div>
-                    <div>{bird.ringNumber || 'Unbanded'}</div>
-
-                    <div className="font-medium text-muted-foreground">Age</div>
-                     <div>
-                        {bird.age !== undefined && bird.age !== null ? (
-                          `${new Date().getFullYear() - bird.age} (${bird.age} ${bird.age === 1 ? 'year' : 'years'} old)`
-                        ) : (
-                          'N/A'
-                        )}
-                      </div>
-                  </div>
-                  
-                  {(bird.visualMutations?.length > 0 || bird.splitMutations?.length > 0) && <Separator />}
-                  
-                  <div className="space-y-3">
-                      {bird.visualMutations?.length > 0 && (
-                          <div className="space-y-1">
-                              <p className="text-sm font-medium">Visual Mutations</p>
-                              <div className="flex flex-wrap gap-1">
-                                  {bird.visualMutations.map(m => <Badge key={m} variant="outline">{m}</Badge>)}
-                              </div>
-                          </div>
-                      )}
-                      {bird.splitMutations?.length > 0 && (
-                          <div className="space-y-1">
-                              <p className="text-sm font-medium">Split Mutations</p>
-                              <div className="flex flex-wrap gap-1">
-                                  {bird.splitMutations.map(m => <Badge key={m} variant="secondary">{m}</Badge>)}
-                              </div>
-                          </div>
-                      )}
-                  </div>
-                  <Accordion type="single" collapsible className="w-full pt-2">
-                    <AccordionItem value="family-tree">
-                      <AccordionTrigger className="py-3 text-sm font-medium">
-                        <div className="flex items-center gap-3">
-                          <Users2 className="h-4 w-4 text-primary" />
-                          Family Tree
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <BirdRelations bird={bird} allBirds={birds} onViewDetails={handleViewDetails} />
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="breeding-records">
-                       <AccordionTrigger className="py-3 text-sm font-medium">
-                        <div className="flex items-center gap-3">
-                          <Egg className="h-4 w-4 text-primary" />
-                          Breeding Records
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                         <p className="text-muted-foreground px-4 py-2">Breeding records for this bird will be displayed here.</p>
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="financials">
-                        <AccordionTrigger className="py-3 text-sm font-medium">
-                        <div className="flex items-center gap-3">
-                            <Landmark className="h-4 w-4 text-primary" />
-                            Financials
-                        </div>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                            <div className="px-4 py-2 text-sm space-y-2">
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Paid Price:</span>
-                                    <span>{formatCurrency(bird.paidPrice)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Est. Value:</span>
-                                    <span>{formatCurrency(bird.estimatedValue)}</span>
-                                </div>
-                            </div>
-                        </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                </CardContent>
-                <CardFooter className="flex justify-end pt-0">
-                    <Button variant="outline" size="sm" onClick={() => handleEditClick(bird)}>
-                        <Pencil className="mr-2 h-4 w-4" /> Edit
-                    </Button>
-                </CardFooter>
-              </Card>
-            )
+          {filteredItems.map((item) => {
+            if (item.category === 'Bird') {
+              return <BirdCard key={item.id} bird={item} allBirds={allBirds} handleEditClick={handleEditClick} handleViewDetails={handleViewDetails} />
+            }
+            if (item.category === 'Cage') {
+                return <CageCard key={item.id} cage={item} allBirds={allBirds} onViewDetails={handleViewDetails} />
+            }
+            if (item.category === 'Pair') {
+                return <PairCard key={item.id} pair={item} allBirds={allBirds} onViewDetails={handleViewDetails} />
+            }
+            return null;
           })}
         </div>
       ) : (
         <div className="text-center py-16">
-          <p className="text-muted-foreground">No birds found. Try adjusting your search or filters.</p>
+          <p className="text-muted-foreground">No {filterCategory.toLowerCase()}s found. Try adjusting your search or filters.</p>
         </div>
       )}
     </div>

@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, PlusCircle, ChevronsUpDown, Users2, Egg, Pencil } from 'lucide-react';
+import { Search, PlusCircle, ChevronsUpDown, Users2, Egg, Pencil, Landmark } from 'lucide-react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, ControllerRenderProps } from "react-hook-form";
 import { z } from "zod";
@@ -34,6 +34,7 @@ import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useCurrency } from '@/context/CurrencyContext';
 
 
 const speciesData = {
@@ -68,6 +69,14 @@ const birdFormSchema = z.object({
   motherId: z.string().optional(),
   mateId: z.string().optional(),
   offspringIds: z.array(z.string()).default([]),
+  paidPrice: z.preprocess(
+      (val) => (val === "" ? undefined : val),
+      z.coerce.number({ invalid_type_error: "Price must be a number."}).min(0, "Price can't be negative.").optional()
+  ),
+  estimatedValue: z.preprocess(
+      (val) => (val === "" ? undefined : val),
+      z.coerce.number({ invalid_type_error: "Value must be a number."}).min(0, "Value can't be negative.").optional()
+  ),
 });
 
 type BirdFormValues = z.infer<typeof birdFormSchema>;
@@ -165,6 +174,8 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds }:
         motherId: undefined,
         mateId: undefined,
         offspringIds: [],
+        paidPrice: undefined,
+        estimatedValue: undefined,
       });
     }
   }, [initialData, form, isOpen]);
@@ -418,6 +429,28 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds }:
                     </FormItem>
                   )} />
                </div>
+                <Separator />
+                <p className="text-base font-medium">Financials</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="paidPrice" render={({field}) => (
+                        <FormItem>
+                            <FormLabel>Paid Price</FormLabel>
+                            <FormControl>
+                                <Input type="number" placeholder="e.g., 100" {...field} onChange={event => field.onChange(event.target.valueAsNumber)} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="estimatedValue" render={({field}) => (
+                        <FormItem>
+                            <FormLabel>Estimated Value</FormLabel>
+                            <FormControl>
+                                <Input type="number" placeholder="e.g., 150" {...field} onChange={event => field.onChange(event.target.valueAsNumber)} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                </div>
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit">{isEditMode ? 'Save Changes' : 'Add Bird'}</Button>
@@ -442,6 +475,8 @@ const initialBirds: Bird[] = [
     visualMutations: ['Opaline'],
     splitMutations: ['Cinnamon'],
     fatherId: undefined, motherId: undefined, mateId: '4', offspringIds: ['3'],
+    paidPrice: 150,
+    estimatedValue: 200,
   },
   {
     id: '2',
@@ -455,6 +490,8 @@ const initialBirds: Bird[] = [
     visualMutations: [],
     splitMutations: ['Lutino'],
     fatherId: undefined, motherId: undefined, mateId: undefined, offspringIds: [],
+    paidPrice: 80,
+    estimatedValue: 120,
   },
   {
     id: '3',
@@ -468,6 +505,8 @@ const initialBirds: Bird[] = [
     visualMutations: [],
     splitMutations: [],
     fatherId: '1', motherId: '4', mateId: undefined, offspringIds: [],
+    paidPrice: 0,
+    estimatedValue: 50,
   },
   {
     id: '4',
@@ -481,6 +520,8 @@ const initialBirds: Bird[] = [
     visualMutations: ['Cinnamon'],
     splitMutations: [],
     fatherId: undefined, motherId: undefined, mateId: '1', offspringIds: ['3'],
+    paidPrice: 160,
+    estimatedValue: 220,
   },
 ];
 
@@ -530,6 +571,7 @@ const BirdRelations = ({ bird, allBirds, onViewDetails }: { bird: Bird, allBirds
 }
 
 function BirdDetailsDialog({ isOpen, onOpenChange, bird, allBirds, onViewDetails, onEdit }: { isOpen: boolean, onOpenChange: (open: boolean) => void, bird: Bird | null, allBirds: Bird[], onViewDetails: (bird: Bird) => void, onEdit: (bird: Bird) => void}) {
+    const { formatCurrency } = useCurrency();
     if (!bird) return null;
 
     const speciesInfo = speciesData[bird.species as keyof typeof speciesData];
@@ -593,6 +635,23 @@ function BirdDetailsDialog({ isOpen, onOpenChange, bird, allBirds, onViewDetails
                                     <BirdRelations bird={bird} allBirds={allBirds} onViewDetails={onViewDetails} />
                                 </AccordionContent>
                             </AccordionItem>
+                             <AccordionItem value="financials">
+                                <AccordionTrigger className="py-3 text-sm font-medium">
+                                    <div className="flex items-center gap-3">
+                                        <Landmark className="h-4 w-4 text-primary" />
+                                        Financials
+                                    </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm pl-4">
+                                        <div className="font-medium text-muted-foreground">Paid Price</div>
+                                        <div>{formatCurrency(bird.paidPrice)}</div>
+
+                                        <div className="font-medium text-muted-foreground">Est. Value</div>
+                                        <div>{formatCurrency(bird.estimatedValue)}</div>
+                                    </div>
+                                </AccordionContent>
+                            </AccordionItem>
                         </Accordion>
                     </CardContent>
                      <CardFooter className="flex justify-end pt-4 pr-6 pb-6">
@@ -613,6 +672,7 @@ export default function BirdsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBird, setEditingBird] = useState<Bird | null>(null);
   const [detailsBird, setDetailsBird] = useState<Bird | null>(null);
+  const { formatCurrency } = useCurrency();
 
   const handleAddClick = () => {
     setEditingBird(null);
@@ -772,6 +832,26 @@ export default function BirdsPage() {
                       <AccordionContent>
                          <p className="text-muted-foreground px-4 py-2">Breeding records for this bird will be displayed here.</p>
                       </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="financials">
+                        <AccordionTrigger className="py-3 text-sm font-medium">
+                        <div className="flex items-center gap-3">
+                            <Landmark className="h-4 w-4 text-primary" />
+                            Financials
+                        </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                            <div className="px-4 py-2 text-sm space-y-2">
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Paid Price:</span>
+                                    <span>{formatCurrency(bird.paidPrice)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Est. Value:</span>
+                                    <span>{formatCurrency(bird.estimatedValue)}</span>
+                                </div>
+                            </div>
+                        </AccordionContent>
                     </AccordionItem>
                   </Accordion>
                 </CardContent>

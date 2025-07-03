@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { BottomNavigation } from '@/components/bottom-navigation';
+import { CurrencyProvider } from '@/context/CurrencyContext';
 
 export const metadata: Metadata = {
   title: 'Bird Watcher',
@@ -21,11 +22,13 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-        <div className="relative flex min-h-screen flex-col bg-background">
-          <main className="flex-1 pb-16">{children}</main>
-          <BottomNavigation />
-        </div>
-        <Toaster />
+        <CurrencyProvider>
+          <div className="relative flex min-h-screen flex-col bg-background">
+            <main className="flex-1 pb-16">{children}</main>
+            <BottomNavigation />
+          </div>
+          <Toaster />
+        </CurrencyProvider>
       </body>
     </html>
   );

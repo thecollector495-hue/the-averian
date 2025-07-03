@@ -558,86 +558,84 @@ function BirdDetailsDialog({ isOpen, onOpenChange, bird, allBirds, onViewDetails
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-xl">
-                 <Card className="flex flex-col border-none shadow-none -m-6">
-                    <CardHeader>
-                        <CardTitle className="text-xl">{displayName}</CardTitle>
-                        <CardDescription>{bird.species}{bird.subspecies && ` (${bird.subspecies})`}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex-grow space-y-4 max-h-[60vh] overflow-y-auto pr-6">
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                            <div className="font-medium text-muted-foreground">Sex</div>
-                            <div className="capitalize">{bird.sex}</div>
+                 <DialogHeader>
+                    <DialogTitle className="text-xl">{displayName}</DialogTitle>
+                    <DialogDescription>{bird.species}{bird.subspecies && ` (${bird.subspecies})`}</DialogDescription>
+                 </DialogHeader>
+                <div className="space-y-4 max-h-[60vh] overflow-y-auto py-4 -mx-6 px-6">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                        <div className="font-medium text-muted-foreground">Sex</div>
+                        <div className="capitalize">{bird.sex}</div>
 
-                            <div className="font-medium text-muted-foreground">Ring #</div>
-                            <div>{bird.ringNumber || 'Unbanded'}</div>
+                        <div className="font-medium text-muted-foreground">Ring #</div>
+                        <div>{bird.ringNumber || 'Unbanded'}</div>
 
-                            <div className="font-medium text-muted-foreground">Age</div>
-                            <div>
-                                {bird.age !== undefined && bird.age !== null ? (
-                                `${new Date().getFullYear() - bird.age} (${bird.age} ${bird.age === 1 ? 'year' : 'years'} old)`
-                                ) : (
-                                'N/A'
-                                )}
+                        <div className="font-medium text-muted-foreground">Age</div>
+                        <div>
+                            {bird.age !== undefined && bird.age !== null ? (
+                            `${new Date().getFullYear() - bird.age} (${bird.age} ${bird.age === 1 ? 'year' : 'years'} old)`
+                            ) : (
+                            'N/A'
+                            )}
+                        </div>
+                    </div>
+                    
+                    {(bird.visualMutations?.length > 0 || bird.splitMutations?.length > 0) && <Separator />}
+                    
+                    <div className="space-y-3">
+                        {bird.visualMutations?.length > 0 && (
+                            <div className="space-y-1">
+                                <p className="text-sm font-medium">Visual Mutations</p>
+                                <div className="flex flex-wrap gap-1">
+                                    {bird.visualMutations.map(m => <Badge key={m} variant="outline">{m}</Badge>)}
+                                </div>
                             </div>
-                        </div>
-                        
-                        {(bird.visualMutations?.length > 0 || bird.splitMutations?.length > 0) && <Separator />}
-                        
-                        <div className="space-y-3">
-                            {bird.visualMutations?.length > 0 && (
-                                <div className="space-y-1">
-                                    <p className="text-sm font-medium">Visual Mutations</p>
-                                    <div className="flex flex-wrap gap-1">
-                                        {bird.visualMutations.map(m => <Badge key={m} variant="outline">{m}</Badge>)}
-                                    </div>
+                        )}
+                        {bird.splitMutations?.length > 0 && (
+                            <div className="space-y-1">
+                                <p className="text-sm font-medium">Split Mutations</p>
+                                <div className="flex flex-wrap gap-1">
+                                    {bird.splitMutations.map(m => <Badge key={m} variant="secondary">{m}</Badge>)}
                                 </div>
-                            )}
-                            {bird.splitMutations?.length > 0 && (
-                                <div className="space-y-1">
-                                    <p className="text-sm font-medium">Split Mutations</p>
-                                    <div className="flex flex-wrap gap-1">
-                                        {bird.splitMutations.map(m => <Badge key={m} variant="secondary">{m}</Badge>)}
-                                    </div>
+                            </div>
+                        )}
+                    </div>
+                    <Accordion type="single" collapsible className="w-full pt-2">
+                        <AccordionItem value="family-tree">
+                            <AccordionTrigger className="py-3 text-sm font-medium">
+                                <div className="flex items-center gap-3">
+                                    <Users2 className="h-4 w-4 text-primary" />
+                                    Family Tree
                                 </div>
-                            )}
-                        </div>
-                        <Accordion type="single" collapsible className="w-full pt-2">
-                            <AccordionItem value="family-tree">
-                                <AccordionTrigger className="py-3 text-sm font-medium">
-                                    <div className="flex items-center gap-3">
-                                        <Users2 className="h-4 w-4 text-primary" />
-                                        Family Tree
-                                    </div>
-                                </AccordionTrigger>
-                                <AccordionContent>
-                                    <BirdRelations bird={bird} allBirds={allBirds} onViewDetails={onViewDetails} />
-                                </AccordionContent>
-                            </AccordionItem>
-                             <AccordionItem value="financials">
-                                <AccordionTrigger className="py-3 text-sm font-medium">
-                                    <div className="flex items-center gap-3">
-                                        <Landmark className="h-4 w-4 text-primary" />
-                                        Financials
-                                    </div>
-                                </AccordionTrigger>
-                                <AccordionContent>
-                                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm pl-4">
-                                        <div className="font-medium text-muted-foreground">Paid Price</div>
-                                        <div>{formatCurrency(bird.paidPrice)}</div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                                <BirdRelations bird={bird} allBirds={allBirds} onViewDetails={onViewDetails} />
+                            </AccordionContent>
+                        </AccordionItem>
+                         <AccordionItem value="financials">
+                            <AccordionTrigger className="py-3 text-sm font-medium">
+                                <div className="flex items-center gap-3">
+                                    <Landmark className="h-4 w-4 text-primary" />
+                                    Financials
+                                </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm pl-4">
+                                    <div className="font-medium text-muted-foreground">Paid Price</div>
+                                    <div>{formatCurrency(bird.paidPrice)}</div>
 
-                                        <div className="font-medium text-muted-foreground">Est. Value</div>
-                                        <div>{formatCurrency(bird.estimatedValue)}</div>
-                                    </div>
-                                </AccordionContent>
-                            </AccordionItem>
-                        </Accordion>
-                    </CardContent>
-                     <CardFooter className="flex justify-end pt-4 pr-6 pb-6">
-                        <Button variant="outline" size="sm" onClick={() => { onOpenChange(false); onEdit(bird); }}>
-                            <Pencil className="mr-2 h-4 w-4" /> Edit
-                        </Button>
-                    </CardFooter>
-                 </Card>
+                                    <div className="font-medium text-muted-foreground">Est. Value</div>
+                                    <div>{formatCurrency(bird.estimatedValue)}</div>
+                                </div>
+                            </AccordionContent>
+                        </AccordionItem>
+                    </Accordion>
+                </div>
+                 <DialogFooter>
+                    <Button variant="outline" size="sm" onClick={() => { onOpenChange(false); onEdit(bird); }}>
+                        <Pencil className="mr-2 h-4 w-4" /> Edit
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );

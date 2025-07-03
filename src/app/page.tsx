@@ -72,11 +72,10 @@ const birdFormSchema = z.object({
 
 type BirdFormValues = z.infer<typeof birdFormSchema>;
 
-// Represents the full bird object, including the ID
 type Bird = BirdFormValues & { id: string, category: 'Bird' | 'Cage' | 'Pair' };
 
 
-function MultiSelectPopover({ field, options, placeholder, displayKey, valueKey }: { field: ControllerRenderProps<any, any>, options: any[], placeholder: string, displayKey: string, valueKey: string }) {
+function MultiSelectPopover({ field, options, placeholder }: { field: ControllerRenderProps<any, any>, options: { value: string; label: string }[], placeholder: string }) {
   const selectedValues = field.value || [];
   
   return (
@@ -94,7 +93,7 @@ function MultiSelectPopover({ field, options, placeholder, displayKey, valueKey 
             <span className="truncate">
               {selectedValues.length
                 ? selectedValues.length === 1
-                  ? options.find(o => o[valueKey] === selectedValues[0])?.[displayKey] ?? selectedValues[0]
+                  ? options.find(o => o.value === selectedValues[0])?.label ?? selectedValues[0]
                   : `${selectedValues.length} selected`
                 : placeholder}
             </span>
@@ -106,26 +105,26 @@ function MultiSelectPopover({ field, options, placeholder, displayKey, valueKey 
         <div className="p-2 space-y-1">
           {options.map((option) => (
             <FormField
-              key={option[valueKey]}
+              key={option.value}
               control={undefined}
               name={field.name}
               render={() => (
                 <FormItem className="flex flex-row items-center space-x-2 space-y-0 p-1 rounded-md hover:bg-accent">
                   <FormControl>
                     <Checkbox
-                      checked={selectedValues.includes(option[valueKey])}
+                      checked={selectedValues.includes(option.value)}
                       onCheckedChange={(checked) => {
                         return checked
-                          ? field.onChange([...selectedValues, option[valueKey]])
+                          ? field.onChange([...selectedValues, option.value])
                           : field.onChange(
                               selectedValues.filter(
-                                (value) => value !== option[valueKey]
+                                (value) => value !== option.value
                               )
                             );
                       }}
                     />
                   </FormControl>
-                  <FormLabel className="font-normal w-full cursor-pointer py-1">{option[displayKey]}</FormLabel>
+                  <FormLabel className="font-normal w-full cursor-pointer py-1">{option.label}</FormLabel>
                 </FormItem>
               )}
             />
@@ -174,17 +173,22 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds }:
   const watchedSpecies = form.watch("species");
   const unbanded = form.watch("unbanded");
   const subspeciesOptions = watchedSpecies ? speciesData[watchedSpecies as keyof typeof speciesData]?.subspecies : [];
+
+  const getBirdIdentifier = (bird: Bird) => {
+    const speciesName = speciesData[bird.species as keyof typeof speciesData]?.name;
+    const identifier = bird.ringNumber ? `(${bird.ringNumber})` : '(Unbanded)';
+    return `${speciesName} ${identifier}`;
+  };
   
-  const birdOptions = allBirds
-    .filter(bird => bird.id !== initialData?.id) // A bird cannot be its own relative
-    .map(bird => {
-      const speciesName = speciesData[bird.species as keyof typeof speciesData]?.name;
-      const identifier = bird.ringNumber ? `(${bird.ringNumber})` : '(Unbanded)';
-      return {
-        value: bird.id,
-        label: `${speciesName} ${identifier}`,
-      };
-    });
+  const potentialRelatives = allBirds
+    .filter(bird => bird.id !== initialData?.id && bird.species === watchedSpecies);
+  
+  const relationshipOptions = {
+    father: potentialRelatives.filter(b => b.sex === 'male').map(b => ({ value: b.id, label: getBirdIdentifier(b) })),
+    mother: potentialRelatives.filter(b => b.sex === 'female').map(b => ({ value: b.id, label: getBirdIdentifier(b) })),
+    mate: potentialRelatives.map(b => ({ value: b.id, label: getBirdIdentifier(b) })),
+    offspring: potentialRelatives.map(b => ({ value: b.id, label: getBirdIdentifier(b) })),
+  };
 
   useEffect(() => {
     if (unbanded) {
@@ -194,7 +198,7 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds }:
 
 
   function onSubmit(data: BirdFormValues) {
-    const birdToSave = {
+    const birdToSave: Bird = {
       ...data,
       id: initialData?.id || Date.now().toString(),
       category: initialData?.category || 'Bird',
@@ -356,7 +360,7 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds }:
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel>Visual Mutations</FormLabel>
-                        <MultiSelectPopover field={field} options={mutationOptions.map(m => ({value:m, label:m}))} placeholder="Select visual mutations" valueKey="value" displayKey="label" />
+                        <MultiSelectPopover field={field} options={mutationOptions.map(m => ({value:m, label:m}))} placeholder="Select visual mutations" />
                         <FormMessage />
                     </FormItem>
                 )}
@@ -367,7 +371,7 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds }:
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel>Split Mutations</FormLabel>
-                        <MultiSelectPopover field={field} options={mutationOptions.map(m => ({value:m, label:m}))} placeholder="Select split mutations" valueKey="value" displayKey="label" />
+                        <MultiSelectPopover field={field} options={mutationOptions.map(m => ({value:m, label:m}))} placeholder="Select split mutations" />
                         <FormMessage />
                     </FormItem>
                 )}
@@ -379,9 +383,9 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds }:
                   <FormField control={form.control} name="fatherId" render={({field}) => (
                     <FormItem>
                       <FormLabel>Father</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="Select father" /></SelectTrigger></FormControl>
-                          <SelectContent>{birdOptions.map(b => <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>)}</SelectContent>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={!watchedSpecies}>
+                          <FormControl><SelectTrigger><SelectValue placeholder={watchedSpecies ? "Select father" : "Select species first"} /></SelectTrigger></FormControl>
+                          <SelectContent>{relationshipOptions.father.map(b => <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>)}</SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
@@ -389,9 +393,9 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds }:
                   <FormField control={form.control} name="motherId" render={({field}) => (
                     <FormItem>
                       <FormLabel>Mother</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="Select mother" /></SelectTrigger></FormControl>
-                          <SelectContent>{birdOptions.map(b => <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>)}</SelectContent>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={!watchedSpecies}>
+                          <FormControl><SelectTrigger><SelectValue placeholder={watchedSpecies ? "Select mother" : "Select species first"} /></SelectTrigger></FormControl>
+                          <SelectContent>{relationshipOptions.mother.map(b => <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>)}</SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
@@ -399,9 +403,9 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds }:
                    <FormField control={form.control} name="mateId" render={({field}) => (
                     <FormItem>
                       <FormLabel>Mate</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="Select mate" /></SelectTrigger></FormControl>
-                          <SelectContent>{birdOptions.map(b => <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>)}</SelectContent>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={!watchedSpecies}>
+                          <FormControl><SelectTrigger><SelectValue placeholder={watchedSpecies ? "Select mate" : "Select species first"} /></SelectTrigger></FormControl>
+                          <SelectContent>{relationshipOptions.mate.map(b => <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>)}</SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
@@ -409,7 +413,7 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds }:
                   <FormField control={form.control} name="offspringIds" render={({field}) => (
                     <FormItem>
                       <FormLabel>Offspring</FormLabel>
-                      <MultiSelectPopover field={field} options={birdOptions} placeholder="Select offspring" valueKey="value" displayKey="label" />
+                      <MultiSelectPopover field={field} options={relationshipOptions.offspring} placeholder={watchedSpecies ? "Select offspring" : "Select species first"} />
                       <FormMessage />
                     </FormItem>
                   )} />
@@ -425,7 +429,6 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds }:
   );
 }
 
-
 const initialBirds: Bird[] = [
   {
     id: '1',
@@ -438,7 +441,7 @@ const initialBirds: Bird[] = [
     age: 2,
     visualMutations: ['Opaline'],
     splitMutations: ['Cinnamon'],
-    fatherId: undefined, motherId: '2', mateId: '2', offspringIds: ['3'],
+    fatherId: undefined, motherId: undefined, mateId: '4', offspringIds: ['3'],
   },
   {
     id: '2',
@@ -451,11 +454,11 @@ const initialBirds: Bird[] = [
     age: 3,
     visualMutations: [],
     splitMutations: ['Lutino'],
-    fatherId: undefined, motherId: undefined, mateId: '1', offspringIds: ['3'],
+    fatherId: undefined, motherId: undefined, mateId: undefined, offspringIds: [],
   },
   {
     id: '3',
-    species: 'Cardinalis cardinalis',
+    species: 'Turdus migratorius',
     subspecies: undefined,
     ringNumber: undefined,
     unbanded: true,
@@ -464,16 +467,35 @@ const initialBirds: Bird[] = [
     age: 1,
     visualMutations: [],
     splitMutations: [],
-    fatherId: '1', motherId: '2', mateId: undefined, offspringIds: [],
+    fatherId: '1', motherId: '4', mateId: undefined, offspringIds: [],
+  },
+  {
+    id: '4',
+    species: 'Turdus migratorius',
+    subspecies: 'T. m. achrusterus',
+    ringNumber: 'C789',
+    unbanded: false,
+    category: 'Bird',
+    sex: 'female',
+    age: 2,
+    visualMutations: ['Cinnamon'],
+    splitMutations: [],
+    fatherId: undefined, motherId: undefined, mateId: '1', offspringIds: ['3'],
   },
 ];
 
-const BirdRelations = ({ bird, allBirds }: { bird: Bird, allBirds: Bird[] }) => {
-    const getBirdLabel = (targetBird: Bird | undefined) => {
+
+const BirdRelations = ({ bird, allBirds, onViewDetails }: { bird: Bird, allBirds: Bird[], onViewDetails: (bird: Bird) => void }) => {
+    const getBirdLabelButton = (targetBird: Bird | undefined) => {
         if (!targetBird) return <span className="text-muted-foreground">N/A</span>;
         const speciesName = speciesData[targetBird.species as keyof typeof speciesData]?.name;
         const identifier = targetBird.ringNumber ? `(${targetBird.ringNumber})` : '(Unbanded)';
-        return `${speciesName} ${identifier}`;
+        const label = `${speciesName} ${identifier}`;
+        return (
+            <Button variant="link" className="p-0 h-auto font-normal text-base text-left" onClick={() => onViewDetails(targetBird)}>
+                {label}
+            </Button>
+        );
     };
 
     const father = allBirds.find(b => b.id === bird.fatherId);
@@ -482,24 +504,24 @@ const BirdRelations = ({ bird, allBirds }: { bird: Bird, allBirds: Bird[] }) => 
     const offspring = allBirds.filter(b => bird.offspringIds.includes(b.id));
 
     return (
-        <div className="space-y-2 pl-8 text-sm">
-            <div className="flex gap-2">
-                <strong className="w-20 shrink-0">Father:</strong>
-                <span>{getBirdLabel(father)}</span>
+        <div className="space-y-3 pl-4 text-sm">
+            <div className="flex items-start gap-2">
+                <strong className="w-20 shrink-0 pt-1">Father:</strong>
+                <span>{getBirdLabelButton(father)}</span>
             </div>
-            <div className="flex gap-2">
-                <strong className="w-20 shrink-0">Mother:</strong>
-                <span>{getBirdLabel(mother)}</span>
+            <div className="flex items-start gap-2">
+                <strong className="w-20 shrink-0 pt-1">Mother:</strong>
+                <span>{getBirdLabelButton(mother)}</span>
             </div>
-            <div className="flex gap-2">
-                <strong className="w-20 shrink-0">Mate:</strong>
-                <span>{getBirdLabel(mate)}</span>
+            <div className="flex items-start gap-2">
+                <strong className="w-20 shrink-0 pt-1">Mate:</strong>
+                <span>{getBirdLabelButton(mate)}</span>
             </div>
             <div className="flex flex-col gap-1">
                 <strong>Offspring:</strong>
                 {offspring.length > 0 ? (
                     <ul className="list-disc pl-6 space-y-1 mt-1">
-                        {offspring.map(o => <li key={o.id}>{getBirdLabel(o)}</li>)}
+                        {offspring.map(o => <li key={o.id}>{getBirdLabelButton(o)}</li>)}
                     </ul>
                 ) : <span className="text-muted-foreground ml-2">N/A</span>}
             </div>
@@ -507,21 +529,103 @@ const BirdRelations = ({ bird, allBirds }: { bird: Bird, allBirds: Bird[] }) => 
     );
 }
 
+function BirdDetailsDialog({ isOpen, onOpenChange, bird, allBirds, onViewDetails, onEdit }: { isOpen: boolean, onOpenChange: (open: boolean) => void, bird: Bird | null, allBirds: Bird[], onViewDetails: (bird: Bird) => void, onEdit: (bird: Bird) => void}) {
+    if (!bird) return null;
+
+    const speciesInfo = speciesData[bird.species as keyof typeof speciesData];
+    const displayName = speciesInfo ? speciesInfo.name : bird.species;
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-xl">
+                 <Card className="flex flex-col border-none shadow-none -m-6">
+                    <CardHeader>
+                        <CardTitle className="text-xl">{displayName}</CardTitle>
+                        <CardDescription>{bird.species}{bird.subspecies && ` (${bird.subspecies})`}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-grow space-y-4 max-h-[60vh] overflow-y-auto pr-6">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                            <div className="font-medium text-muted-foreground">Sex</div>
+                            <div className="capitalize">{bird.sex}</div>
+
+                            <div className="font-medium text-muted-foreground">Ring #</div>
+                            <div>{bird.ringNumber || 'Unbanded'}</div>
+
+                            <div className="font-medium text-muted-foreground">Age</div>
+                            <div>
+                                {bird.age !== undefined && bird.age !== null ? (
+                                `${new Date().getFullYear() - bird.age} (${bird.age} ${bird.age === 1 ? 'year' : 'years'} old)`
+                                ) : (
+                                'N/A'
+                                )}
+                            </div>
+                        </div>
+                        
+                        {(bird.visualMutations?.length > 0 || bird.splitMutations?.length > 0) && <Separator />}
+                        
+                        <div className="space-y-3">
+                            {bird.visualMutations?.length > 0 && (
+                                <div className="space-y-1">
+                                    <p className="text-sm font-medium">Visual Mutations</p>
+                                    <div className="flex flex-wrap gap-1">
+                                        {bird.visualMutations.map(m => <Badge key={m} variant="outline">{m}</Badge>)}
+                                    </div>
+                                </div>
+                            )}
+                            {bird.splitMutations?.length > 0 && (
+                                <div className="space-y-1">
+                                    <p className="text-sm font-medium">Split Mutations</p>
+                                    <div className="flex flex-wrap gap-1">
+                                        {bird.splitMutations.map(m => <Badge key={m} variant="secondary">{m}</Badge>)}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        <Accordion type="single" collapsible className="w-full pt-2">
+                            <AccordionItem value="family-tree">
+                                <AccordionTrigger className="py-3 text-sm font-medium">
+                                    <div className="flex items-center gap-3">
+                                        <Users2 className="h-4 w-4 text-primary" />
+                                        Family Tree
+                                    </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                    <BirdRelations bird={bird} allBirds={allBirds} onViewDetails={onViewDetails} />
+                                </AccordionContent>
+                            </AccordionItem>
+                        </Accordion>
+                    </CardContent>
+                     <CardFooter className="flex justify-end pt-4 pr-6 pb-6">
+                        <Button variant="outline" size="sm" onClick={() => { onOpenChange(false); onEdit(bird); }}>
+                            <Pencil className="mr-2 h-4 w-4" /> Edit
+                        </Button>
+                    </CardFooter>
+                 </Card>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 export default function BirdsPage() {
   const [birds, setBirds] = useState(initialBirds);
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('Bird');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBird, setEditingBird] = useState<Bird | null>(null);
+  const [detailsBird, setDetailsBird] = useState<Bird | null>(null);
 
   const handleAddClick = () => {
     setEditingBird(null);
-    setIsDialogOpen(true);
+    setIsFormOpen(true);
   };
 
   const handleEditClick = (bird: Bird) => {
     setEditingBird(bird);
-    setIsDialogOpen(true);
+    setIsFormOpen(true);
+  };
+
+  const handleViewDetails = (bird: Bird) => {
+    setDetailsBird(bird);
   };
 
   const handleSaveBird = (birdToSave: Bird) => {
@@ -548,11 +652,22 @@ export default function BirdsPage() {
   return (
     <div className="container mx-auto p-4 sm:p-6 md:p-8">
       <BirdFormDialog
-        isOpen={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
+        isOpen={isFormOpen}
+        onOpenChange={setIsFormOpen}
         onSave={handleSaveBird}
         initialData={editingBird}
         allBirds={birds}
+      />
+      <BirdDetailsDialog
+        isOpen={!!detailsBird}
+        onOpenChange={(open) => !open && setDetailsBird(null)}
+        bird={detailsBird}
+        allBirds={birds}
+        onViewDetails={handleViewDetails}
+        onEdit={(bird) => {
+            setDetailsBird(null);
+            handleEditClick(bird);
+        }}
       />
       <div className="flex flex-col gap-4 mb-8">
         <h1 className="text-4xl md:text-5xl font-bold font-headline text-center">Bird Watcher</h1>
@@ -644,7 +759,7 @@ export default function BirdsPage() {
                         </div>
                       </AccordionTrigger>
                       <AccordionContent>
-                        <BirdRelations bird={bird} allBirds={birds} />
+                        <BirdRelations bird={bird} allBirds={birds} onViewDetails={handleViewDetails} />
                       </AccordionContent>
                     </AccordionItem>
                     <AccordionItem value="breeding-records">

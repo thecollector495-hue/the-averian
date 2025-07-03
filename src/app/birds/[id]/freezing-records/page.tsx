@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
-export default function FreezingRecordsPage({ params }: { params: { id: string } }) {
+export default function BreedingRecordsPage({ params }: { params: { id: string } }) {
   return (
     <div className="p-4 sm:p-6 md:p-8">
        <div className="flex items-center gap-4 mb-6">
@@ -14,14 +14,14 @@ export default function FreezingRecordsPage({ params }: { params: { id: string }
               <span className="sr-only">Back to Birds</span>
            </Link>
         </Button>
-        <h1 className="text-3xl font-bold">Freezing Records for Bird #{params.id}</h1>
+        <h1 className="text-3xl font-bold">Breeding Records for Bird #{params.id}</h1>
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Freezing Records</CardTitle>
+          <CardTitle>Breeding Records</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">Freezing records for this bird will be displayed here.</p>
+          <p className="text-muted-foreground">Breeding records for this bird will be displayed here.</p>
         </CardContent>
       </Card>
     </div>

@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, PlusCircle, ChevronsUpDown, Users2, Snowflake, Pencil } from 'lucide-react';
+import { Search, PlusCircle, ChevronsUpDown, Users2, Egg, Pencil } from 'lucide-react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, ControllerRenderProps } from "react-hook-form";
 import { z } from "zod";
@@ -647,15 +647,15 @@ export default function BirdsPage() {
                         <BirdRelations bird={bird} allBirds={birds} />
                       </AccordionContent>
                     </AccordionItem>
-                    <AccordionItem value="freezing-records">
+                    <AccordionItem value="breeding-records">
                        <AccordionTrigger className="py-3 text-sm font-medium">
                         <div className="flex items-center gap-3">
-                          <Snowflake className="h-4 w-4 text-primary" />
-                          Freezing Records
+                          <Egg className="h-4 w-4 text-primary" />
+                          Breeding Records
                         </div>
                       </AccordionTrigger>
                       <AccordionContent>
-                         <p className="text-muted-foreground px-4 py-2">Freezing records for this bird will be displayed here.</p>
+                         <p className="text-muted-foreground px-4 py-2">Breeding records for this bird will be displayed here.</p>
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>

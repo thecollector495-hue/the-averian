@@ -51,6 +51,7 @@ const birdFormSchema = z.object({
   sex: z.enum(["male", "female", "unsexed"], {
     required_error: "You need to select a sex.",
   }),
+  ringNumber: z.string().optional(),
 });
 
 type BirdFormValues = z.infer<typeof birdFormSchema>;
@@ -61,6 +62,7 @@ function AddBirdDialog({ onBirdAdded }: { onBirdAdded: (bird: any) => void }) {
     resolver: zodResolver(birdFormSchema),
     defaultValues: {
       name: "",
+      ringNumber: "",
     },
   });
 
@@ -74,6 +76,7 @@ function AddBirdDialog({ onBirdAdded }: { onBirdAdded: (bird: any) => void }) {
       species: data.species,
       subspecies: data.subspecies,
       sex: data.sex,
+      ringNumber: data.ringNumber,
       imageUrl: 'https://placehold.co/600x400.png',
       aiHint: `${data.name.toLowerCase()} bird`,
       region: 'Unknown',
@@ -196,6 +199,19 @@ function AddBirdDialog({ onBirdAdded }: { onBirdAdded: (bird: any) => void }) {
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="ringNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ring Number</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., USAU-12345" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
             <DialogFooter>
               <Button type="submit">Add Bird</Button>
@@ -214,6 +230,7 @@ const initialBirds = [
     name: 'Robin',
     species: 'Turdus migratorius',
     subspecies: null,
+    ringNumber: 'A123',
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'robin bird',
     region: 'North America',
@@ -225,6 +242,7 @@ const initialBirds = [
     name: 'Blue Jay',
     species: 'Cyanocitta cristata',
     subspecies: null,
+    ringNumber: 'B456',
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'blue jay',
     region: 'North America',
@@ -236,6 +254,7 @@ const initialBirds = [
     name: 'Cardinal',
     species: 'Cardinalis cardinalis',
     subspecies: null,
+    ringNumber: null,
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'cardinal bird',
     region: 'North America',
@@ -247,6 +266,7 @@ const initialBirds = [
     name: 'European Robin',
     species: 'Erithacus rubecula',
     subspecies: null,
+    ringNumber: 'E789',
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'european robin',
     region: 'Europe',
@@ -258,6 +278,7 @@ const initialBirds = [
     name: 'Common Kestrel',
     species: 'Falco tinnunculus',
     subspecies: null,
+    ringNumber: null,
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'kestrel bird',
     region: 'Europe',
@@ -269,6 +290,7 @@ const initialBirds = [
     name: 'Galah',
     species: 'Eolophus roseicapilla',
     subspecies: null,
+    ringNumber: 'G101',
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'galah bird',
     region: 'Australia',
@@ -280,6 +302,7 @@ const initialBirds = [
     name: 'Canary',
     species: 'Serinus canaria domestica',
     subspecies: null,
+    ringNumber: null,
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'canary bird',
     region: 'Domestic',
@@ -298,7 +321,7 @@ export default function BirdsPage() {
   };
 
   const filteredBirds = birds.filter(bird => {
-    const birdIdentifier = `${bird.name} ${bird.species} ${bird.subspecies || ''}`.toLowerCase();
+    const birdIdentifier = `${bird.name} ${bird.species} ${bird.subspecies || ''} ${bird.ringNumber || ''}`.toLowerCase();
     const matchesSearch = birdIdentifier.includes(search.toLowerCase());
     const matchesCategory = bird.category === filterCategory;
     return matchesSearch && matchesCategory;
@@ -316,7 +339,7 @@ export default function BirdsPage() {
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
-              placeholder="Search for birds by name or species..."
+              placeholder="Search for birds by name, species, or ring number..."
               className="pl-10"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -354,8 +377,8 @@ export default function BirdsPage() {
               <CardHeader>
                 <CardTitle>{bird.name}</CardTitle>
                 <CardDescription>
-                  {bird.species}
-                  {bird.subspecies && ` (${bird.subspecies})`}
+                  <p>{bird.species}{bird.subspecies && ` (${bird.subspecies})`}</p>
+                  {bird.ringNumber && <p className="text-xs text-muted-foreground">Ring: {bird.ringNumber}</p>}
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -369,3 +392,5 @@ export default function BirdsPage() {
     </div>
   );
 }
+
+    

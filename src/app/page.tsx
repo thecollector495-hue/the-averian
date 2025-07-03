@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, PlusCircle, ChevronsUpDown, Users2, Egg, Pencil, Landmark, Dna } from 'lucide-react';
+import { Search, PlusCircle, ChevronsUpDown, Users2, Egg, Pencil, Landmark } from 'lucide-react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, ControllerRenderProps } from "react-hook-form";
 import { z } from "zod";
@@ -33,7 +33,6 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurrency } from '@/context/CurrencyContext';
 
 
@@ -100,6 +99,11 @@ type Pair = {
 
 type CollectionItem = Bird | Cage | Pair;
 
+const getBirdIdentifier = (bird: Bird) => {
+    const identifier = bird.ringNumber ? `(${bird.ringNumber})` : '(Unbanded)';
+    return `${bird.species} ${identifier}`;
+};
+
 
 function MultiSelectPopover({ field, options, placeholder }: { field: ControllerRenderProps<any, any>, options: { value: string; label: string }[], placeholder: string }) {
   const selectedValues = field.value || [];
@@ -162,7 +166,7 @@ function MultiSelectPopover({ field, options, placeholder }: { field: Controller
 }
 
 
-function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, allCages }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onSave: (data: BirdFormValues) => void, initialData: Bird | null, allCages: Cage[] }) {
+function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, allCages }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onSave: (data: BirdFormValues) => void, initialData: Bird | null, allBirds: Bird[], allCages: Cage[] }) {
   const form = useForm<BirdFormValues>({
     resolver: zodResolver(birdFormSchema),
     defaultValues: {
@@ -207,12 +211,6 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
   const watchedSpecies = form.watch("species");
   const unbanded = form.watch("unbanded");
   const subspeciesOptions = watchedSpecies ? speciesData[watchedSpecies as keyof typeof speciesData]?.subspecies : [];
-
-  const getBirdIdentifier = (bird: Bird) => {
-    const speciesName = speciesData[bird.species as keyof typeof speciesData]?.name;
-    const identifier = bird.ringNumber ? `(${bird.ringNumber})` : '(Unbanded)';
-    return `${speciesName} ${identifier}`;
-  };
   
   const potentialRelatives = allBirds
     .filter(bird => bird.id !== initialData?.id && bird.species === watchedSpecies);
@@ -535,17 +533,10 @@ const initialCages: Cage[] = [
 const initialItems: CollectionItem[] = [...initialBirds, ...initialPairs, ...initialCages];
 
 
-const BirdRelations = ({ bird, allBirds, onViewDetails }: { bird: Bird, allBirds: Bird[], onViewDetails: (bird: Bird, tab: string) => void }) => {
-    const getBirdLabelButton = (targetBird: Bird | undefined) => {
+const BirdRelations = ({ bird, allBirds }: { bird: Bird, allBirds: Bird[] }) => {
+    const getBirdLabelText = (targetBird: Bird | undefined) => {
         if (!targetBird) return <span className="text-muted-foreground">N/A</span>;
-        const speciesName = speciesData[targetBird.species as keyof typeof speciesData]?.name;
-        const identifier = targetBird.ringNumber ? `(${targetBird.ringNumber})` : '(Unbanded)';
-        const label = `${speciesName} ${identifier}`;
-        return (
-            <Button variant="link" className="p-0 h-auto font-normal text-base text-left" onClick={() => onViewDetails(targetBird, 'family')}>
-                {label}
-            </Button>
-        );
+        return <span className="font-normal text-base">{getBirdIdentifier(targetBird)}</span>;
     };
 
     const father = allBirds.find(b => b.id === bird.fatherId);
@@ -557,21 +548,21 @@ const BirdRelations = ({ bird, allBirds, onViewDetails }: { bird: Bird, allBirds
         <div className="space-y-3 pl-4 text-sm">
             <div className="flex items-start gap-2">
                 <strong className="w-20 shrink-0 pt-1">Father:</strong>
-                <span>{getBirdLabelButton(father)}</span>
+                <span>{getBirdLabelText(father)}</span>
             </div>
             <div className="flex items-start gap-2">
                 <strong className="w-20 shrink-0 pt-1">Mother:</strong>
-                <span>{getBirdLabelButton(mother)}</span>
+                <span>{getBirdLabelText(mother)}</span>
             </div>
             <div className="flex items-start gap-2">
                 <strong className="w-20 shrink-0 pt-1">Mate:</strong>
-                <span>{getBirdLabelButton(mate)}</span>
+                <span>{getBirdLabelText(mate)}</span>
             </div>
             <div className="flex flex-col gap-1">
                 <strong>Offspring:</strong>
                 {offspring.length > 0 ? (
                     <ul className="list-disc pl-6 space-y-1 mt-1">
-                        {offspring.map(o => <li key={o.id}>{getBirdLabelButton(o)}</li>)}
+                        {offspring.map(o => <li key={o.id}>{getBirdLabelText(o)}</li>)}
                     </ul>
                 ) : <span className="text-muted-foreground ml-2">N/A</span>}
             </div>
@@ -579,117 +570,22 @@ const BirdRelations = ({ bird, allBirds, onViewDetails }: { bird: Bird, allBirds
     );
 }
 
-function BirdDetailsDialog({ isOpen, onOpenChange, bird, allBirds, onViewDetails, onEdit, defaultTab }: { isOpen: boolean, onOpenChange: (open: boolean) => void, bird: Bird | null, allBirds: Bird[], onViewDetails: (bird: Bird, tab: string) => void, onEdit: (bird: Bird) => void, defaultTab: string }) {
-    const { formatCurrency } = useCurrency();
-    if (!bird) return null;
 
-    const speciesInfo = speciesData[bird.species as keyof typeof speciesData];
-    const displayName = speciesInfo ? speciesInfo.name : bird.species;
-
-    return (
-        <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-xl">
-                 <DialogHeader>
-                    <DialogTitle className="text-xl">{displayName}</DialogTitle>
-                    <DialogDescription>{bird.species}{bird.subspecies && ` (${bird.subspecies})`}</DialogDescription>
-                 </DialogHeader>
-                <div className="space-y-4 max-h-[60vh] overflow-y-auto py-4 -mx-6 px-6">
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                        <div className="font-medium text-muted-foreground">Sex</div>
-                        <div className="capitalize">{bird.sex}</div>
-
-                        <div className="font-medium text-muted-foreground">Ring #</div>
-                        <div>{bird.ringNumber || 'Unbanded'}</div>
-
-                        <div className="font-medium text-muted-foreground">Age</div>
-                        <div>
-                            {bird.age !== undefined && bird.age !== null ? (
-                            `${new Date().getFullYear() - bird.age} (${bird.age} ${bird.age === 1 ? 'year' : 'years'} old)`
-                            ) : (
-                            'N/A'
-                            )}
-                        </div>
-                    </div>
-                    
-                     <Tabs defaultValue={defaultTab} className="w-full pt-2">
-                        <TabsList className="grid w-full grid-cols-4 h-9">
-                            <TabsTrigger value="family" className="text-xs px-1">
-                                <Users2 className="h-4 w-4 sm:mr-1" />
-                                <span className="hidden sm:inline">Family</span>
-                            </TabsTrigger>
-                             <TabsTrigger value="genetics" className="text-xs px-1">
-                                <Dna className="h-4 w-4 sm:mr-1" />
-                                <span className="hidden sm:inline">Genetics</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="breeding" className="text-xs px-1">
-                                <Egg className="h-4 w-4 sm:mr-1" />
-                                <span className="hidden sm:inline">Breeding</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="financials" className="text-xs px-1">
-                                <Landmark className="h-4 w-4 sm:mr-1" />
-                                <span className="hidden sm:inline">Financials</span>
-                            </TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="family" className="pt-3">
-                             <BirdRelations bird={bird} allBirds={allBirds} onViewDetails={onViewDetails} />
-                        </TabsContent>
-                        <TabsContent value="genetics" className="pt-3 pl-4">
-                            <div className="space-y-3">
-                                {bird.visualMutations?.length > 0 && (
-                                    <div className="space-y-1">
-                                        <p className="text-sm font-medium">Visual Mutations</p>
-                                        <div className="flex flex-wrap gap-1">
-                                            {bird.visualMutations.map(m => <Badge key={m} variant="outline">{m}</Badge>)}
-                                        </div>
-                                    </div>
-                                )}
-                                {bird.splitMutations?.length > 0 && (
-                                    <div className="space-y-1">
-                                        <p className="text-sm font-medium">Split Mutations</p>
-                                        <div className="flex flex-wrap gap-1">
-                                            {bird.splitMutations.map(m => <Badge key={m} variant="secondary">{m}</Badge>)}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </TabsContent>
-                         <TabsContent value="breeding" className="pt-3">
-                           <p className="text-muted-foreground px-4 py-2 text-sm">Breeding records for this bird will be displayed here.</p>
-                        </TabsContent>
-                        <TabsContent value="financials" className="pt-3">
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm pl-4">
-                                <div className="font-medium text-muted-foreground">Paid Price</div>
-                                <div>{formatCurrency(bird.paidPrice)}</div>
-
-                                <div className="font-medium text-muted-foreground">Est. Value</div>
-                                <div>{formatCurrency(bird.estimatedValue)}</div>
-                            </div>
-                        </TabsContent>
-                    </Tabs>
-                </div>
-                 <DialogFooter>
-                    <Button variant="outline" size="sm" onClick={() => { onOpenChange(false); onEdit(bird); }}>
-                        <Pencil className="mr-2 h-4 w-4" /> Edit
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
-}
-
-function BirdCard({ bird, handleEditClick, handleViewDetails }: { bird: Bird, handleEditClick: (bird: Bird) => void, handleViewDetails: (bird: Bird, tab: string) => void }) {
+function BirdCard({ bird, allBirds, handleEditClick }: { bird: Bird, allBirds: Bird[], handleEditClick: (bird: Bird) => void }) {
   const { formatCurrency } = useCurrency();
-  const speciesInfo = speciesData[bird.species as keyof typeof speciesData];
-  const displayName = speciesInfo ? speciesInfo.name : bird.species;
-  
   const sexVariant = bird.sex === 'male' ? 'default' : bird.sex === 'female' ? 'destructive' : 'secondary';
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+
+  const toggleSection = (section: string) => {
+    setExpandedSection(prev => prev === section ? null : section);
+  };
   
   return (
     <Card key={bird.id} className="flex flex-col h-full">
       <CardHeader className="flex flex-row items-start justify-between p-4 pb-2">
         <div>
-            <CardTitle className="text-lg">{displayName}</CardTitle>
-            <CardDescription>{bird.species}{bird.subspecies && ` (${bird.subspecies})`}</CardDescription>
+            <CardTitle className="text-lg">{bird.species}</CardTitle>
+            <CardDescription>{bird.subspecies}</CardDescription>
         </div>
         <Badge variant={sexVariant} className="capitalize shrink-0">{bird.sex}</Badge>
       </CardHeader>
@@ -706,37 +602,54 @@ function BirdCard({ bird, handleEditClick, handleViewDetails }: { bird: Bird, ha
                 'N/A'
               )}
             </div>
-
-            <div className="font-medium text-muted-foreground">Est. Value</div>
-            <div>{formatCurrency(bird.estimatedValue)}</div>
         </div>
+
+        {(bird.visualMutations.length > 0 || bird.splitMutations.length > 0) && (
+            <div className="space-y-2">
+                <div className="flex flex-wrap gap-1">
+                    {bird.visualMutations.map(m => <Badge key={m} variant="outline">{m}</Badge>)}
+                    {bird.splitMutations.map(m => <Badge key={m} variant="secondary">{m}</Badge>)}
+                </div>
+            </div>
+        )}
       </CardContent>
-      <CardFooter className="flex justify-end gap-2 p-4 pt-0">
-          <Button variant="secondary" size="sm" onClick={() => handleViewDetails(bird, 'family')}>
-              <Users2 className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Family</span>
-          </Button>
-           <Button variant="secondary" size="sm" onClick={() => handleViewDetails(bird, 'breeding')}>
-              <Egg className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Breeding</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => handleEditClick(bird)}>
+      <CardFooter className="flex-col items-start gap-4 p-4 pt-0 mt-auto">
+        {expandedSection && (
+            <div className="w-full pt-4 border-t border-border">
+                {expandedSection === 'family' && <BirdRelations bird={bird} allBirds={allBirds} />}
+                {expandedSection === 'breeding' && <p className="text-muted-foreground px-4 py-2 text-sm">Breeding records for this bird will be displayed here.</p>}
+                {expandedSection === 'financials' && (
+                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm pl-4">
+                        <div className="font-medium text-muted-foreground">Paid Price</div>
+                        <div>{formatCurrency(bird.paidPrice)}</div>
+                        <div className="font-medium text-muted-foreground">Est. Value</div>
+                        <div>{formatCurrency(bird.estimatedValue)}</div>
+                    </div>
+                )}
+            </div>
+        )}
+        <div className="w-full pt-2 flex justify-end items-center gap-2">
+            <Button size="sm" variant={expandedSection === 'family' ? 'default' : 'secondary'} onClick={() => toggleSection('family')}>
+                <Users2 className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Family</span>
+            </Button>
+            <Button size="sm" variant={expandedSection === 'breeding' ? 'default' : 'secondary'} onClick={() => toggleSection('breeding')}>
+                <Egg className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Breeding</span>
+            </Button>
+            <Button size="sm" variant={expandedSection === 'financials' ? 'default' : 'secondary'} onClick={() => toggleSection('financials')}>
+                <Landmark className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Financials</span>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => handleEditClick(bird)}>
               <Pencil className="h-4 w-4 sm:mr-2" />
                <span className="hidden sm:inline">Edit</span>
           </Button>
+        </div>
       </CardFooter>
     </Card>
   )
 }
 
-function CageCard({ cage, allBirds, onViewDetails }: { cage: Cage, allBirds: Bird[], onViewDetails: (bird: Bird, tab: string) => void }) {
+function CageCard({ cage, allBirds }: { cage: Cage, allBirds: Bird[] }) {
     const birdsInCage = allBirds.filter(b => cage.birdIds.includes(b.id));
-
-    const getBirdIdentifier = (bird: Bird) => {
-        const speciesName = speciesData[bird.species as keyof typeof speciesData]?.name;
-        const identifier = bird.ringNumber ? `(${bird.ringNumber})` : '(Unbanded)';
-        return `${speciesName} ${identifier}`;
-    };
 
     return (
         <Card className="h-full">
@@ -751,9 +664,7 @@ function CageCard({ cage, allBirds, onViewDetails }: { cage: Cage, allBirds: Bir
                         <ul className="list-disc pl-5 space-y-1">
                             {birdsInCage.map(bird => (
                                 <li key={bird.id}>
-                                    <Button variant="link" className="p-0 h-auto font-normal text-base" onClick={() => onViewDetails(bird, 'family')}>
-                                        {getBirdIdentifier(bird)}
-                                    </Button>
+                                    <span>{getBirdIdentifier(bird)}</span>
                                 </li>
                             ))}
                         </ul>
@@ -766,19 +677,13 @@ function CageCard({ cage, allBirds, onViewDetails }: { cage: Cage, allBirds: Bir
     );
 }
 
-function PairCard({ pair, allBirds, onViewDetails }: { pair: Pair, allBirds: Bird[], onViewDetails: (bird: Bird, tab: string) => void }) {
+function PairCard({ pair, allBirds }: { pair: Pair, allBirds: Bird[] }) {
     const male = allBirds.find(b => b.id === pair.maleId);
     const female = allBirds.find(b => b.id === pair.femaleId);
 
-    const BirdButton = ({ bird }: { bird: Bird | undefined }) => {
+    const BirdText = ({ bird }: { bird: Bird | undefined }) => {
         if (!bird) return <span className="text-muted-foreground">Bird not found</span>;
-        const speciesName = speciesData[bird.species as keyof typeof speciesData]?.name;
-        const identifier = bird.ringNumber ? `(${bird.ringNumber})` : '(Unbanded)';
-        return (
-            <Button variant="link" className="p-0 h-auto text-base font-normal text-left" onClick={() => onViewDetails(bird, 'family')}>
-                {speciesName} {identifier}
-            </Button>
-        );
+        return <span className="text-base font-normal text-left">{getBirdIdentifier(bird)}</span>;
     }
     
     return (
@@ -786,7 +691,7 @@ function PairCard({ pair, allBirds, onViewDetails }: { pair: Pair, allBirds: Bir
             <CardHeader className="p-4">
                 <CardTitle>Breeding Pair</CardTitle>
                 <CardDescription>
-                  {male ? speciesData[male.species as keyof typeof speciesData]?.name : 'Pair'}
+                  {male ? male.species : 'Pair'}
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 p-4 pt-0">
@@ -794,14 +699,14 @@ function PairCard({ pair, allBirds, onViewDetails }: { pair: Pair, allBirds: Bir
                     <Users2 className="h-5 w-5 text-primary mt-1" />
                     <div className="grid gap-0.5">
                         <div className="font-semibold text-sm">Male</div>
-                        <BirdButton bird={male} />
+                        <BirdText bird={male} />
                     </div>
                 </div>
                  <div className="flex items-start gap-4">
                     <Users2 className="h-5 w-5 text-primary mt-1" />
                      <div className="grid gap-0.5">
                         <div className="font-semibold text-sm">Female</div>
-                        <BirdButton bird={female} />
+                        <BirdText bird={female} />
                     </div>
                 </div>
             </CardContent>
@@ -815,8 +720,6 @@ export default function BirdsPage() {
   const [filterCategory, setFilterCategory] = useState('Bird');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBird, setEditingBird] = useState<Bird | null>(null);
-  const [detailsBird, setDetailsBird] = useState<Bird | null>(null);
-  const [detailsTab, setDetailsTab] = useState('family');
   
   const allBirds = items.filter((item): item is Bird => item.category === 'Bird');
   const allCages = items.filter((item): item is Cage => item.category === 'Cage');
@@ -829,11 +732,6 @@ export default function BirdsPage() {
   const handleEditClick = (bird: Bird) => {
     setEditingBird(bird);
     setIsFormOpen(true);
-  };
-
-  const handleViewDetails = (bird: Bird, tab: string = 'family') => {
-    setDetailsBird(bird);
-    setDetailsTab(tab);
   };
 
   const handleSaveBird = (formData: BirdFormValues) => {
@@ -901,8 +799,7 @@ export default function BirdsPage() {
     }
 
     const bird = item as Bird;
-    const speciesName = speciesData[bird.species as keyof typeof speciesData]?.name || '';
-    const birdIdentifier = `${speciesName} ${bird.species} ${bird.subspecies || ''} ${bird.ringNumber || ''} ${bird.age || ''} ${(bird.visualMutations || []).join(' ')} ${(bird.splitMutations || []).join(' ')}`.toLowerCase();
+    const birdIdentifier = `${bird.species} ${bird.subspecies || ''} ${bird.ringNumber || ''} ${bird.age || ''} ${(bird.visualMutations || []).join(' ')} ${(bird.splitMutations || []).join(' ')}`.toLowerCase();
     return birdIdentifier.includes(search.toLowerCase());
   });
 
@@ -917,18 +814,6 @@ export default function BirdsPage() {
         initialData={editingBird}
         allBirds={allBirds}
         allCages={allCages}
-      />
-      <BirdDetailsDialog
-        isOpen={!!detailsBird}
-        onOpenChange={(open) => !open && setDetailsBird(null)}
-        bird={detailsBird}
-        allBirds={allBirds}
-        onViewDetails={handleViewDetails}
-        onEdit={(bird) => {
-            setDetailsBird(null);
-            handleEditClick(bird);
-        }}
-        defaultTab={detailsTab}
       />
       <div className="flex flex-col gap-4 mb-8">
         <h1 className="text-4xl md:text-5xl font-bold font-headline text-center">Bird Watcher</h1>
@@ -967,13 +852,13 @@ export default function BirdsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredItems.map((item) => {
             if (item.category === 'Bird') {
-              return <BirdCard key={item.id} bird={item} handleEditClick={handleEditClick} handleViewDetails={handleViewDetails} />
+              return <BirdCard key={item.id} bird={item} allBirds={allBirds} handleEditClick={handleEditClick} />
             }
             if (item.category === 'Cage') {
-                return <CageCard key={item.id} cage={item} allBirds={allBirds} onViewDetails={handleViewDetails} />
+                return <CageCard key={item.id} cage={item} allBirds={allBirds} />
             }
             if (item.category === 'Pair') {
-                return <PairCard key={item.id} pair={item} allBirds={allBirds} onViewDetails={handleViewDetails} />
+                return <PairCard key={item.id} pair={item} allBirds={allBirds} />
             }
             return null;
           })}
@@ -986,3 +871,5 @@ export default function BirdsPage() {
     </div>
   );
 }
+
+    

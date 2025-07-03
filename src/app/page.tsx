@@ -356,7 +356,7 @@ const initialBirds = [
     subspecies: null,
     ringNumber: 'A123',
     category: 'Bird',
-    sex: 'unsexed',
+    sex: 'male',
     age: 2,
     visualMutations: ['Opaline'],
     splitMutations: ['Cinnamon']
@@ -367,7 +367,7 @@ const initialBirds = [
     subspecies: null,
     ringNumber: 'B456',
     category: 'Bird',
-    sex: 'unsexed',
+    sex: 'female',
     age: 3,
     visualMutations: [],
     splitMutations: ['Lutino']
@@ -389,7 +389,7 @@ const initialBirds = [
     subspecies: null,
     ringNumber: 'E789',
     category: 'Bird',
-    sex: 'unsexed',
+    sex: 'male',
     age: 5,
     visualMutations: ['Cinnamon'],
     splitMutations: []
@@ -400,7 +400,7 @@ const initialBirds = [
     subspecies: null,
     ringNumber: null,
     category: 'Bird',
-    sex: 'unsexed',
+    sex: 'female',
     age: 2,
     visualMutations: [],
     splitMutations: []
@@ -490,32 +490,44 @@ export default function BirdsPage() {
                   <CardTitle className="text-xl">{displayName}</CardTitle>
                   <CardDescription>{bird.species}{bird.subspecies && ` (${bird.subspecies})`}</CardDescription>
                 </CardHeader>
-                <CardContent className="flex-grow space-y-3">
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>
-                        {bird.ringNumber ? `Ring: ${bird.ringNumber}` : `Unbanded`}
-                    </span>
-                    <span>
-                        {bird.age !== undefined && `Age: ${bird.age} ${bird.age === 1 ? 'year' : 'years'}`}
-                    </span>
+                <CardContent className="flex-grow space-y-4">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    <div className="text-muted-foreground">Sex</div>
+                    <div className="capitalize">{bird.sex}</div>
+
+                    <div className="text-muted-foreground">Ring #</div>
+                    <div>{bird.ringNumber || 'Unbanded'}</div>
+
+                    <div className="text-muted-foreground">Age</div>
+                     <div>
+                        {bird.age !== undefined && bird.age !== null ? (
+                          `${new Date().getFullYear() - bird.age} (${bird.age} ${bird.age === 1 ? 'year' : 'years'} old)`
+                        ) : (
+                          'N/A'
+                        )}
+                      </div>
                   </div>
-                  { (bird.visualMutations?.length > 0 || bird.splitMutations?.length > 0) && <Separator /> }
-                  {bird.visualMutations?.length > 0 && (
-                      <div className="space-y-1">
-                          <p className="text-sm font-medium">Visual Mutations</p>
-                          <div className="flex flex-wrap gap-1">
-                              {bird.visualMutations.map(m => <Badge key={m} variant="outline">{m}</Badge>)}
+                  
+                  {(bird.visualMutations?.length > 0 || bird.splitMutations?.length > 0) && <Separator />}
+                  
+                  <div className="space-y-3">
+                      {bird.visualMutations?.length > 0 && (
+                          <div className="space-y-1">
+                              <p className="text-sm font-medium">Visual Mutations</p>
+                              <div className="flex flex-wrap gap-1">
+                                  {bird.visualMutations.map(m => <Badge key={m} variant="outline">{m}</Badge>)}
+                              </div>
                           </div>
-                      </div>
-                  )}
-                  {bird.splitMutations?.length > 0 && (
-                      <div className="space-y-1">
-                          <p className="text-sm font-medium">Split Mutations</p>
-                          <div className="flex flex-wrap gap-1">
-                              {bird.splitMutations.map(m => <Badge key={m} variant="secondary">{m}</Badge>)}
+                      )}
+                      {bird.splitMutations?.length > 0 && (
+                          <div className="space-y-1">
+                              <p className="text-sm font-medium">Split Mutations</p>
+                              <div className="flex flex-wrap gap-1">
+                                  {bird.splitMutations.map(m => <Badge key={m} variant="secondary">{m}</Badge>)}
+                              </div>
                           </div>
-                      </div>
-                  )}
+                      )}
+                  </div>
                 </CardContent>
               </Card>
             )

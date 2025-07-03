@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, PlusCircle, ChevronsUpDown, Users2, Egg, Pencil, Landmark, ClipboardList, Trash2, Calendar as CalendarIcon } from 'lucide-react';
+import { Search, PlusCircle, ChevronsUpDown, Users2, Egg, Pencil, Landmark, StickyNote, Trash2, Calendar as CalendarIcon } from 'lucide-react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, ControllerRenderProps, useFieldArray, Controller } from "react-hook-form";
 import { z } from "zod";
@@ -608,32 +608,37 @@ function BreedingRecordDetailsDialog({ record, allBirds, allPairs, onClose, onBi
                     <DialogTitle>Breeding Record Details</DialogTitle>
                     <DialogDescription>Started on {format(new Date(record.startDate), 'PPP')}</DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
+                <div className="grid gap-4 py-4 text-sm max-h-[60vh] overflow-y-auto pr-2">
                     {male && female && (
-                        <div>
-                            <h4 className="font-semibold mb-1">Breeding Pair</h4>
-                            <p className="text-sm"><span className="text-muted-foreground">Male:</span> <Button variant="link" onClick={() => onBirdClick(male)} className="p-0 h-auto">{getBirdIdentifier(male)}</Button></p>
-                            <p className="text-sm"><span className="text-muted-foreground">Female:</span> <Button variant="link" onClick={() => onBirdClick(female)} className="p-0 h-auto">{getBirdIdentifier(female)}</Button></p>
+                       <div className="space-y-2 rounded-lg border p-3">
+                            <h4 className="font-medium text-base">Breeding Pair</h4>
+                            <div className="grid grid-cols-[auto_1fr] items-center gap-x-2 gap-y-1">
+                                <span className="text-muted-foreground">Male:</span>
+                                <Button variant="link" onClick={() => onBirdClick(male)} className="p-0 h-auto justify-start font-semibold">{getBirdIdentifier(male)}</Button>
+                                <span className="text-muted-foreground">Female:</span>
+                                <Button variant="link" onClick={() => onBirdClick(female)} className="p-0 h-auto justify-start font-semibold">{getBirdIdentifier(female)}</Button>
+                            </div>
                         </div>
                     )}
-                    <div>
-                        <h4 className="font-semibold mb-2">Egg Log</h4>
-                        <div className="space-y-2">
-                            {record.eggs.map(egg => (
+                    <div className="space-y-2 rounded-lg border p-3">
+                         <h4 className="font-medium text-base">Egg Log</h4>
+                         <div className="space-y-2">
+                            {record.eggs.length > 0 ? record.eggs.map(egg => (
                                 <div key={egg.id} className="text-sm p-2 border rounded-md grid grid-cols-2 gap-x-4">
                                     <p><span className="text-muted-foreground">Laid:</span> {format(new Date(egg.laidDate), 'PPP')}</p>
                                     <p><span className="text-muted-foreground">Status:</span> {egg.status}</p>
                                     {egg.hatchDate && <p><span className="text-muted-foreground">Hatched:</span> {format(new Date(egg.hatchDate), 'PPP')}</p>}
                                     {egg.chickId && allBirds.find(b => b.id === egg.chickId) && 
-                                        <p><span className="text-muted-foreground">Chick:</span> <Button variant="link" onClick={() => onBirdClick(allBirds.find(b => b.id === egg.chickId)!)} className="p-0 h-auto">{getBirdIdentifier(allBirds.find(b => b.id === egg.chickId)!)}</Button></p>
+                                        <p className="col-span-2"><span className="text-muted-foreground">Chick:</span> <Button variant="link" onClick={() => onBirdClick(allBirds.find(b => b.id === egg.chickId)!)} className="p-0 h-auto">{getBirdIdentifier(allBirds.find(b => b.id === egg.chickId)!)}</Button></p>
                                     }
                                 </div>
-                            ))}
+                            )) : <p className="text-muted-foreground">No eggs recorded.</p>}
                         </div>
                     </div>
+
                     {record.notes && (
-                        <div>
-                            <h4 className="font-semibold mb-1">Notes</h4>
+                         <div className="space-y-2 rounded-lg border p-3">
+                            <h4 className="font-medium text-base">Notes</h4>
                             <p className="text-sm text-muted-foreground">{record.notes}</p>
                         </div>
                     )}
@@ -666,30 +671,25 @@ function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecords, hand
 
   return (
     <Card key={bird.id} className="flex flex-col h-full">
-      <CardHeader className="flex flex-row items-start justify-between p-4 pb-2">
+       <CardHeader className="flex flex-row items-start justify-between p-4 pb-2">
         <Badge variant={bird.sex === 'male' ? 'default' : bird.sex === 'female' ? 'destructive' : 'secondary'} className="capitalize">{bird.sex}</Badge>
         <span className="text-sm text-muted-foreground text-right">{cage?.name || 'No Cage'}</span>
       </CardHeader>
       <CardContent className="flex-grow space-y-3 p-4 pt-0">
         <div>
             <p className="font-bold text-lg">{bird.species}</p>
-            <p className="text-sm text-muted-foreground">{bird.subspecies}</p>
+            <p className="text-sm text-muted-foreground">{bird.subspecies || 'No subspecies'}</p>
         </div>
         
         {mutationDisplay && (
-            <p className="text-sm">{mutationDisplay}</p>
+            <p className="text-sm font-semibold">{mutationDisplay}</p>
         )}
         
         <div className="flex justify-between items-center text-sm pt-2">
           <span className="text-muted-foreground">Ring: <span className="font-medium text-foreground">{bird.ringNumber || 'Unbanded'}</span></span>
-          <span className="text-muted-foreground">Age: <span className="font-medium text-foreground">
-              {bird.age !== undefined && bird.age !== null ? (
-                `${new Date().getFullYear() - bird.age} (${bird.age} ${bird.age === 1 ? 'year' : 'years'} old)`
-              ) : (
-                'N/A'
-              )}
-            </span>
-          </span>
+           <span className="text-muted-foreground">Age: <span className="font-medium text-foreground">
+             {bird.age ? `${new Date().getFullYear() - bird.age} (${bird.age} yrs)` : 'N/A'}
+           </span></span>
         </div>
       </CardContent>
       <CardFooter className="flex-col items-start gap-2 p-4 pt-0 mt-auto">
@@ -711,7 +711,7 @@ function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecords, hand
             </Button>
         </div>
         {expandedSection && (
-            <div className="w-full pt-4 border-t border-border">
+            <div className="w-full pt-4 mt-2 border-t border-border">
                 {expandedSection === 'family' && <BirdRelations bird={bird} allBirds={allBirds} onBirdClick={onBirdClick} />}
                 {expandedSection === 'breeding' && (
                   <div className="px-2 py-1 text-sm space-y-2">
@@ -995,4 +995,5 @@ export default function BirdsPage() {
     </div>
   );
 }
+
 

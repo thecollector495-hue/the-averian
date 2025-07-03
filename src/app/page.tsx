@@ -33,7 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurrency } from '@/context/CurrencyContext';
 
 
@@ -631,36 +631,30 @@ function BirdDetailsDialog({ isOpen, onOpenChange, bird, allBirds, onViewDetails
                             </div>
                         )}
                     </div>
-                    <Accordion type="single" collapsible className="w-full pt-2">
-                        <AccordionItem value="family-tree">
-                            <AccordionTrigger className="py-3 text-sm font-medium">
-                                <div className="flex items-center gap-3">
-                                    <Users2 className="h-4 w-4 text-primary" />
-                                    Family Tree
-                                </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                                <BirdRelations bird={bird} allBirds={allBirds} onViewDetails={onViewDetails} />
-                            </AccordionContent>
-                        </AccordionItem>
-                         <AccordionItem value="financials">
-                            <AccordionTrigger className="py-3 text-sm font-medium">
-                                <div className="flex items-center gap-3">
-                                    <Landmark className="h-4 w-4 text-primary" />
-                                    Financials
-                                </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm pl-4">
-                                    <div className="font-medium text-muted-foreground">Paid Price</div>
-                                    <div>{formatCurrency(bird.paidPrice)}</div>
+                     <Tabs defaultValue="family" className="w-full pt-2">
+                        <TabsList className="grid w-full grid-cols-3 h-9">
+                            <TabsTrigger value="family" className="text-xs px-1">
+                                <Users2 className="h-4 w-4 sm:mr-1" />
+                                <span className="hidden sm:inline">Family Tree</span>
+                            </TabsTrigger>
+                            <TabsTrigger value="financials" className="text-xs px-1">
+                                <Landmark className="h-4 w-4 sm:mr-1" />
+                                <span className="hidden sm:inline">Financials</span>
+                            </TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="family" className="pt-3">
+                             <BirdRelations bird={bird} allBirds={allBirds} onViewDetails={onViewDetails} />
+                        </TabsContent>
+                        <TabsContent value="financials" className="pt-3">
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm pl-4">
+                                <div className="font-medium text-muted-foreground">Paid Price</div>
+                                <div>{formatCurrency(bird.paidPrice)}</div>
 
-                                    <div className="font-medium text-muted-foreground">Est. Value</div>
-                                    <div>{formatCurrency(bird.estimatedValue)}</div>
-                                </div>
-                            </AccordionContent>
-                        </AccordionItem>
-                    </Accordion>
+                                <div className="font-medium text-muted-foreground">Est. Value</div>
+                                <div>{formatCurrency(bird.estimatedValue)}</div>
+                            </div>
+                        </TabsContent>
+                    </Tabs>
                 </div>
                  <DialogFooter>
                     <Button variant="outline" size="sm" onClick={() => { onOpenChange(false); onEdit(bird); }}>
@@ -720,38 +714,29 @@ function BirdCard({ bird, allBirds, handleEditClick, handleViewDetails }: { bird
                 </div>
             )}
         </div>
-        <Accordion type="single" collapsible className="w-full pt-1">
-          <AccordionItem value="family-tree">
-            <AccordionTrigger className="py-2 text-sm font-medium">
-              <div className="flex items-center gap-3">
-                <Users2 className="h-4 w-4 text-primary" />
-                Family Tree
-              </div>
-            </AccordionTrigger>
-            <AccordionContent>
+        <Tabs defaultValue="family" className="w-full pt-2">
+            <TabsList className="grid w-full grid-cols-3 h-9">
+                <TabsTrigger value="family" className="text-xs px-1">
+                    <Users2 className="h-4 w-4 sm:mr-1" />
+                    <span className="hidden sm:inline">Family</span>
+                </TabsTrigger>
+                <TabsTrigger value="breeding" className="text-xs px-1">
+                    <Egg className="h-4 w-4 sm:mr-1" />
+                    <span className="hidden sm:inline">Breeding</span>
+                </TabsTrigger>
+                <TabsTrigger value="financials" className="text-xs px-1">
+                    <Landmark className="h-4 w-4 sm:mr-1" />
+                    <span className="hidden sm:inline">Financials</span>
+                </TabsTrigger>
+            </TabsList>
+            <TabsContent value="family" className="pt-3">
               <BirdRelations bird={bird} allBirds={allBirds} onViewDetails={handleViewDetails} />
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="breeding-records">
-             <AccordionTrigger className="py-2 text-sm font-medium">
-              <div className="flex items-center gap-3">
-                <Egg className="h-4 w-4 text-primary" />
-                Breeding Records
-              </div>
-            </AccordionTrigger>
-            <AccordionContent>
+            </TabsContent>
+            <TabsContent value="breeding" className="pt-3">
                <p className="text-muted-foreground px-4 py-2 text-sm">Breeding records for this bird will be displayed here.</p>
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="financials">
-              <AccordionTrigger className="py-2 text-sm font-medium">
-              <div className="flex items-center gap-3">
-                  <Landmark className="h-4 w-4 text-primary" />
-                  Financials
-              </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                  <div className="px-4 py-2 text-sm space-y-2">
+            </TabsContent>
+            <TabsContent value="financials" className="pt-3">
+                  <div className="text-sm space-y-2">
                       <div className="flex justify-between">
                           <span className="text-muted-foreground">Paid Price:</span>
                           <span>{formatCurrency(bird.paidPrice)}</span>
@@ -761,9 +746,8 @@ function BirdCard({ bird, allBirds, handleEditClick, handleViewDetails }: { bird
                           <span>{formatCurrency(bird.estimatedValue)}</span>
                       </div>
                   </div>
-              </AccordionContent>
-          </AccordionItem>
-        </Accordion>
+            </TabsContent>
+        </Tabs>
       </CardContent>
       <CardFooter className="flex justify-end p-4 pt-0">
           <Button variant="outline" size="sm" onClick={() => handleEditClick(bird)}>

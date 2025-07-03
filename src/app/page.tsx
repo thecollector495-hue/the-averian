@@ -46,7 +46,7 @@ const speciesData = {
   'Serinus canaria domestica': { name: 'Domestic Canary', subspecies: [] },
 };
 
-const mutationOptions = ['Opaline', 'Cinnamon', 'Lutino', 'Albino', 'Fallow', 'Spangle'] as const;
+const mutationOptions = ['Opaline', 'Cinnamon', 'Lutino', 'Albino', 'Fallow', 'Spangle', 'Pied'] as const;
 
 const birdFormSchema = z.object({
   species: z.string({
@@ -101,7 +101,8 @@ type CollectionItem = Bird | Cage | Pair;
 
 const getBirdIdentifier = (bird: Bird) => {
     const identifier = bird.ringNumber ? `(${bird.ringNumber})` : '(Unbanded)';
-    return `${speciesData[bird.species as keyof typeof speciesData]?.name || bird.species} ${identifier}`;
+    const speciesName = speciesData[bird.species as keyof typeof speciesData]?.name || bird.species;
+    return `${speciesName} ${identifier}`;
 };
 
 
@@ -508,7 +509,7 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
 
 const initialBirds: Bird[] = [
   {
-    id: '1', species: 'Turdus migratorius', subspecies: 'T. m. migratorius', ringNumber: 'A123', unbanded: false, category: 'Bird', sex: 'male', age: 2, visualMutations: ['Opaline'], splitMutations: ['Cinnamon'], fatherId: undefined, motherId: undefined, mateId: '4', offspringIds: ['3'], paidPrice: 150, estimatedValue: 200,
+    id: '1', species: 'Turdus migratorius', subspecies: 'T. m. migratorius', ringNumber: 'A123', unbanded: false, category: 'Bird', sex: 'male', age: 2, visualMutations: ['Opaline'], splitMutations: ['Cinnamon', 'Pied'], fatherId: undefined, motherId: undefined, mateId: '4', offspringIds: ['3'], paidPrice: 150, estimatedValue: 200,
   },
   {
     id: '2', species: 'Cyanocitta cristata', subspecies: undefined, ringNumber: 'B456', unbanded: false, category: 'Bird', sex: 'female', age: 3, visualMutations: [], splitMutations: ['Lutino'], fatherId: undefined, motherId: undefined, mateId: undefined, offspringIds: [], paidPrice: 80, estimatedValue: 120,
@@ -533,10 +534,18 @@ const initialCages: Cage[] = [
 const initialItems: CollectionItem[] = [...initialBirds, ...initialPairs, ...initialCages];
 
 
-const BirdRelations = ({ bird, allBirds }: { bird: Bird, allBirds: Bird[] }) => {
-    const getBirdLabelText = (targetBird: Bird | undefined) => {
+const BirdRelations = ({ bird, allBirds, onBirdClick }: { bird: Bird, allBirds: Bird[], onBirdClick: (bird: Bird) => void }) => {
+
+    const getBirdLabel = (targetBird: Bird | undefined) => {
         if (!targetBird) return <span className="text-muted-foreground">N/A</span>;
-        return <span className="font-normal text-base">{getBirdIdentifier(targetBird)}</span>;
+        
+        const identifier = getBirdIdentifier(targetBird);
+
+        return (
+            <Button variant="link" className="p-0 h-auto font-normal text-base text-left justify-start" onClick={() => onBirdClick(targetBird)}>
+                {identifier}
+            </Button>
+        );
     };
 
     const father = allBirds.find(b => b.id === bird.fatherId);
@@ -548,21 +557,21 @@ const BirdRelations = ({ bird, allBirds }: { bird: Bird, allBirds: Bird[] }) => 
         <div className="space-y-3 pl-4 text-sm">
             <div className="flex items-start gap-2">
                 <strong className="w-20 shrink-0 pt-1">Father:</strong>
-                <span>{getBirdLabelText(father)}</span>
+                <span>{getBirdLabel(father)}</span>
             </div>
             <div className="flex items-start gap-2">
                 <strong className="w-20 shrink-0 pt-1">Mother:</strong>
-                <span>{getBirdLabelText(mother)}</span>
+                <span>{getBirdLabel(mother)}</span>
             </div>
             <div className="flex items-start gap-2">
                 <strong className="w-20 shrink-0 pt-1">Mate:</strong>
-                <span>{getBirdLabelText(mate)}</span>
+                <span>{getBirdLabel(mate)}</span>
             </div>
             <div className="flex flex-col gap-1">
                 <strong>Offspring:</strong>
                 {offspring.length > 0 ? (
                     <ul className="list-disc pl-6 space-y-1 mt-1">
-                        {offspring.map(o => <li key={o.id}>{getBirdLabelText(o)}</li>)}
+                        {offspring.map(o => <li key={o.id}>{getBirdLabel(o)}</li>)}
                     </ul>
                 ) : <span className="text-muted-foreground ml-2">N/A</span>}
             </div>
@@ -570,10 +579,73 @@ const BirdRelations = ({ bird, allBirds }: { bird: Bird, allBirds: Bird[] }) => 
     );
 }
 
-
-function BirdCard({ bird, allBirds, allCages, handleEditClick }: { bird: Bird; allBirds: Bird[]; allCages: Cage[]; handleEditClick: (bird: Bird) => void; }) {
+function BirdDetailsDialog({ bird, allBirds, allCages, onClose }: { bird: Bird | null; allBirds: Bird[]; allCages: Cage[]; onClose: () => void; }) {
   const { formatCurrency } = useCurrency();
-  const sexVariant = bird.sex === 'male' ? 'default' : bird.sex === 'female' ? 'destructive' : 'secondary';
+  if (!bird) return null;
+
+  const visualText = bird.visualMutations.join(' ');
+  const splitText = bird.splitMutations.length > 0 ? `/(split) ${bird.splitMutations.join(' ')}` : '';
+  const mutationDisplay = `${visualText} ${splitText}`.trim();
+
+  const cage = allCages.find(c => c.birdIds.includes(bird.id));
+  const father = allBirds.find(b => b.id === bird.fatherId);
+  const mother = allBirds.find(b => b.id === bird.motherId);
+  const mate = allBirds.find(b => b.id === bird.mateId);
+  const offspring = allBirds.filter(b => bird.offspringIds.includes(b.id));
+
+
+  return (
+    <Dialog open={!!bird} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{getBirdIdentifier(bird)}</DialogTitle>
+          <DialogDescription>
+             {bird.species} {bird.subspecies && `- ${bird.subspecies}`}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4 text-sm max-h-[60vh] overflow-y-auto">
+          <div className="space-y-2 rounded-lg border p-3">
+            <h4 className="font-medium text-base">Core Details</h4>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+              <div><span className="text-muted-foreground">Sex:</span> <span className="font-semibold capitalize">{bird.sex}</span></div>
+              <div><span className="text-muted-foreground">Age:</span> <span className="font-semibold">{bird.age !== undefined ? `${new Date().getFullYear() - bird.age} (${bird.age} yrs)`: 'N/A'}</span></div>
+              <div><span className="text-muted-foreground">Ring:</span> <span className="font-semibold">{bird.ringNumber || 'Unbanded'}</span></div>
+              <div><span className="text-muted-foreground">Cage:</span> <span className="font-semibold">{cage?.name || 'N/A'}</span></div>
+            </div>
+          </div>
+          
+          <div className="space-y-2 rounded-lg border p-3">
+            <h4 className="font-medium text-base">Genetics & Family</h4>
+             <p><span className="text-muted-foreground">Mutations:</span> <span className="font-semibold">{mutationDisplay || 'None'}</span></p>
+            <p><span className="text-muted-foreground">Father:</span> <span className="font-semibold">{father ? getBirdIdentifier(father) : 'N/A'}</span></p>
+            <p><span className="text-muted-foreground">Mother:</span> <span className="font-semibold">{mother ? getBirdIdentifier(mother) : 'N/A'}</span></p>
+            <p><span className="text-muted-foreground">Mate:</span> <span className="font-semibold">{mate ? getBirdIdentifier(mate) : 'N/A'}</span></p>
+             <div>
+                <span className="text-muted-foreground">Offspring:</span>
+                {offspring.length > 0 ? (
+                    <ul className="list-disc pl-5 mt-1">
+                        {offspring.map(o => <li key={o.id}><span className="font-semibold">{getBirdIdentifier(o)}</span></li>)}
+                    </ul>
+                ) : <span className="font-semibold ml-2">N/A</span>}
+            </div>
+          </div>
+           
+           <div className="space-y-2 rounded-lg border p-3">
+            <h4 className="font-medium text-base">Financials</h4>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <div><span className="text-muted-foreground">Paid:</span> <span className="font-semibold">{formatCurrency(bird.paidPrice)}</span></div>
+                <div><span className="text-muted-foreground">Value:</span> <span className="font-semibold">{formatCurrency(bird.estimatedValue)}</span></div>
+            </div>
+           </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
+function BirdCard({ bird, allBirds, allCages, handleEditClick, onBirdClick }: { bird: Bird; allBirds: Bird[]; allCages: Cage[]; handleEditClick: (bird: Bird) => void; onBirdClick: (bird: Bird) => void; }) {
+  const { formatCurrency } = useCurrency();
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   const toggleSection = (section: string) => {
@@ -583,18 +655,15 @@ function BirdCard({ bird, allBirds, allCages, handleEditClick }: { bird: Bird; a
   const cage = allCages.find(c => c.birdIds.includes(bird.id));
 
   const visualText = bird.visualMutations.join(' ');
-  const splitText = bird.splitMutations.join(' ');
-  let mutationDisplay = visualText;
-  if (splitText) {
-      if (mutationDisplay) mutationDisplay += ' ';
-      mutationDisplay += `/(split) ${splitText}`;
-  }
+  const splitText = bird.splitMutations.length > 0 ? `/(split) ${bird.splitMutations.join(' ')}` : '';
+  const mutationDisplay = `${visualText} ${splitText}`.trim();
+
 
   return (
     <Card key={bird.id} className="flex flex-col h-full">
-      <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
-        <Badge variant={sexVariant} className="capitalize">{bird.sex}</Badge>
-        <span className="text-sm text-muted-foreground">{cage?.name || 'No Cage'}</span>
+      <CardHeader className="flex flex-row items-start justify-between p-4 pb-2">
+        <Badge variant={bird.sex === 'male' ? 'default' : bird.sex === 'female' ? 'destructive' : 'secondary'} className="capitalize">{bird.sex}</Badge>
+        <span className="text-sm text-muted-foreground text-right">{cage?.name || 'No Cage'}</span>
       </CardHeader>
       <CardContent className="flex-grow space-y-3 p-4 pt-0">
         <div>
@@ -606,7 +675,7 @@ function BirdCard({ bird, allBirds, allCages, handleEditClick }: { bird: Bird; a
             <p className="text-sm">{mutationDisplay}</p>
         )}
         
-        <div className="flex justify-between items-center text-sm">
+        <div className="flex justify-between items-center text-sm pt-2">
           <span className="text-muted-foreground">Ring: <span className="font-medium text-foreground">{bird.ringNumber || 'Unbanded'}</span></span>
           <span className="text-muted-foreground">Age: <span className="font-medium text-foreground">
               {bird.age !== undefined && bird.age !== null ? (
@@ -618,27 +687,27 @@ function BirdCard({ bird, allBirds, allCages, handleEditClick }: { bird: Bird; a
           </span>
         </div>
       </CardContent>
-      <CardFooter className="flex-col items-start gap-4 p-4 pt-0 mt-auto">
+      <CardFooter className="flex-col items-start gap-2 p-4 pt-0 mt-auto">
         <div className="w-full pt-2 flex justify-between items-center gap-2">
-          <div className="flex gap-2">
-            <Button size="sm" variant={expandedSection === 'family' ? 'default' : 'secondary'} onClick={() => toggleSection('family')}>
-                <Users2 className="h-4 w-4" />
-            </Button>
-            <Button size="sm" variant={expandedSection === 'breeding' ? 'default' : 'secondary'} onClick={() => toggleSection('breeding')}>
-                <Egg className="h-4 w-4" />
-            </Button>
-            <Button size="sm" variant={expandedSection === 'financials' ? 'default' : 'secondary'} onClick={() => toggleSection('financials')}>
-                <Landmark className="h-4 w-4" />
-            </Button>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => handleEditClick(bird)}>
+            <div className="flex gap-2">
+                <Button size="sm" variant={expandedSection === 'family' ? 'default' : 'secondary'} onClick={() => toggleSection('family')}>
+                    <Users2 className="h-4 w-4" />
+                </Button>
+                <Button size="sm" variant={expandedSection === 'breeding' ? 'default' : 'secondary'} onClick={() => toggleSection('breeding')}>
+                    <Egg className="h-4 w-4" />
+                </Button>
+                <Button size="sm" variant={expandedSection === 'financials' ? 'default' : 'secondary'} onClick={() => toggleSection('financials')}>
+                    <Landmark className="h-4 w-4" />
+                </Button>
+            </div>
+             <Button variant="outline" size="sm" onClick={() => handleEditClick(bird)}>
               <Pencil className="h-4 w-4 mr-2" />
               Edit
-          </Button>
+            </Button>
         </div>
         {expandedSection && (
             <div className="w-full pt-4 border-t border-border">
-                {expandedSection === 'family' && <BirdRelations bird={bird} allBirds={allBirds} />}
+                {expandedSection === 'family' && <BirdRelations bird={bird} allBirds={allBirds} onBirdClick={onBirdClick} />}
                 {expandedSection === 'breeding' && <p className="text-muted-foreground px-4 py-2 text-sm">Breeding records for this bird will be displayed here.</p>}
                 {expandedSection === 'financials' && (
                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm pl-4">
@@ -655,7 +724,7 @@ function BirdCard({ bird, allBirds, allCages, handleEditClick }: { bird: Bird; a
   )
 }
 
-function CageCard({ cage, allBirds }: { cage: Cage, allBirds: Bird[] }) {
+function CageCard({ cage, allBirds, onBirdClick }: { cage: Cage, allBirds: Bird[], onBirdClick: (bird: Bird) => void }) {
     const birdsInCage = allBirds.filter(b => cage.birdIds.includes(b.id));
 
     return (
@@ -671,7 +740,9 @@ function CageCard({ cage, allBirds }: { cage: Cage, allBirds: Bird[] }) {
                         <ul className="list-disc pl-5 space-y-1">
                             {birdsInCage.map(bird => (
                                 <li key={bird.id}>
-                                    <span>{getBirdIdentifier(bird)}</span>
+                                    <Button variant="link" className="p-0 h-auto font-normal text-base text-left" onClick={() => onBirdClick(bird)}>
+                                        {getBirdIdentifier(bird)}
+                                    </Button>
                                 </li>
                             ))}
                         </ul>
@@ -684,13 +755,17 @@ function CageCard({ cage, allBirds }: { cage: Cage, allBirds: Bird[] }) {
     );
 }
 
-function PairCard({ pair, allBirds }: { pair: Pair, allBirds: Bird[] }) {
+function PairCard({ pair, allBirds, onBirdClick }: { pair: Pair, allBirds: Bird[], onBirdClick: (bird: Bird) => void }) {
     const male = allBirds.find(b => b.id === pair.maleId);
     const female = allBirds.find(b => b.id === pair.femaleId);
 
-    const BirdText = ({ bird }: { bird: Bird | undefined }) => {
+    const BirdLink = ({ bird }: { bird: Bird | undefined }) => {
         if (!bird) return <span className="text-muted-foreground">Bird not found</span>;
-        return <span className="text-base font-normal text-left">{getBirdIdentifier(bird)}</span>;
+        return (
+            <Button variant="link" className="p-0 h-auto font-normal text-base text-left" onClick={() => onBirdClick(bird)}>
+                {getBirdIdentifier(bird)}
+            </Button>
+        );
     }
     
     return (
@@ -706,14 +781,14 @@ function PairCard({ pair, allBirds }: { pair: Pair, allBirds: Bird[] }) {
                     <Users2 className="h-5 w-5 text-primary mt-1" />
                     <div className="grid gap-0.5">
                         <div className="font-semibold text-sm">Male</div>
-                        <BirdText bird={male} />
+                        <BirdLink bird={male} />
                     </div>
                 </div>
                  <div className="flex items-start gap-4">
                     <Users2 className="h-5 w-5 text-primary mt-1" />
                      <div className="grid gap-0.5">
                         <div className="font-semibold text-sm">Female</div>
-                        <BirdText bird={female} />
+                        <BirdLink bird={female} />
                     </div>
                 </div>
             </CardContent>
@@ -727,6 +802,7 @@ export default function BirdsPage() {
   const [filterCategory, setFilterCategory] = useState('Bird');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBird, setEditingBird] = useState<Bird | null>(null);
+  const [viewingBird, setViewingBird] = useState<Bird | null>(null);
   
   const allBirds = items.filter((item): item is Bird => item.category === 'Bird');
   const allCages = items.filter((item): item is Cage => item.category === 'Cage');
@@ -739,6 +815,10 @@ export default function BirdsPage() {
   const handleEditClick = (bird: Bird) => {
     setEditingBird(bird);
     setIsFormOpen(true);
+  };
+
+  const handleViewBirdClick = (bird: Bird) => {
+    setViewingBird(bird);
   };
 
   const handleSaveBird = (formData: BirdFormValues) => {
@@ -822,6 +902,12 @@ export default function BirdsPage() {
         allBirds={allBirds}
         allCages={allCages}
       />
+      <BirdDetailsDialog
+        bird={viewingBird}
+        allBirds={allBirds}
+        allCages={allCages}
+        onClose={() => setViewingBird(null)}
+      />
       <div className="flex flex-col gap-4 mb-8">
         <h1 className="text-4xl md:text-5xl font-bold font-headline text-center">Bird Watcher</h1>
         <p className="text-lg text-muted-foreground text-center">Explore the world of birds.</p>
@@ -859,13 +945,13 @@ export default function BirdsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredItems.map((item) => {
             if (item.category === 'Bird') {
-              return <BirdCard key={item.id} bird={item} allBirds={allBirds} allCages={allCages} handleEditClick={handleEditClick} />
+              return <BirdCard key={item.id} bird={item} allBirds={allBirds} allCages={allCages} handleEditClick={handleEditClick} onBirdClick={handleViewBirdClick} />
             }
             if (item.category === 'Cage') {
-                return <CageCard key={item.id} cage={item} allBirds={allBirds} />
+                return <CageCard key={item.id} cage={item} allBirds={allBirds} onBirdClick={handleViewBirdClick} />
             }
             if (item.category === 'Pair') {
-                return <PairCard key={item.id} pair={item} allBirds={allBirds} />
+                return <PairCard key={item.id} pair={item} allBirds={allBirds} onBirdClick={handleViewBirdClick} />
             }
             return null;
           })}
@@ -878,7 +964,3 @@ export default function BirdsPage() {
     </div>
   );
 }
-
-    
-
-    

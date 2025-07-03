@@ -1,14 +1,14 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, PlusCircle } from 'lucide-react';
+import { Search, PlusCircle, ChevronsUpDown } from 'lucide-react';
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, ControllerRenderProps } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,11 +23,18 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
+import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
+
 
 const speciesData = {
   'Turdus migratorius': { name: 'American Robin', subspecies: ['T. m. migratorius', 'T. m. achrusterus'] },
@@ -39,6 +46,7 @@ const speciesData = {
   'Serinus canaria domestica': { name: 'Domestic Canary', subspecies: [] },
 };
 
+const mutationOptions = ['Opaline', 'Cinnamon', 'Lutino', 'Albino', 'Fallow', 'Spangle'] as const;
 
 const birdFormSchema = z.object({
   name: z.string().min(2, {
@@ -52,9 +60,75 @@ const birdFormSchema = z.object({
     required_error: "You need to select a sex.",
   }),
   ringNumber: z.string().optional(),
+  unbanded: z.boolean().default(false),
+  age: z.preprocess(
+      (val) => (val === "" ? undefined : val),
+      z.coerce.number({ invalid_type_error: "Age must be a number."}).int().min(0, "Age can't be negative.").optional()
+  ),
+  visualMutations: z.array(z.string()).default([]),
+  splitMutations: z.array(z.string()).default([]),
 });
 
 type BirdFormValues = z.infer<typeof birdFormSchema>;
+
+function MultiSelectPopover({ field, options, placeholder }: { field: ControllerRenderProps<BirdFormValues, "visualMutations" | "splitMutations">, options: readonly string[], placeholder: string }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <FormControl>
+          <Button
+            variant="outline"
+            role="combobox"
+            className={cn(
+              "w-full justify-between h-10",
+              !field.value?.length && "text-muted-foreground"
+            )}
+          >
+            <span className="truncate">
+              {field.value?.length
+                ? field.value.length === 1
+                  ? field.value[0]
+                  : `${field.value.length} selected`
+                : placeholder}
+            </span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </FormControl>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] max-h-60 overflow-y-auto p-0">
+        <div className="p-2 space-y-1">
+          {options.map((option) => (
+            <FormField
+              key={option}
+              control={undefined}
+              name={field.name}
+              render={() => (
+                <FormItem className="flex flex-row items-center space-x-2 space-y-0 p-1 rounded-md hover:bg-accent">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value?.includes(option)}
+                      onCheckedChange={(checked) => {
+                        return checked
+                          ? field.onChange([...(field.value || []), option])
+                          : field.onChange(
+                              field.value?.filter(
+                                (value) => value !== option
+                              )
+                            );
+                      }}
+                    />
+                  </FormControl>
+                  <FormLabel className="font-normal w-full cursor-pointer py-1">{option}</FormLabel>
+                </FormItem>
+              )}
+            />
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 
 function AddBirdDialog({ onBirdAdded }: { onBirdAdded: (bird: any) => void }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -63,11 +137,22 @@ function AddBirdDialog({ onBirdAdded }: { onBirdAdded: (bird: any) => void }) {
     defaultValues: {
       name: "",
       ringNumber: "",
+      unbanded: false,
+      visualMutations: [],
+      splitMutations: [],
     },
   });
 
   const watchedSpecies = form.watch("species");
+  const unbanded = form.watch("unbanded");
   const subspeciesOptions = watchedSpecies ? speciesData[watchedSpecies as keyof typeof speciesData]?.subspecies : [];
+
+  useEffect(() => {
+    if (unbanded) {
+      form.setValue("ringNumber", "");
+    }
+  }, [unbanded, form]);
+
 
   function onSubmit(data: BirdFormValues) {
     const newBird = {
@@ -76,11 +161,14 @@ function AddBirdDialog({ onBirdAdded }: { onBirdAdded: (bird: any) => void }) {
       species: data.species,
       subspecies: data.subspecies,
       sex: data.sex,
-      ringNumber: data.ringNumber,
+      ringNumber: data.unbanded ? null : data.ringNumber,
       imageUrl: 'https://placehold.co/600x400.png',
       aiHint: `${data.name.toLowerCase()} bird`,
       region: 'Unknown',
       category: 'Bird',
+      age: data.age,
+      visualMutations: data.visualMutations || [],
+      splitMutations: data.splitMutations || [],
     };
     onBirdAdded(newBird);
     form.reset();
@@ -103,7 +191,7 @@ function AddBirdDialog({ onBirdAdded }: { onBirdAdded: (bird: any) => void }) {
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-6 pl-1">
             <div className="space-y-4">
               <FormField
                 control={form.control}
@@ -179,41 +267,100 @@ function AddBirdDialog({ onBirdAdded }: { onBirdAdded: (bird: any) => void }) {
               />
               <FormField
                 control={form.control}
-                name="sex"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sex</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select sex" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="male">Male</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
-                        <SelectItem value="unsexed">Unsexed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
                 name="ringNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ring Number</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Ring Number</FormLabel>
+                      <FormField
+                        control={form.control}
+                        name="unbanded"
+                        render={({ field: unbandedField }) => (
+                          <div className="flex flex-row items-center space-x-2">
+                             <FormControl>
+                                <Checkbox
+                                  checked={unbandedField.value}
+                                  onCheckedChange={(checked) => {
+                                      unbandedField.onChange(checked);
+                                      if (checked) {
+                                          form.setValue('ringNumber', '', { shouldValidate: true });
+                                      }
+                                  }}
+                                />
+                             </FormControl>
+                             <Label htmlFor="unbanded" className="font-normal cursor-pointer">Unbanded</Label>
+                          </div>
+                        )}
+                      />
+                    </div>
                     <FormControl>
-                      <Input placeholder="e.g., USAU-12345" {...field} />
+                      <Input placeholder="e.g., USAU-12345" {...field} disabled={unbanded} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="sex"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sex</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select sex" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                          <SelectItem value="unsexed">Unsexed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="age"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Age</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="e.g., 2" {...field} onChange={event => field.onChange(event.target.valueAsNumber)} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
+                name="visualMutations"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Visual Mutations</FormLabel>
+                        <MultiSelectPopover field={field} options={mutationOptions} placeholder="Select visual mutations" />
+                        <FormMessage />
+                    </FormItem>
+                )}
+               />
+               <FormField
+                control={form.control}
+                name="splitMutations"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Split Mutations</FormLabel>
+                        <MultiSelectPopover field={field} options={mutationOptions} placeholder="Select split mutations" />
+                        <FormMessage />
+                    </FormItem>
+                )}
+               />
             </div>
-            <DialogFooter>
+            <DialogFooter className="pt-4">
               <Button type="submit">Add Bird</Button>
             </DialogFooter>
           </form>
@@ -235,7 +382,10 @@ const initialBirds = [
     aiHint: 'robin bird',
     region: 'North America',
     category: 'Bird',
-    sex: 'unsexed'
+    sex: 'unsexed',
+    age: 2,
+    visualMutations: ['Opaline'],
+    splitMutations: ['Cinnamon']
   },
   {
     id: 2,
@@ -247,7 +397,10 @@ const initialBirds = [
     aiHint: 'blue jay',
     region: 'North America',
     category: 'Bird',
-    sex: 'unsexed'
+    sex: 'unsexed',
+    age: 3,
+    visualMutations: [],
+    splitMutations: ['Lutino']
   },
   {
     id: 3,
@@ -259,7 +412,10 @@ const initialBirds = [
     aiHint: 'cardinal bird',
     region: 'North America',
     category: 'Pair',
-    sex: 'unsexed'
+    sex: 'unsexed',
+    age: 1,
+    visualMutations: [],
+    splitMutations: []
   },
   {
     id: 4,
@@ -271,7 +427,10 @@ const initialBirds = [
     aiHint: 'european robin',
     region: 'Europe',
     category: 'Bird',
-    sex: 'unsexed'
+    sex: 'unsexed',
+    age: 5,
+    visualMutations: ['Cinnamon'],
+    splitMutations: []
   },
     {
     id: 5,
@@ -283,7 +442,10 @@ const initialBirds = [
     aiHint: 'kestrel bird',
     region: 'Europe',
     category: 'Bird',
-    sex: 'unsexed'
+    sex: 'unsexed',
+    age: 2,
+    visualMutations: [],
+    splitMutations: []
   },
   {
     id: 6,
@@ -295,7 +457,10 @@ const initialBirds = [
     aiHint: 'galah bird',
     region: 'Australia',
     category: 'Pair',
-    sex: 'unsexed'
+    sex: 'unsexed',
+    age: 4,
+    visualMutations: ['Fallow'],
+    splitMutations: ['Spangle']
   },
   {
     id: 7,
@@ -307,7 +472,10 @@ const initialBirds = [
     aiHint: 'canary bird',
     region: 'Domestic',
     category: 'Cage',
-    sex: 'unsexed'
+    sex: 'unsexed',
+    age: 1,
+    visualMutations: ['Lutino'],
+    splitMutations: []
   }
 ];
 
@@ -321,7 +489,7 @@ export default function BirdsPage() {
   };
 
   const filteredBirds = birds.filter(bird => {
-    const birdIdentifier = `${bird.name} ${bird.species} ${bird.subspecies || ''} ${bird.ringNumber || ''}`.toLowerCase();
+    const birdIdentifier = `${bird.name} ${bird.species} ${bird.subspecies || ''} ${bird.ringNumber || ''} ${bird.age || ''} ${(bird.visualMutations || []).join(' ')} ${(bird.splitMutations || []).join(' ')}`.toLowerCase();
     const matchesSearch = birdIdentifier.includes(search.toLowerCase());
     const matchesCategory = bird.category === filterCategory;
     return matchesSearch && matchesCategory;
@@ -339,7 +507,7 @@ export default function BirdsPage() {
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
-              placeholder="Search for birds by name, species, or ring number..."
+              placeholder="Search for birds by name, species, ring number, or mutation..."
               className="pl-10"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -363,7 +531,7 @@ export default function BirdsPage() {
       {filteredBirds.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredBirds.map((bird) => (
-            <Card key={bird.id} className="overflow-hidden group">
+            <Card key={bird.id} className="overflow-hidden group flex flex-col">
               <div className="relative aspect-video">
                 <Image 
                   src={bird.imageUrl} 
@@ -378,9 +546,26 @@ export default function BirdsPage() {
                 <CardTitle>{bird.name}</CardTitle>
                 <CardDescription>
                   <p>{bird.species}{bird.subspecies && ` (${bird.subspecies})`}</p>
-                  {bird.ringNumber && <p className="text-xs text-muted-foreground">Ring: {bird.ringNumber}</p>}
+                  <div className="flex justify-between items-center">
+                    {bird.ringNumber ? <p className="text-xs text-muted-foreground">Ring: {bird.ringNumber}</p> : <p className="text-xs text-muted-foreground">Unbanded</p>}
+                    {bird.age !== undefined && <p className="text-xs text-muted-foreground">Age: {bird.age}</p>}
+                  </div>
                 </CardDescription>
               </CardHeader>
+              <CardContent className="pt-0 pb-4 px-6 space-y-2 flex-grow">
+                {bird.visualMutations?.length > 0 && (
+                    <div className="flex flex-wrap gap-1 items-center">
+                        <p className="text-sm font-medium mr-2">Visual:</p>
+                        {bird.visualMutations.map(m => <Badge key={m} variant="outline">{m}</Badge>)}
+                    </div>
+                )}
+                {bird.splitMutations?.length > 0 && (
+                    <div className="flex flex-wrap gap-1 items-center">
+                        <p className="text-sm font-medium mr-2">Split:</p>
+                        {bird.splitMutations.map(m => <Badge key={m} variant="secondary">{m}</Badge>)}
+                    </div>
+                )}
+              </CardContent>
             </Card>
           ))}
         </div>
@@ -392,5 +577,3 @@ export default function BirdsPage() {
     </div>
   );
 }
-
-    

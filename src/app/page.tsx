@@ -33,7 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import Link from 'next/link';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 
 const speciesData = {
@@ -430,7 +430,7 @@ const initialBirds: Bird[] = [
   {
     id: '1',
     species: 'Turdus migratorius',
-    subspecies: undefined,
+    subspecies: 'T. m. migratorius',
     ringNumber: 'A123',
     unbanded: false,
     category: 'Bird',
@@ -438,7 +438,7 @@ const initialBirds: Bird[] = [
     age: 2,
     visualMutations: ['Opaline'],
     splitMutations: ['Cinnamon'],
-    fatherId: undefined, motherId: undefined, mateId: undefined, offspringIds: [],
+    fatherId: undefined, motherId: '2', mateId: '2', offspringIds: ['3'],
   },
   {
     id: '2',
@@ -451,7 +451,7 @@ const initialBirds: Bird[] = [
     age: 3,
     visualMutations: [],
     splitMutations: ['Lutino'],
-    fatherId: undefined, motherId: undefined, mateId: undefined, offspringIds: [],
+    fatherId: undefined, motherId: undefined, mateId: '1', offspringIds: ['3'],
   },
   {
     id: '3',
@@ -464,9 +464,48 @@ const initialBirds: Bird[] = [
     age: 1,
     visualMutations: [],
     splitMutations: [],
-    fatherId: undefined, motherId: undefined, mateId: undefined, offspringIds: [],
+    fatherId: '1', motherId: '2', mateId: undefined, offspringIds: [],
   },
 ];
+
+const BirdRelations = ({ bird, allBirds }: { bird: Bird, allBirds: Bird[] }) => {
+    const getBirdLabel = (targetBird: Bird | undefined) => {
+        if (!targetBird) return <span className="text-muted-foreground">N/A</span>;
+        const speciesName = speciesData[targetBird.species as keyof typeof speciesData]?.name;
+        const identifier = targetBird.ringNumber ? `(${targetBird.ringNumber})` : '(Unbanded)';
+        return `${speciesName} ${identifier}`;
+    };
+
+    const father = allBirds.find(b => b.id === bird.fatherId);
+    const mother = allBirds.find(b => b.id === bird.motherId);
+    const mate = allBirds.find(b => b.id === bird.mateId);
+    const offspring = allBirds.filter(b => bird.offspringIds.includes(b.id));
+
+    return (
+        <div className="space-y-2 pl-8 text-sm">
+            <div className="flex gap-2">
+                <strong className="w-20 shrink-0">Father:</strong>
+                <span>{getBirdLabel(father)}</span>
+            </div>
+            <div className="flex gap-2">
+                <strong className="w-20 shrink-0">Mother:</strong>
+                <span>{getBirdLabel(mother)}</span>
+            </div>
+            <div className="flex gap-2">
+                <strong className="w-20 shrink-0">Mate:</strong>
+                <span>{getBirdLabel(mate)}</span>
+            </div>
+            <div className="flex flex-col gap-1">
+                <strong>Offspring:</strong>
+                {offspring.length > 0 ? (
+                    <ul className="list-disc pl-6 space-y-1 mt-1">
+                        {offspring.map(o => <li key={o.id}>{getBirdLabel(o)}</li>)}
+                    </ul>
+                ) : <span className="text-muted-foreground ml-2">N/A</span>}
+            </div>
+        </div>
+    );
+}
 
 export default function BirdsPage() {
   const [birds, setBirds] = useState(initialBirds);
@@ -553,7 +592,7 @@ export default function BirdsPage() {
             const speciesInfo = speciesData[bird.species as keyof typeof speciesData];
             const displayName = speciesInfo ? speciesInfo.name : bird.species;
             return (
-              <Card key={bird.id} className="flex flex-col bg-card/60">
+              <Card key={bird.id} className="flex flex-col">
                 <CardHeader>
                   <CardTitle className="text-xl">{displayName}</CardTitle>
                   <CardDescription>{bird.species}{bird.subspecies && ` (${bird.subspecies})`}</CardDescription>
@@ -596,16 +635,34 @@ export default function BirdsPage() {
                           </div>
                       )}
                   </div>
+                  <Accordion type="single" collapsible className="w-full pt-2">
+                    <AccordionItem value="family-tree">
+                      <AccordionTrigger className="py-3 text-sm font-medium">
+                        <div className="flex items-center gap-3">
+                          <Users2 className="h-4 w-4 text-primary" />
+                          Family Tree
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <BirdRelations bird={bird} allBirds={birds} />
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="freezing-records">
+                       <AccordionTrigger className="py-3 text-sm font-medium">
+                        <div className="flex items-center gap-3">
+                          <Snowflake className="h-4 w-4 text-primary" />
+                          Freezing Records
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                         <p className="text-muted-foreground px-4 py-2">Freezing records for this bird will be displayed here.</p>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
                 </CardContent>
-                <CardFooter className="bg-background/30 px-6 py-3 flex justify-end gap-2">
-                    <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/birds/${bird.id}/family-tree`}><Users2 className="mr-2" /> Family Tree</Link>
-                    </Button>
-                     <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/birds/${bird.id}/freezing-records`}><Snowflake className="mr-2" /> Records</Link>
-                    </Button>
+                <CardFooter className="flex justify-end pt-0">
                     <Button variant="outline" size="sm" onClick={() => handleEditClick(bird)}>
-                        <Pencil className="mr-2" /> Edit
+                        <Pencil className="mr-2 h-4 w-4" /> Edit
                     </Button>
                 </CardFooter>
               </Card>

@@ -29,13 +29,25 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
+const speciesData = {
+  'Turdus migratorius': { name: 'American Robin', subspecies: ['T. m. migratorius', 'T. m. achrusterus'] },
+  'Cyanocitta cristata': { name: 'Blue Jay', subspecies: ['C. c. cristata', 'C. c. bromia'] },
+  'Cardinalis cardinalis': { name: 'Northern Cardinal', subspecies: ['C. c. cardinalis', 'C. c. floridanus'] },
+  'Erithacus rubecula': { name: 'European Robin', subspecies: ['E. r. rubecula', 'E. r. melophilus'] },
+  'Falco tinnunculus': { name: 'Common Kestrel', subspecies: [] },
+  'Eolophus roseicapilla': { name: 'Galah', subspecies: ['E. r. roseicapilla', 'E. r. assimilis'] },
+  'Serinus canaria domestica': { name: 'Domestic Canary', subspecies: [] },
+};
+
+
 const birdFormSchema = z.object({
   name: z.string().min(2, {
     message: "Name must be at least 2 characters.",
   }),
-  species: z.string().min(2, {
-    message: "Species must be at least 2 characters.",
+  species: z.string({
+    required_error: "You need to select a species.",
   }),
+  subspecies: z.string().optional(),
   sex: z.enum(["male", "female", "unsexed"], {
     required_error: "You need to select a sex.",
   }),
@@ -43,22 +55,24 @@ const birdFormSchema = z.object({
 
 type BirdFormValues = z.infer<typeof birdFormSchema>;
 
-// This could be defined in a separate file, e.g., components/add-bird-dialog.tsx
 function AddBirdDialog({ onBirdAdded }: { onBirdAdded: (bird: any) => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const form = useForm<BirdFormValues>({
     resolver: zodResolver(birdFormSchema),
     defaultValues: {
       name: "",
-      species: "",
     },
   });
+
+  const watchedSpecies = form.watch("species");
+  const subspeciesOptions = watchedSpecies ? speciesData[watchedSpecies as keyof typeof speciesData]?.subspecies : [];
 
   function onSubmit(data: BirdFormValues) {
     const newBird = {
       id: Date.now(),
       name: data.name,
       species: data.species,
+      subspecies: data.subspecies,
       sex: data.sex,
       imageUrl: 'https://placehold.co/600x400.png',
       aiHint: `${data.name.toLowerCase()} bird`,
@@ -90,25 +104,71 @@ function AddBirdDialog({ onBirdAdded }: { onBirdAdded: (bird: any) => void }) {
             <div className="space-y-4">
               <FormField
                 control={form.control}
-                name="name"
+                name="species"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Robin" {...field} />
-                    </FormControl>
+                    <FormLabel>Species</FormLabel>
+                    <Select
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        form.setValue('name', speciesData[value as keyof typeof speciesData]?.name || '');
+                        form.setValue('subspecies', undefined);
+                      }}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a species" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {Object.entries(speciesData).map(([code, { name }]) => (
+                           <SelectItem key={code} value={code}>
+                             {name} <span className="text-muted-foreground ml-2">({code})</span>
+                           </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="subspecies"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Subspecies</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      disabled={!subspeciesOptions || subspeciesOptions.length === 0}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select subspecies (if any)" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {subspeciesOptions.map((sub) => (
+                          <SelectItem key={sub} value={sub}>
+                            {sub}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               <FormField
                 control={form.control}
-                name="species"
+                name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Species</FormLabel>
+                    <FormLabel>Common Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Turdus migratorius" {...field} />
+                      <Input placeholder="e.g., Robin" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -153,6 +213,7 @@ const initialBirds = [
     id: 1,
     name: 'Robin',
     species: 'Turdus migratorius',
+    subspecies: null,
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'robin bird',
     region: 'North America',
@@ -163,6 +224,7 @@ const initialBirds = [
     id: 2,
     name: 'Blue Jay',
     species: 'Cyanocitta cristata',
+    subspecies: null,
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'blue jay',
     region: 'North America',
@@ -173,6 +235,7 @@ const initialBirds = [
     id: 3,
     name: 'Cardinal',
     species: 'Cardinalis cardinalis',
+    subspecies: null,
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'cardinal bird',
     region: 'North America',
@@ -183,6 +246,7 @@ const initialBirds = [
     id: 4,
     name: 'European Robin',
     species: 'Erithacus rubecula',
+    subspecies: null,
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'european robin',
     region: 'Europe',
@@ -193,6 +257,7 @@ const initialBirds = [
     id: 5,
     name: 'Common Kestrel',
     species: 'Falco tinnunculus',
+    subspecies: null,
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'kestrel bird',
     region: 'Europe',
@@ -203,6 +268,7 @@ const initialBirds = [
     id: 6,
     name: 'Galah',
     species: 'Eolophus roseicapilla',
+    subspecies: null,
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'galah bird',
     region: 'Australia',
@@ -213,6 +279,7 @@ const initialBirds = [
     id: 7,
     name: 'Canary',
     species: 'Serinus canaria domestica',
+    subspecies: null,
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'canary bird',
     region: 'Domestic',
@@ -231,7 +298,8 @@ export default function BirdsPage() {
   };
 
   const filteredBirds = birds.filter(bird => {
-    const matchesSearch = bird.name.toLowerCase().includes(search.toLowerCase()) || bird.species.toLowerCase().includes(search.toLowerCase());
+    const birdIdentifier = `${bird.name} ${bird.species} ${bird.subspecies || ''}`.toLowerCase();
+    const matchesSearch = birdIdentifier.includes(search.toLowerCase());
     const matchesCategory = bird.category === filterCategory;
     return matchesSearch && matchesCategory;
   });
@@ -285,7 +353,10 @@ export default function BirdsPage() {
               </div>
               <CardHeader>
                 <CardTitle>{bird.name}</CardTitle>
-                <CardDescription>{bird.species}</CardDescription>
+                <CardDescription>
+                  {bird.species}
+                  {bird.subspecies && ` (${bird.subspecies})`}
+                </CardDescription>
               </CardHeader>
             </Card>
           ))}

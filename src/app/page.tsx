@@ -101,7 +101,7 @@ type CollectionItem = Bird | Cage | Pair;
 
 const getBirdIdentifier = (bird: Bird) => {
     const identifier = bird.ringNumber ? `(${bird.ringNumber})` : '(Unbanded)';
-    return `${bird.species} ${identifier}`;
+    return `${speciesData[bird.species as keyof typeof speciesData]?.name || bird.species} ${identifier}`;
 };
 
 
@@ -526,7 +526,7 @@ const initialPairs: Pair[] = [
 ];
 
 const initialCages: Cage[] = [
-    { id: 'c1', category: 'Cage', name: 'Breeding Cage A', birdIds: ['1'] },
+    { id: 'c1', category: 'Cage', name: 'Breeding Cage A', birdIds: ['1', '4'] },
     { id: 'c2', category: 'Cage', name: 'Flight Cage 1', birdIds: ['2', '3'] },
 ];
 
@@ -571,7 +571,7 @@ const BirdRelations = ({ bird, allBirds }: { bird: Bird, allBirds: Bird[] }) => 
 }
 
 
-function BirdCard({ bird, allBirds, handleEditClick }: { bird: Bird, allBirds: Bird[], handleEditClick: (bird: Bird) => void }) {
+function BirdCard({ bird, allBirds, allCages, handleEditClick }: { bird: Bird; allBirds: Bird[]; allCages: Cage[]; handleEditClick: (bird: Bird) => void; }) {
   const { formatCurrency } = useCurrency();
   const sexVariant = bird.sex === 'male' ? 'default' : bird.sex === 'female' ? 'destructive' : 'secondary';
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
@@ -580,40 +580,62 @@ function BirdCard({ bird, allBirds, handleEditClick }: { bird: Bird, allBirds: B
     setExpandedSection(prev => prev === section ? null : section);
   };
   
+  const cage = allCages.find(c => c.birdIds.includes(bird.id));
+
+  const visualText = bird.visualMutations.join(' ');
+  const splitText = bird.splitMutations.join(' ');
+  let mutationDisplay = visualText;
+  if (splitText) {
+      if (mutationDisplay) mutationDisplay += ' ';
+      mutationDisplay += `/(split) ${splitText}`;
+  }
+
   return (
     <Card key={bird.id} className="flex flex-col h-full">
-      <CardHeader className="flex flex-row items-start justify-between p-4 pb-2">
-        <div>
-            <CardTitle className="text-lg">{bird.species}</CardTitle>
-            <CardDescription>{bird.subspecies}</CardDescription>
-        </div>
-        <Badge variant={sexVariant} className="capitalize shrink-0">{bird.sex}</Badge>
+      <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
+        <Badge variant={sexVariant} className="capitalize">{bird.sex}</Badge>
+        <span className="text-sm text-muted-foreground">{cage?.name || 'No Cage'}</span>
       </CardHeader>
-      <CardContent className="flex-grow space-y-3 p-4 pt-2">
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-          <div className="font-medium text-muted-foreground">Ring #</div>
-          <div>{bird.ringNumber || 'Unbanded'}</div>
-
-          <div className="font-medium text-muted-foreground">Age</div>
-           <div>
+      <CardContent className="flex-grow space-y-3 p-4 pt-0">
+        <div>
+            <p className="font-bold text-lg">{bird.species}</p>
+            <p className="text-sm text-muted-foreground">{bird.subspecies}</p>
+        </div>
+        
+        {mutationDisplay && (
+            <p className="text-sm">{mutationDisplay}</p>
+        )}
+        
+        <div className="flex justify-between items-center text-sm">
+          <span className="text-muted-foreground">Ring: <span className="font-medium text-foreground">{bird.ringNumber || 'Unbanded'}</span></span>
+          <span className="text-muted-foreground">Age: <span className="font-medium text-foreground">
               {bird.age !== undefined && bird.age !== null ? (
                 `${new Date().getFullYear() - bird.age} (${bird.age} ${bird.age === 1 ? 'year' : 'years'} old)`
               ) : (
                 'N/A'
               )}
-            </div>
+            </span>
+          </span>
         </div>
-
-        {(bird.visualMutations.length > 0 || bird.splitMutations.length > 0) && (
-            <div className="space-y-2">
-                <div className="flex flex-wrap gap-1">
-                    {bird.visualMutations.map(m => <Badge key={m} variant="outline">{m}</Badge>)}
-                    {bird.splitMutations.map(m => <Badge key={m} variant="secondary">{m}</Badge>)}
-                </div>
-            </div>
-        )}
       </CardContent>
       <CardFooter className="flex-col items-start gap-4 p-4 pt-0 mt-auto">
+        <div className="w-full pt-2 flex justify-between items-center gap-2">
+          <div className="flex gap-2">
+            <Button size="sm" variant={expandedSection === 'family' ? 'default' : 'secondary'} onClick={() => toggleSection('family')}>
+                <Users2 className="h-4 w-4" />
+            </Button>
+            <Button size="sm" variant={expandedSection === 'breeding' ? 'default' : 'secondary'} onClick={() => toggleSection('breeding')}>
+                <Egg className="h-4 w-4" />
+            </Button>
+            <Button size="sm" variant={expandedSection === 'financials' ? 'default' : 'secondary'} onClick={() => toggleSection('financials')}>
+                <Landmark className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => handleEditClick(bird)}>
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit
+          </Button>
+        </div>
         {expandedSection && (
             <div className="w-full pt-4 border-t border-border">
                 {expandedSection === 'family' && <BirdRelations bird={bird} allBirds={allBirds} />}
@@ -628,21 +650,6 @@ function BirdCard({ bird, allBirds, handleEditClick }: { bird: Bird, allBirds: B
                 )}
             </div>
         )}
-        <div className="w-full pt-2 flex justify-end items-center gap-2">
-            <Button size="sm" variant={expandedSection === 'family' ? 'default' : 'secondary'} onClick={() => toggleSection('family')}>
-                <Users2 className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Family</span>
-            </Button>
-            <Button size="sm" variant={expandedSection === 'breeding' ? 'default' : 'secondary'} onClick={() => toggleSection('breeding')}>
-                <Egg className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Breeding</span>
-            </Button>
-            <Button size="sm" variant={expandedSection === 'financials' ? 'default' : 'secondary'} onClick={() => toggleSection('financials')}>
-                <Landmark className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Financials</span>
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => handleEditClick(bird)}>
-              <Pencil className="h-4 w-4 sm:mr-2" />
-               <span className="hidden sm:inline">Edit</span>
-          </Button>
-        </div>
       </CardFooter>
     </Card>
   )
@@ -691,7 +698,7 @@ function PairCard({ pair, allBirds }: { pair: Pair, allBirds: Bird[] }) {
             <CardHeader className="p-4">
                 <CardTitle>Breeding Pair</CardTitle>
                 <CardDescription>
-                  {male ? male.species : 'Pair'}
+                  {male ? speciesData[male.species as keyof typeof speciesData]?.name || male.species : 'Pair'}
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 p-4 pt-0">
@@ -799,7 +806,7 @@ export default function BirdsPage() {
     }
 
     const bird = item as Bird;
-    const birdIdentifier = `${bird.species} ${bird.subspecies || ''} ${bird.ringNumber || ''} ${bird.age || ''} ${(bird.visualMutations || []).join(' ')} ${(bird.splitMutations || []).join(' ')}`.toLowerCase();
+    const birdIdentifier = `${bird.species} ${speciesData[bird.species as keyof typeof speciesData]?.name || ''} ${bird.subspecies || ''} ${bird.ringNumber || ''} ${bird.age || ''} ${(bird.visualMutations || []).join(' ')} ${(bird.splitMutations || []).join(' ')}`.toLowerCase();
     return birdIdentifier.includes(search.toLowerCase());
   });
 
@@ -852,7 +859,7 @@ export default function BirdsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredItems.map((item) => {
             if (item.category === 'Bird') {
-              return <BirdCard key={item.id} bird={item} allBirds={allBirds} handleEditClick={handleEditClick} />
+              return <BirdCard key={item.id} bird={item} allBirds={allBirds} allCages={allCages} handleEditClick={handleEditClick} />
             }
             if (item.category === 'Cage') {
                 return <CageCard key={item.id} cage={item} allBirds={allBirds} />
@@ -871,5 +878,7 @@ export default function BirdsPage() {
     </div>
   );
 }
+
+    
 
     

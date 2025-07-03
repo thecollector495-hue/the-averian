@@ -33,6 +33,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Badge } from "@/components/ui/badge";
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 
 
 const speciesData = {
@@ -484,28 +485,35 @@ export default function BirdsPage() {
             const speciesInfo = speciesData[bird.species as keyof typeof speciesData];
             const displayName = speciesInfo ? speciesInfo.name : bird.species;
             return (
-              <Card key={bird.id} className="overflow-hidden group flex flex-col">
+              <Card key={bird.id} className="flex flex-col">
                 <CardHeader>
-                  <CardTitle>{displayName}</CardTitle>
-                  <CardDescription>
-                    <p>{bird.species}{bird.subspecies && ` (${bird.subspecies})`}</p>
-                    <div className="flex justify-between items-center">
-                      {bird.ringNumber ? <p className="text-xs text-muted-foreground">Ring: {bird.ringNumber}</p> : <p className="text-xs text-muted-foreground">Unbanded</p>}
-                      {bird.age !== undefined && <p className="text-xs text-muted-foreground">Age: {bird.age}</p>}
-                    </div>
-                  </CardDescription>
+                  <CardTitle className="text-xl">{displayName}</CardTitle>
+                  <CardDescription>{bird.species}{bird.subspecies && ` (${bird.subspecies})`}</CardDescription>
                 </CardHeader>
-                <CardContent className="pt-0 pb-4 px-6 space-y-2 flex-grow">
+                <CardContent className="flex-grow space-y-3">
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>
+                        {bird.ringNumber ? `Ring: ${bird.ringNumber}` : `Unbanded`}
+                    </span>
+                    <span>
+                        {bird.age !== undefined && `Age: ${bird.age} ${bird.age === 1 ? 'year' : 'years'}`}
+                    </span>
+                  </div>
+                  { (bird.visualMutations?.length > 0 || bird.splitMutations?.length > 0) && <Separator /> }
                   {bird.visualMutations?.length > 0 && (
-                      <div className="flex flex-wrap gap-1 items-center">
-                          <p className="text-sm font-medium mr-2">Visual:</p>
-                          {bird.visualMutations.map(m => <Badge key={m} variant="outline">{m}</Badge>)}
+                      <div className="space-y-1">
+                          <p className="text-sm font-medium">Visual Mutations</p>
+                          <div className="flex flex-wrap gap-1">
+                              {bird.visualMutations.map(m => <Badge key={m} variant="outline">{m}</Badge>)}
+                          </div>
                       </div>
                   )}
                   {bird.splitMutations?.length > 0 && (
-                      <div className="flex flex-wrap gap-1 items-center">
-                          <p className="text-sm font-medium mr-2">Split:</p>
-                          {bird.splitMutations.map(m => <Badge key={m} variant="secondary">{m}</Badge>)}
+                      <div className="space-y-1">
+                          <p className="text-sm font-medium">Split Mutations</p>
+                          <div className="flex flex-wrap gap-1">
+                              {bird.splitMutations.map(m => <Badge key={m} variant="secondary">{m}</Badge>)}
+                          </div>
                       </div>
                   )}
                 </CardContent>

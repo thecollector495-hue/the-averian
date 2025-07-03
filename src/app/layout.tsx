@@ -4,8 +4,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { BottomNavigation } from '@/components/bottom-navigation';
 
 export const metadata: Metadata = {
-  title: 'Feathered Ledger',
-  description: 'A personal finance tracker for the modern age.',
+  title: 'Bird Watcher',
+  description: 'Explore the world of birds.',
 };
 
 export default function RootLayout({

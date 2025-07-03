@@ -14,7 +14,8 @@ const allBirds = [
     species: 'Turdus migratorius',
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'robin bird',
-    region: 'North America'
+    region: 'North America',
+    category: 'Bird'
   },
   {
     id: 2,
@@ -22,7 +23,8 @@ const allBirds = [
     species: 'Cyanocitta cristata',
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'blue jay',
-    region: 'North America'
+    region: 'North America',
+    category: 'Bird'
   },
   {
     id: 3,
@@ -30,7 +32,8 @@ const allBirds = [
     species: 'Cardinalis cardinalis',
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'cardinal bird',
-    region: 'North America'
+    region: 'North America',
+    category: 'Pair'
   },
   {
     id: 4,
@@ -38,7 +41,8 @@ const allBirds = [
     species: 'Erithacus rubecula',
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'european robin',
-    region: 'Europe'
+    region: 'Europe',
+    category: 'Bird'
   },
     {
     id: 5,
@@ -46,7 +50,8 @@ const allBirds = [
     species: 'Falco tinnunculus',
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'kestrel bird',
-    region: 'Europe'
+    region: 'Europe',
+    category: 'Bird'
   },
   {
     id: 6,
@@ -54,21 +59,31 @@ const allBirds = [
     species: 'Eolophus roseicapilla',
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'galah bird',
-    region: 'Australia'
+    region: 'Australia',
+    category: 'Pair'
+  },
+  {
+    id: 7,
+    name: 'Canary',
+    species: 'Serinus canaria domestica',
+    imageUrl: 'https://placehold.co/600x400.png',
+    aiHint: 'canary bird',
+    region: 'Domestic',
+    category: 'Cage'
   }
 ];
 
 export default function BirdsPage() {
   const [search, setSearch] = useState('');
-  const [filterRegion, setFilterRegion] = useState('all');
+  const [filterCategory, setFilterCategory] = useState('all');
 
   const filteredBirds = allBirds.filter(bird => {
     const matchesSearch = bird.name.toLowerCase().includes(search.toLowerCase()) || bird.species.toLowerCase().includes(search.toLowerCase());
-    const matchesRegion = filterRegion === 'all' || bird.region === filterRegion;
-    return matchesSearch && matchesRegion;
+    const matchesCategory = filterCategory === 'all' || bird.category === filterCategory;
+    return matchesSearch && matchesCategory;
   });
 
-  const regions = ['all', ...Array.from(new Set(allBirds.map(b => b.region)))];
+  const categories = ['all', 'Bird', 'Cage', 'Pair'];
 
   return (
     <div className="container mx-auto p-4 sm:p-6 md:p-8">
@@ -85,14 +100,14 @@ export default function BirdsPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Select value={filterRegion} onValueChange={setFilterRegion}>
+          <Select value={filterCategory} onValueChange={setFilterCategory}>
             <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Filter by region" />
+              <SelectValue placeholder="Filter by type" />
             </SelectTrigger>
             <SelectContent>
-              {regions.map(region => (
-                <SelectItem key={region} value={region}>
-                  {region === 'all' ? 'All Regions' : region}
+              {categories.map(category => (
+                <SelectItem key={category} value={category}>
+                  {category === 'all' ? 'All Types' : category}
                 </SelectItem>
               ))}
             </SelectContent>

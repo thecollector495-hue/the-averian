@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bird, Settings } from 'lucide-react';
+import { Bird, Settings, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/', label: 'Birds', icon: Bird },
+  { href: '/breeding', label: 'Breeding', icon: ClipboardList },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 

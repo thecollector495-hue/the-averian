@@ -5,9 +5,9 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, PlusCircle, ChevronsUpDown, Users2, Egg, Pencil, Landmark } from 'lucide-react';
+import { Search, PlusCircle, ChevronsUpDown, Users2, Egg, Pencil, Landmark, ClipboardList, Trash2, Calendar as CalendarIcon } from 'lucide-react';
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, ControllerRenderProps } from "react-hook-form";
+import { useForm, ControllerRenderProps, useFieldArray, Controller } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,19 +34,11 @@ import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useCurrency } from '@/context/CurrencyContext';
+import { Bird, Cage, Pair, BreedingRecord, CollectionItem, speciesData, mutationOptions, getBirdIdentifier, initialItems, Egg as EggType } from '@/lib/data';
+import { format } from 'date-fns';
+import { Calendar } from "@/components/ui/calendar"
+import { Textarea } from '@/components/ui/textarea';
 
-
-const speciesData = {
-  'Turdus migratorius': { name: 'American Robin', subspecies: ['T. m. migratorius', 'T. m. achrusterus'] },
-  'Cyanocitta cristata': { name: 'Blue Jay', subspecies: ['C. c. cristata', 'C. c. bromia'] },
-  'Cardinalis cardinalis': { name: 'Northern Cardinal', subspecies: ['C. c. cardinalis', 'C. c. floridanus'] },
-  'Erithacus rubecula': { name: 'European Robin', subspecies: ['E. r. rubecula', 'E. r. melophilus'] },
-  'Falco tinnunculus': { name: 'Common Kestrel', subspecies: [] },
-  'Eolophus roseicapilla': { name: 'Galah', subspecies: ['E. r. roseicapilla', 'E. r. assimilis'] },
-  'Serinus canaria domestica': { name: 'Domestic Canary', subspecies: [] },
-};
-
-const mutationOptions = ['Opaline', 'Cinnamon', 'Lutino', 'Albino', 'Fallow', 'Spangle', 'Pied'] as const;
 
 const birdFormSchema = z.object({
   species: z.string({
@@ -80,30 +72,6 @@ const birdFormSchema = z.object({
 });
 
 type BirdFormValues = z.infer<typeof birdFormSchema>;
-
-type Bird = Omit<BirdFormValues, 'cageId'> & { id: string, category: 'Bird' };
-
-type Cage = {
-  id: string;
-  name: string;
-  category: 'Cage';
-  birdIds: string[];
-};
-
-type Pair = {
-  id: string;
-  category: 'Pair';
-  maleId: string;
-  femaleId: string;
-};
-
-type CollectionItem = Bird | Cage | Pair;
-
-const getBirdIdentifier = (bird: Bird) => {
-    const identifier = bird.ringNumber ? `(${bird.ringNumber})` : '(Unbanded)';
-    const speciesName = speciesData[bird.species as keyof typeof speciesData]?.name || bird.species;
-    return `${speciesName} ${identifier}`;
-};
 
 
 function MultiSelectPopover({ field, options, placeholder }: { field: ControllerRenderProps<any, any>, options: { value: string; label: string }[], placeholder: string }) {
@@ -507,33 +475,6 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
   );
 }
 
-const initialBirds: Bird[] = [
-  {
-    id: '1', species: 'Turdus migratorius', subspecies: 'T. m. migratorius', ringNumber: 'A123', unbanded: false, category: 'Bird', sex: 'male', age: 2, visualMutations: ['Opaline'], splitMutations: ['Cinnamon', 'Pied'], fatherId: undefined, motherId: undefined, mateId: '4', offspringIds: ['3'], paidPrice: 150, estimatedValue: 200,
-  },
-  {
-    id: '2', species: 'Cyanocitta cristata', subspecies: undefined, ringNumber: 'B456', unbanded: false, category: 'Bird', sex: 'female', age: 3, visualMutations: [], splitMutations: ['Lutino'], fatherId: undefined, motherId: undefined, mateId: undefined, offspringIds: [], paidPrice: 80, estimatedValue: 120,
-  },
-  {
-    id: '3', species: 'Turdus migratorius', subspecies: undefined, ringNumber: undefined, unbanded: true, category: 'Bird', sex: 'unsexed', age: 1, visualMutations: [], splitMutations: [], fatherId: '1', motherId: '4', mateId: undefined, offspringIds: [], paidPrice: 0, estimatedValue: 50,
-  },
-  {
-    id: '4', species: 'Turdus migratorius', subspecies: 'T. m. achrusterus', ringNumber: 'C789', unbanded: false, category: 'Bird', sex: 'female', age: 2, visualMutations: ['Cinnamon'], splitMutations: [], fatherId: undefined, motherId: undefined, mateId: '1', offspringIds: ['3'], paidPrice: 160, estimatedValue: 220,
-  },
-];
-
-const initialPairs: Pair[] = [
-    { id: 'p1', category: 'Pair', maleId: '1', femaleId: '4' },
-];
-
-const initialCages: Cage[] = [
-    { id: 'c1', category: 'Cage', name: 'Breeding Cage A', birdIds: ['1', '4'] },
-    { id: 'c2', category: 'Cage', name: 'Flight Cage 1', birdIds: ['2', '3'] },
-];
-
-const initialItems: CollectionItem[] = [...initialBirds, ...initialPairs, ...initialCages];
-
-
 const BirdRelations = ({ bird, allBirds, onBirdClick }: { bird: Bird, allBirds: Bird[], onBirdClick: (bird: Bird) => void }) => {
 
     const getBirdLabel = (targetBird: Bird | undefined) => {
@@ -579,7 +520,7 @@ const BirdRelations = ({ bird, allBirds, onBirdClick }: { bird: Bird, allBirds: 
     );
 }
 
-function BirdDetailsDialog({ bird, allBirds, allCages, onClose }: { bird: Bird | null; allBirds: Bird[]; allCages: Cage[]; onClose: () => void; }) {
+function BirdDetailsDialog({ bird, allBirds, allCages, onClose, onBirdClick }: { bird: Bird | null; allBirds: Bird[]; allCages: Cage[]; onClose: () => void; onBirdClick: (bird: Bird) => void; }) {
   const { formatCurrency } = useCurrency();
   if (!bird) return null;
 
@@ -592,7 +533,15 @@ function BirdDetailsDialog({ bird, allBirds, allCages, onClose }: { bird: Bird |
   const mother = allBirds.find(b => b.id === bird.motherId);
   const mate = allBirds.find(b => b.id === bird.mateId);
   const offspring = allBirds.filter(b => bird.offspringIds.includes(b.id));
-
+  
+  const BirdLink = ({ bird }: { bird: Bird | undefined }) => {
+        if (!bird) return <span className="font-semibold">N/A</span>;
+        return (
+            <Button variant="link" className="p-0 h-auto font-normal text-base text-left justify-start" onClick={() => onBirdClick(bird)}>
+                <span className="font-semibold">{getBirdIdentifier(bird)}</span>
+            </Button>
+        );
+    }
 
   return (
     <Dialog open={!!bird} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
@@ -617,14 +566,14 @@ function BirdDetailsDialog({ bird, allBirds, allCages, onClose }: { bird: Bird |
           <div className="space-y-2 rounded-lg border p-3">
             <h4 className="font-medium text-base">Genetics & Family</h4>
              <p><span className="text-muted-foreground">Mutations:</span> <span className="font-semibold">{mutationDisplay || 'None'}</span></p>
-            <p><span className="text-muted-foreground">Father:</span> <span className="font-semibold">{father ? getBirdIdentifier(father) : 'N/A'}</span></p>
-            <p><span className="text-muted-foreground">Mother:</span> <span className="font-semibold">{mother ? getBirdIdentifier(mother) : 'N/A'}</span></p>
-            <p><span className="text-muted-foreground">Mate:</span> <span className="font-semibold">{mate ? getBirdIdentifier(mate) : 'N/A'}</span></p>
+            <p className="flex items-center gap-2"><span className="text-muted-foreground">Father:</span> <BirdLink bird={father} /></p>
+            <p className="flex items-center gap-2"><span className="text-muted-foreground">Mother:</span> <BirdLink bird={mother} /></p>
+            <p className="flex items-center gap-2"><span className="text-muted-foreground">Mate:</span> <BirdLink bird={mate} /></p>
              <div>
                 <span className="text-muted-foreground">Offspring:</span>
                 {offspring.length > 0 ? (
                     <ul className="list-disc pl-5 mt-1">
-                        {offspring.map(o => <li key={o.id}><span className="font-semibold">{getBirdIdentifier(o)}</span></li>)}
+                        {offspring.map(o => <li key={o.id}><BirdLink bird={o}/></li>)}
                     </ul>
                 ) : <span className="font-semibold ml-2">N/A</span>}
             </div>
@@ -643,8 +592,59 @@ function BirdDetailsDialog({ bird, allBirds, allCages, onClose }: { bird: Bird |
   );
 }
 
+function BreedingRecordDetailsDialog({ record, allBirds, allPairs, onClose, onBirdClick }: { record: BreedingRecord | null, allBirds: Bird[], allPairs: Pair[], onClose: () => void, onBirdClick: (bird: Bird) => void }) {
+    if (!record) return null;
 
-function BirdCard({ bird, allBirds, allCages, handleEditClick, onBirdClick }: { bird: Bird; allBirds: Bird[]; allCages: Cage[]; handleEditClick: (bird: Bird) => void; onBirdClick: (bird: Bird) => void; }) {
+    const pair = allPairs.find(p => p.id === record.pairId);
+    if (!pair) return null;
+
+    const male = allBirds.find(b => b.id === pair.maleId);
+    const female = allBirds.find(b => b.id === pair.femaleId);
+
+    return (
+        <Dialog open={!!record} onOpenChange={(isOpen) => !isOpen && onClose()}>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Breeding Record Details</DialogTitle>
+                    <DialogDescription>Started on {format(new Date(record.startDate), 'PPP')}</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
+                    {male && female && (
+                        <div>
+                            <h4 className="font-semibold mb-1">Breeding Pair</h4>
+                            <p className="text-sm"><span className="text-muted-foreground">Male:</span> <Button variant="link" onClick={() => onBirdClick(male)} className="p-0 h-auto">{getBirdIdentifier(male)}</Button></p>
+                            <p className="text-sm"><span className="text-muted-foreground">Female:</span> <Button variant="link" onClick={() => onBirdClick(female)} className="p-0 h-auto">{getBirdIdentifier(female)}</Button></p>
+                        </div>
+                    )}
+                    <div>
+                        <h4 className="font-semibold mb-2">Egg Log</h4>
+                        <div className="space-y-2">
+                            {record.eggs.map(egg => (
+                                <div key={egg.id} className="text-sm p-2 border rounded-md grid grid-cols-2 gap-x-4">
+                                    <p><span className="text-muted-foreground">Laid:</span> {format(new Date(egg.laidDate), 'PPP')}</p>
+                                    <p><span className="text-muted-foreground">Status:</span> {egg.status}</p>
+                                    {egg.hatchDate && <p><span className="text-muted-foreground">Hatched:</span> {format(new Date(egg.hatchDate), 'PPP')}</p>}
+                                    {egg.chickId && allBirds.find(b => b.id === egg.chickId) && 
+                                        <p><span className="text-muted-foreground">Chick:</span> <Button variant="link" onClick={() => onBirdClick(allBirds.find(b => b.id === egg.chickId)!)} className="p-0 h-auto">{getBirdIdentifier(allBirds.find(b => b.id === egg.chickId)!)}</Button></p>
+                                    }
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    {record.notes && (
+                        <div>
+                            <h4 className="font-semibold mb-1">Notes</h4>
+                            <p className="text-sm text-muted-foreground">{record.notes}</p>
+                        </div>
+                    )}
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+
+function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecords, handleEditClick, onBirdClick, onViewBreedingRecord }: { bird: Bird; allBirds: Bird[]; allCages: Cage[]; allPairs: Pair[], allBreedingRecords: BreedingRecord[], handleEditClick: (bird: Bird) => void; onBirdClick: (bird: Bird) => void; onViewBreedingRecord: (record: BreedingRecord) => void; }) {
   const { formatCurrency } = useCurrency();
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
@@ -655,8 +655,13 @@ function BirdCard({ bird, allBirds, allCages, handleEditClick, onBirdClick }: { 
   const cage = allCages.find(c => c.birdIds.includes(bird.id));
 
   const visualText = bird.visualMutations.join(' ');
-  const splitText = bird.splitMutations.length > 0 ? `/(split) ${bird.splitMutations.join(' ')}` : '';
-  const mutationDisplay = `${visualText} ${splitText}`.trim();
+  const splitText = bird.splitMutations.length > 0 ? ` / (split) ${bird.splitMutations.join(' ')}` : '';
+  const mutationDisplay = `${visualText}${splitText}`.trim();
+  
+  const birdBreedingRecords = allBreedingRecords.filter(r => {
+    const pair = allPairs.find(p => p.id === r.pairId);
+    return pair && (pair.maleId === bird.id || pair.femaleId === bird.id);
+  });
 
 
   return (
@@ -708,7 +713,15 @@ function BirdCard({ bird, allBirds, allCages, handleEditClick, onBirdClick }: { 
         {expandedSection && (
             <div className="w-full pt-4 border-t border-border">
                 {expandedSection === 'family' && <BirdRelations bird={bird} allBirds={allBirds} onBirdClick={onBirdClick} />}
-                {expandedSection === 'breeding' && <p className="text-muted-foreground px-4 py-2 text-sm">Breeding records for this bird will be displayed here.</p>}
+                {expandedSection === 'breeding' && (
+                  <div className="px-2 py-1 text-sm space-y-2">
+                    {birdBreedingRecords.length > 0 ? birdBreedingRecords.map(rec => (
+                      <Button key={rec.id} variant="ghost" className="w-full justify-start h-auto" onClick={() => onViewBreedingRecord(rec)}>
+                        Breeding Record from {format(new Date(rec.startDate), 'PPP')}
+                      </Button>
+                    )) : <p className="text-muted-foreground text-center">No breeding records found.</p>}
+                  </div>
+                )}
                 {expandedSection === 'financials' && (
                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm pl-4">
                         <div className="font-medium text-muted-foreground">Paid Price</div>
@@ -803,9 +816,12 @@ export default function BirdsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBird, setEditingBird] = useState<Bird | null>(null);
   const [viewingBird, setViewingBird] = useState<Bird | null>(null);
+  const [viewingBreedingRecord, setViewingBreedingRecord] = useState<BreedingRecord | null>(null);
   
   const allBirds = items.filter((item): item is Bird => item.category === 'Bird');
   const allCages = items.filter((item): item is Cage => item.category === 'Cage');
+  const allPairs = items.filter((item): item is Pair => item.category === 'Pair');
+  const allBreedingRecords = items.filter((item): item is BreedingRecord => item.category === 'BreedingRecord');
 
   const handleAddClick = () => {
     setEditingBird(null);
@@ -820,6 +836,10 @@ export default function BirdsPage() {
   const handleViewBirdClick = (bird: Bird) => {
     setViewingBird(bird);
   };
+
+  const handleViewBreedingRecord = (record: BreedingRecord) => {
+    setViewingBreedingRecord(record);
+  }
 
   const handleSaveBird = (formData: BirdFormValues) => {
     const birdToSave: Bird = {
@@ -907,6 +927,17 @@ export default function BirdsPage() {
         allBirds={allBirds}
         allCages={allCages}
         onClose={() => setViewingBird(null)}
+        onBirdClick={(bird) => {
+            // This allows clicking through birds in the details dialog
+            setViewingBird(bird);
+        }}
+      />
+      <BreedingRecordDetailsDialog
+        record={viewingBreedingRecord}
+        allBirds={allBirds}
+        allPairs={allPairs}
+        onClose={() => setViewingBreedingRecord(null)}
+        onBirdClick={handleViewBirdClick}
       />
       <div className="flex flex-col gap-4 mb-8">
         <h1 className="text-4xl md:text-5xl font-bold font-headline text-center">Bird Watcher</h1>
@@ -945,7 +976,7 @@ export default function BirdsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredItems.map((item) => {
             if (item.category === 'Bird') {
-              return <BirdCard key={item.id} bird={item} allBirds={allBirds} allCages={allCages} handleEditClick={handleEditClick} onBirdClick={handleViewBirdClick} />
+              return <BirdCard key={item.id} bird={item} allBirds={allBirds} allCages={allCages} allPairs={allPairs} allBreedingRecords={allBreedingRecords} handleEditClick={handleEditClick} onBirdClick={handleViewBirdClick} onViewBreedingRecord={handleViewBreedingRecord} />
             }
             if (item.category === 'Cage') {
                 return <CageCard key={item.id} cage={item} allBirds={allBirds} onBirdClick={handleViewBirdClick} />
@@ -964,3 +995,4 @@ export default function BirdsPage() {
     </div>
   );
 }
+

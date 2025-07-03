@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -49,9 +48,6 @@ const speciesData = {
 const mutationOptions = ['Opaline', 'Cinnamon', 'Lutino', 'Albino', 'Fallow', 'Spangle'] as const;
 
 const birdFormSchema = z.object({
-  name: z.string().min(2, {
-    message: "Name must be at least 2 characters.",
-  }),
   species: z.string({
     required_error: "You need to select a species.",
   }),
@@ -135,7 +131,6 @@ function AddBirdDialog({ onBirdAdded }: { onBirdAdded: (bird: any) => void }) {
   const form = useForm<BirdFormValues>({
     resolver: zodResolver(birdFormSchema),
     defaultValues: {
-      name: "",
       ringNumber: "",
       unbanded: false,
       visualMutations: [],
@@ -157,14 +152,10 @@ function AddBirdDialog({ onBirdAdded }: { onBirdAdded: (bird: any) => void }) {
   function onSubmit(data: BirdFormValues) {
     const newBird = {
       id: Date.now(),
-      name: data.name,
       species: data.species,
       subspecies: data.subspecies,
       sex: data.sex,
       ringNumber: data.unbanded ? null : data.ringNumber,
-      imageUrl: 'https://placehold.co/600x400.png',
-      aiHint: `${data.name.toLowerCase()} bird`,
-      region: 'Unknown',
       category: 'Bird',
       age: data.age,
       visualMutations: data.visualMutations || [],
@@ -202,7 +193,6 @@ function AddBirdDialog({ onBirdAdded }: { onBirdAdded: (bird: any) => void }) {
                     <Select
                       onValueChange={(value) => {
                         field.onChange(value);
-                        form.setValue('name', speciesData[value as keyof typeof speciesData]?.name || '');
                         form.setValue('subspecies', undefined);
                       }}
                       defaultValue={field.value}
@@ -248,19 +238,6 @@ function AddBirdDialog({ onBirdAdded }: { onBirdAdded: (bird: any) => void }) {
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Common Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Robin" {...field} />
-                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -374,13 +351,9 @@ function AddBirdDialog({ onBirdAdded }: { onBirdAdded: (bird: any) => void }) {
 const initialBirds = [
   {
     id: 1,
-    name: 'Robin',
     species: 'Turdus migratorius',
     subspecies: null,
     ringNumber: 'A123',
-    imageUrl: 'https://placehold.co/600x400.png',
-    aiHint: 'robin bird',
-    region: 'North America',
     category: 'Bird',
     sex: 'unsexed',
     age: 2,
@@ -389,13 +362,9 @@ const initialBirds = [
   },
   {
     id: 2,
-    name: 'Blue Jay',
     species: 'Cyanocitta cristata',
     subspecies: null,
     ringNumber: 'B456',
-    imageUrl: 'https://placehold.co/600x400.png',
-    aiHint: 'blue jay',
-    region: 'North America',
     category: 'Bird',
     sex: 'unsexed',
     age: 3,
@@ -404,13 +373,9 @@ const initialBirds = [
   },
   {
     id: 3,
-    name: 'Cardinal',
     species: 'Cardinalis cardinalis',
     subspecies: null,
     ringNumber: null,
-    imageUrl: 'https://placehold.co/600x400.png',
-    aiHint: 'cardinal bird',
-    region: 'North America',
     category: 'Pair',
     sex: 'unsexed',
     age: 1,
@@ -419,13 +384,9 @@ const initialBirds = [
   },
   {
     id: 4,
-    name: 'European Robin',
     species: 'Erithacus rubecula',
     subspecies: null,
     ringNumber: 'E789',
-    imageUrl: 'https://placehold.co/600x400.png',
-    aiHint: 'european robin',
-    region: 'Europe',
     category: 'Bird',
     sex: 'unsexed',
     age: 5,
@@ -434,13 +395,9 @@ const initialBirds = [
   },
     {
     id: 5,
-    name: 'Common Kestrel',
     species: 'Falco tinnunculus',
     subspecies: null,
     ringNumber: null,
-    imageUrl: 'https://placehold.co/600x400.png',
-    aiHint: 'kestrel bird',
-    region: 'Europe',
     category: 'Bird',
     sex: 'unsexed',
     age: 2,
@@ -449,13 +406,9 @@ const initialBirds = [
   },
   {
     id: 6,
-    name: 'Galah',
     species: 'Eolophus roseicapilla',
     subspecies: null,
     ringNumber: 'G101',
-    imageUrl: 'https://placehold.co/600x400.png',
-    aiHint: 'galah bird',
-    region: 'Australia',
     category: 'Pair',
     sex: 'unsexed',
     age: 4,
@@ -464,13 +417,9 @@ const initialBirds = [
   },
   {
     id: 7,
-    name: 'Canary',
     species: 'Serinus canaria domestica',
     subspecies: null,
     ringNumber: null,
-    imageUrl: 'https://placehold.co/600x400.png',
-    aiHint: 'canary bird',
-    region: 'Domestic',
     category: 'Cage',
     sex: 'unsexed',
     age: 1,
@@ -489,7 +438,8 @@ export default function BirdsPage() {
   };
 
   const filteredBirds = birds.filter(bird => {
-    const birdIdentifier = `${bird.name} ${bird.species} ${bird.subspecies || ''} ${bird.ringNumber || ''} ${bird.age || ''} ${(bird.visualMutations || []).join(' ')} ${(bird.splitMutations || []).join(' ')}`.toLowerCase();
+    const speciesName = speciesData[bird.species as keyof typeof speciesData]?.name || '';
+    const birdIdentifier = `${speciesName} ${bird.species} ${bird.subspecies || ''} ${bird.ringNumber || ''} ${bird.age || ''} ${(bird.visualMutations || []).join(' ')} ${(bird.splitMutations || []).join(' ')}`.toLowerCase();
     const matchesSearch = birdIdentifier.includes(search.toLowerCase());
     const matchesCategory = bird.category === filterCategory;
     return matchesSearch && matchesCategory;
@@ -530,44 +480,38 @@ export default function BirdsPage() {
       
       {filteredBirds.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredBirds.map((bird) => (
-            <Card key={bird.id} className="overflow-hidden group flex flex-col">
-              <div className="relative aspect-video">
-                <Image 
-                  src={bird.imageUrl} 
-                  alt={bird.name}
-                  fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  className="object-cover transition-transform duration-300 group-hover:scale-105"
-                  data-ai-hint={bird.aiHint}
-                />
-              </div>
-              <CardHeader>
-                <CardTitle>{bird.name}</CardTitle>
-                <CardDescription>
-                  <p>{bird.species}{bird.subspecies && ` (${bird.subspecies})`}</p>
-                  <div className="flex justify-between items-center">
-                    {bird.ringNumber ? <p className="text-xs text-muted-foreground">Ring: {bird.ringNumber}</p> : <p className="text-xs text-muted-foreground">Unbanded</p>}
-                    {bird.age !== undefined && <p className="text-xs text-muted-foreground">Age: {bird.age}</p>}
-                  </div>
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0 pb-4 px-6 space-y-2 flex-grow">
-                {bird.visualMutations?.length > 0 && (
-                    <div className="flex flex-wrap gap-1 items-center">
-                        <p className="text-sm font-medium mr-2">Visual:</p>
-                        {bird.visualMutations.map(m => <Badge key={m} variant="outline">{m}</Badge>)}
+          {filteredBirds.map((bird) => {
+            const speciesInfo = speciesData[bird.species as keyof typeof speciesData];
+            const displayName = speciesInfo ? speciesInfo.name : bird.species;
+            return (
+              <Card key={bird.id} className="overflow-hidden group flex flex-col">
+                <CardHeader>
+                  <CardTitle>{displayName}</CardTitle>
+                  <CardDescription>
+                    <p>{bird.species}{bird.subspecies && ` (${bird.subspecies})`}</p>
+                    <div className="flex justify-between items-center">
+                      {bird.ringNumber ? <p className="text-xs text-muted-foreground">Ring: {bird.ringNumber}</p> : <p className="text-xs text-muted-foreground">Unbanded</p>}
+                      {bird.age !== undefined && <p className="text-xs text-muted-foreground">Age: {bird.age}</p>}
                     </div>
-                )}
-                {bird.splitMutations?.length > 0 && (
-                    <div className="flex flex-wrap gap-1 items-center">
-                        <p className="text-sm font-medium mr-2">Split:</p>
-                        {bird.splitMutations.map(m => <Badge key={m} variant="secondary">{m}</Badge>)}
-                    </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0 pb-4 px-6 space-y-2 flex-grow">
+                  {bird.visualMutations?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 items-center">
+                          <p className="text-sm font-medium mr-2">Visual:</p>
+                          {bird.visualMutations.map(m => <Badge key={m} variant="outline">{m}</Badge>)}
+                      </div>
+                  )}
+                  {bird.splitMutations?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 items-center">
+                          <p className="text-sm font-medium mr-2">Split:</p>
+                          {bird.splitMutations.map(m => <Badge key={m} variant="secondary">{m}</Badge>)}
+                      </div>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
       ) : (
         <div className="text-center py-16">

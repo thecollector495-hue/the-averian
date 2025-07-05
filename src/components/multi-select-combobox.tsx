@@ -14,7 +14,7 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
     
     const selectedValues = new Set(Array.isArray(field.value) ? field.value : []);
 
-    const handleSelect = (valueToToggle: string) => {
+    const handleToggle = (valueToToggle: string) => {
         const newSelectedValues = new Set(selectedValues);
         if (newSelectedValues.has(valueToToggle)) {
             newSelectedValues.delete(valueToToggle);
@@ -27,7 +27,7 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
     const getLabel = (value: string) => options.find(o => o.value === value)?.label || value;
     
     return (
-        <Popover open={open} onOpenChange={setOpen} modal={true}>
+        <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <Button
                     variant="outline"
@@ -45,7 +45,7 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                                     onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        handleSelect(value);
+                                        handleToggle(value);
                                     }}
                                 >
                                     {getLabel(value)}
@@ -72,8 +72,10 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                             {options.map((option) => (
                                 <CommandItem
                                     key={option.value}
-                                    value={option.label}
-                                    onSelect={() => handleSelect(option.value)}
+                                    value={option.value}
+                                    onSelect={(currentValue) => {
+                                        handleToggle(currentValue);
+                                    }}
                                 >
                                     <Check
                                         className={cn(

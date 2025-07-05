@@ -13,7 +13,7 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
   const [open, setOpen] = React.useState(false);
 
   return (
-    <Popover open={open} onOpenChange={setOpen} modal={true}>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild disabled={disabled}>
         <FormControl>
           <Button
@@ -50,9 +50,9 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.label}
-                  onSelect={() => {
-                    field.onChange(option.value === field.value ? "" : option.value);
+                  value={option.value}
+                  onSelect={(currentValue) => {
+                    field.onChange(currentValue === field.value ? "" : currentValue);
                     setOpen(false);
                   }}
                 >

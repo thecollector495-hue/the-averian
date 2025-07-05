@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -9,18 +10,17 @@ import { cn } from '@/lib/utils';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 
-
 export function MultiSelectCombobox({ field, options, placeholder }: { field: ControllerRenderProps<any, any>, options: { value: string; label: string }[], placeholder: string }) {
     const [open, setOpen] = React.useState(false);
     
     const selectedValues = React.useMemo(() => new Set(Array.isArray(field.value) ? field.value : []), [field.value]);
 
-    const handleSelect = (value: string) => {
+    const handleSelect = (valueToToggle: string) => {
         const newSelectedValues = new Set(selectedValues);
-        if (newSelectedValues.has(value)) {
-            newSelectedValues.delete(value);
+        if (newSelectedValues.has(valueToToggle)) {
+            newSelectedValues.delete(valueToToggle);
         } else {
-            newSelectedValues.add(value);
+            newSelectedValues.add(valueToToggle);
         }
         field.onChange(Array.from(newSelectedValues));
     };
@@ -74,9 +74,9 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                             {options.map((option) => (
                                 <CommandItem
                                     key={option.value}
-                                    value={option.value}
-                                    onSelect={(currentValue) => {
-                                        handleSelect(currentValue);
+                                    value={option.label}
+                                    onSelect={() => {
+                                        handleSelect(option.value);
                                     }}
                                 >
                                     <Check

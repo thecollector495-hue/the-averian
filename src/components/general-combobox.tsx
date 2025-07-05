@@ -13,7 +13,7 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
   const [open, setOpen] = React.useState(false);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={true}>
       <PopoverTrigger asChild disabled={disabled}>
         <FormControl>
           <Button
@@ -40,9 +40,7 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
       <PopoverContent
         className="w-[--radix-popover-trigger-width] p-0"
         align="start"
-        onPointerDownOutside={(e) => {
-            e.preventDefault();
-        }}
+        onPointerDownOutside={(e) => e.preventDefault()}
       >
         <Command>
           <CommandInput placeholder="Search..." />
@@ -54,8 +52,7 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
                   key={option.value}
                   value={option.value}
                   onSelect={(currentValue) => {
-                    const newValue = currentValue === field.value ? "" : currentValue;
-                    field.onChange(newValue);
+                    field.onChange(currentValue === field.value ? "" : currentValue);
                     setOpen(false);
                   }}
                 >

@@ -56,6 +56,7 @@ const birdFormSchema = z.object({
       z.coerce.number({ invalid_type_error: "Age must be a number."}).int().min(0, "Age can't be negative.").optional()
   ),
   cageId: z.string().optional(),
+  newCageName: z.string().optional(),
   visualMutations: z.array(z.string()).default([]),
   splitMutations: z.array(z.string()).default([]),
   fatherId: z.string().optional(),
@@ -70,6 +71,9 @@ const birdFormSchema = z.object({
       (val) => (val === "" ? undefined : val),
       z.coerce.number({ invalid_type_error: "Value must be a number."}).min(0, "Value can't be negative.").optional()
   ),
+}).refine(data => !data.cageId || !data.newCageName, {
+    message: "Cannot select a cage and create a new one.",
+    path: ["cageId"],
 });
 
 type BirdFormValues = z.infer<typeof birdFormSchema>;
@@ -194,12 +198,9 @@ function BirdCombobox({ field, options, placeholder }: { field: ControllerRender
   );
 }
 
-function CageCombobox({ field, allCages, onCageCreate }: { field: ControllerRenderProps<BirdFormValues, 'cageId'>; allCages: Cage[]; onCageCreate: (name: string) => void }) {
+function CageCombobox({ field, allCages }: { field: ControllerRenderProps<BirdFormValues, 'cageId'>; allCages: Cage[]; }) {
   const [open, setOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
   const selectedCageName = allCages.find(cage => cage.id === field.value)?.name || "";
-
-  const exactMatchExists = allCages.some(cage => cage.name.toLowerCase() === searchValue.toLowerCase());
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -213,7 +214,7 @@ function CageCombobox({ field, allCages, onCageCreate }: { field: ControllerRend
           >
             {field.value
               ? selectedCageName
-              : "Select or create cage..."}
+              : "Select cage..."}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </FormControl>
@@ -221,26 +222,11 @@ function CageCombobox({ field, allCages, onCageCreate }: { field: ControllerRend
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <Command>
           <CommandInput 
-            placeholder="Search or create cage..." 
-            value={searchValue}
-            onValueChange={setSearchValue}
+            placeholder="Search cage..." 
           />
           <CommandList>
-            <CommandEmpty>No cage found. Type to create one.</CommandEmpty>
+            <CommandEmpty>No cage found.</CommandEmpty>
             <CommandGroup>
-               {searchValue && !exactMatchExists && (
-                <CommandItem
-                  onSelect={() => {
-                    onCageCreate(searchValue);
-                    setOpen(false);
-                    setSearchValue("");
-                  }}
-                  className="cursor-pointer"
-                >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Create "{searchValue}"
-                </CommandItem>
-              )}
               {allCages.map((cage) => (
                 <CommandItem
                   key={cage.id}
@@ -248,7 +234,6 @@ function CageCombobox({ field, allCages, onCageCreate }: { field: ControllerRend
                   onSelect={() => {
                     field.onChange(cage.id);
                     setOpen(false);
-                    setSearchValue("");
                   }}
                 >
                   <Check
@@ -270,6 +255,8 @@ function CageCombobox({ field, allCages, onCageCreate }: { field: ControllerRend
 
 
 function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, allCages, handleCreateCage }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onSave: (data: BirdFormValues) => void, initialData: Bird | null, allBirds: Bird[], allCages: Cage[], handleCreateCage: (name: string) => string }) {
+  const [isCreatingCage, setIsCreatingCage] = useState(false);
+  
   const form = useForm<BirdFormValues>({
     resolver: zodResolver(birdFormSchema),
     defaultValues: {
@@ -279,20 +266,18 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
       splitMutations: [],
       offspringIds: [],
       cageId: undefined,
+      newCageName: "",
     },
   });
   
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: 'visualMutations' // Placeholder, not used but required
-  });
-  
   useEffect(() => {
+    setIsCreatingCage(false); // Always reset on open
     if (initialData) {
       const currentCage = allCages.find(cage => cage.birdIds.includes(initialData.id));
       form.reset({
         ...initialData,
         cageId: currentCage?.id,
+        newCageName: "",
       });
     } else {
       form.reset({
@@ -303,6 +288,7 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
         unbanded: false,
         age: undefined,
         cageId: undefined,
+        newCageName: "",
         visualMutations: [],
         splitMutations: [],
         fatherId: undefined,
@@ -490,24 +476,57 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
             </div>
              <Separator />
               <p className="text-base font-medium">Housing</p>
-                <FormField
-                  control={form.control}
-                  name="cageId"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Cage</FormLabel>
-                       <CageCombobox
+                {isCreatingCage ? (
+                  <FormField
+                    control={form.control}
+                    name="newCageName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>New Cage Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter name for the new cage" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : (
+                  <FormField
+                    control={form.control}
+                    name="cageId"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Cage</FormLabel>
+                        <CageCombobox
                           field={field}
                           allCages={allCages}
-                          onCageCreate={(cageName) => {
-                            const newCageId = handleCreateCage(cageName);
-                            field.onChange(newCageId);
-                          }}
                         />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="create-cage"
+                    checked={isCreatingCage}
+                    onCheckedChange={(checked) => {
+                      const isChecked = !!checked;
+                      setIsCreatingCage(isChecked);
+                      if (isChecked) {
+                        form.setValue('cageId', undefined, { shouldValidate: true });
+                      } else {
+                        form.setValue('newCageName', '', { shouldValidate: true });
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor="create-cage"
+                    className="text-sm font-medium leading-none"
+                  >
+                    Create a new cage
+                  </label>
+                </div>
              <Separator />
              <p className="text-base font-medium">Genetics</p>
              <div className="space-y-4">
@@ -1035,6 +1054,11 @@ export default function BirdsPage() {
 
 
   const handleSaveBird = (formData: BirdFormValues) => {
+    let finalCageId = formData.cageId;
+    if (formData.newCageName && formData.newCageName.trim() !== "") {
+      finalCageId = handleCreateCage(formData.newCageName);
+    }
+
     const birdToSave: Bird = {
       species: formData.species,
       subspecies: formData.subspecies,
@@ -1056,7 +1080,7 @@ export default function BirdsPage() {
 
     setItems(prevItems => {
       let newItems = [...prevItems];
-      const newCageId = formData.cageId;
+      const newCageId = finalCageId;
 
       // Find old cage ID before updating the bird
       const oldCage = prevItems.find(item => item.category === 'Cage' && (item as Cage).birdIds.includes(birdToSave.id)) as Cage | undefined;

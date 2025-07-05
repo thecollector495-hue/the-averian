@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -49,7 +48,7 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
                   key={option.value}
                   value={option.label}
                   onSelect={() => {
-                    field.onChange(option.value === field.value ? "" : option.value);
+                    field.onChange(option.value);
                     setOpen(false);
                   }}
                 >

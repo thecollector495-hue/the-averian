@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -22,11 +23,11 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
             aria-expanded={open}
             disabled={disabled}
             className={cn(
-              "w-full justify-between text-left",
+              "w-full justify-between",
               !field.value && "text-muted-foreground"
             )}
           >
-            <span className="truncate">
+            <span className="truncate text-left">
                 {field.value
                 ? options.find(
                     (option) => option.value === field.value
@@ -46,9 +47,9 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.label}
-                  onSelect={() => {
-                    field.onChange(option.value);
+                  value={option.value}
+                  onSelect={(currentValue) => {
+                    field.onChange(currentValue === field.value ? "" : currentValue);
                     setOpen(false);
                   }}
                 >

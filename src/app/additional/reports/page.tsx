@@ -7,19 +7,40 @@ import { useCurrency } from '@/context/CurrencyContext';
 import { initialItems, Transaction } from '@/lib/data';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
-import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO } from 'date-fns';
+
+type TimeFilter = 'month' | 'year' | 'all';
 
 export default function ReportsPage() {
   const [items] = useState(initialItems);
   const { formatCurrency, currency } = useCurrency();
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
 
   const transactions = items.filter((item): item is Transaction => item.category === 'Transaction');
 
+  const filteredTransactions = useMemo(() => {
+    const now = new Date();
+    if (timeFilter === 'all') {
+      return transactions;
+    }
+    
+    let interval;
+    if (timeFilter === 'month') {
+      interval = { start: startOfMonth(now), end: endOfMonth(now) };
+    } else { // year
+      interval = { start: startOfYear(now), end: endOfYear(now) };
+    }
+
+    return transactions.filter(t => isWithinInterval(parseISO(t.date), interval));
+
+  }, [transactions, timeFilter]);
+
   const { totalIncome, totalExpenses, netProfit } = useMemo(() => {
-    const income = transactions
+    const income = filteredTransactions
       .filter(t => t.type === 'income')
       .reduce((sum, t) => sum + t.amount, 0);
-    const expenses = transactions
+    const expenses = filteredTransactions
       .filter(t => t.type === 'expense')
       .reduce((sum, t) => sum + t.amount, 0);
     return {
@@ -27,7 +48,7 @@ export default function ReportsPage() {
       totalExpenses: expenses,
       netProfit: income - expenses,
     };
-  }, [transactions]);
+  }, [filteredTransactions]);
 
   const chartData = [
     { name: 'Income', value: totalIncome, fill: 'hsl(var(--chart-2))' },
@@ -36,7 +57,17 @@ export default function ReportsPage() {
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
-      <h1 className="text-3xl font-bold mb-6">Reports</h1>
+       <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Reports</h1>
+        <Tabs value={timeFilter} onValueChange={(value) => setTimeFilter(value as TimeFilter)} className="w-auto">
+          <TabsList>
+            <TabsTrigger value="month">This Month</TabsTrigger>
+            <TabsTrigger value="year">This Year</TabsTrigger>
+            <TabsTrigger value="all">All Time</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
       <div className="grid gap-6 md:grid-cols-3 mb-6">
         <Card>
           <CardHeader><CardTitle>Total Income</CardTitle></CardHeader>
@@ -54,7 +85,7 @@ export default function ReportsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Financial Overview</CardTitle>
-          <CardDescription>A visual summary of your income versus expenses.</CardDescription>
+          <CardDescription>A visual summary of your income versus expenses for the selected period.</CardDescription>
         </CardHeader>
         <CardContent>
            <ChartContainer config={{}} className="h-[250px] w-full">

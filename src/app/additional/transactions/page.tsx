@@ -1,11 +1,11 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Calendar as CalendarIcon, ArrowDown, ArrowUp } from "lucide-react";
+import { PlusCircle, Calendar as CalendarIcon, ArrowDown, ArrowUp, Pencil, Search } from "lucide-react";
 import { useCurrency } from '@/context/CurrencyContext';
 import { initialItems, Transaction, getBirdIdentifier, Bird } from '@/lib/data';
 import { format, parseISO } from 'date-fns';
@@ -33,27 +33,40 @@ const transactionSchema = z.object({
 
 type TransactionFormValues = z.infer<typeof transactionSchema>;
 
-function AddTransactionDialog({ isOpen, onOpenChange, onSave }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onSave: (data: TransactionFormValues) => void }) {
+function AddTransactionDialog({ isOpen, onOpenChange, onSave, initialData }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onSave: (data: TransactionFormValues & { id?: string }) => void, initialData: Transaction | null }) {
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),
-    defaultValues: {
-      type: 'expense',
-      date: new Date(),
-    },
   });
 
+  useEffect(() => {
+    if (initialData) {
+      form.reset({
+        ...initialData,
+        date: parseISO(initialData.date),
+      });
+    } else {
+      form.reset({
+        type: 'expense',
+        date: new Date(),
+        description: '',
+        amount: undefined,
+      });
+    }
+  }, [initialData, form, isOpen]);
+
   function onSubmit(data: TransactionFormValues) {
-    onSave(data);
+    onSave({ ...data, id: initialData?.id });
     onOpenChange(false);
-    form.reset();
   }
+
+  const isEditMode = initialData !== null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Transaction</DialogTitle>
-          <DialogDescription>Log a new income or expense item.</DialogDescription>
+          <DialogTitle>{isEditMode ? 'Edit Transaction' : 'Add Transaction'}</DialogTitle>
+          <DialogDescription>Log an income or expense item.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -69,7 +82,7 @@ function AddTransactionDialog({ isOpen, onOpenChange, onSave }: { isOpen: boolea
             <FormField control={form.control} name="amount" render={({ field }) => (
               <FormItem><FormLabel>Amount</FormLabel><FormControl><Input type="number" step="0.01" placeholder="e.g., 25.50" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} /></FormControl><FormMessage /></FormItem>
             )} />
-            <DialogFooter><Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button><Button type="submit">Save Transaction</Button></DialogFooter>
+            <DialogFooter><Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button><Button type="submit">{isEditMode ? 'Save Changes' : 'Save Transaction'}</Button></DialogFooter>
           </form>
         </Form>
       </DialogContent>
@@ -79,38 +92,74 @@ function AddTransactionDialog({ isOpen, onOpenChange, onSave }: { isOpen: boolea
 
 export default function TransactionsPage() {
   const [items, setItems] = useState(initialItems);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [search, setSearch] = useState('');
   const { formatCurrency } = useCurrency();
+
+  const allBirds = items.filter((item): item is Bird => item.category === 'Bird');
 
   const transactions = items
     .filter((item): item is Transaction => item.category === 'Transaction')
     .sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
-  
-  const allBirds = items.filter((item): item is Bird => item.category === 'Bird');
+    
+  const filteredTransactions = transactions.filter(t => 
+    t.description.toLowerCase().includes(search.toLowerCase())
+  );
 
-  const handleSaveTransaction = (data: TransactionFormValues) => {
-    const newTransaction: Transaction = {
-      ...data,
-      id: `t${Date.now()}`,
-      category: 'Transaction',
-      date: format(data.date, 'yyyy-MM-dd'),
-    };
-    setItems(prev => [newTransaction, ...prev]);
+  const handleAddClick = () => {
+    setEditingTransaction(null);
+    setIsFormOpen(true);
+  };
+  
+  const handleEditClick = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setIsFormOpen(true);
+  };
+
+  const handleSaveTransaction = (data: TransactionFormValues & { id?: string }) => {
+    if (data.id) { // Editing existing
+        setItems(prev => prev.map(item =>
+            item.id === data.id
+                ? { ...item, ...data, date: format(data.date, 'yyyy-MM-dd') }
+                : item
+        ));
+    } else { // Creating new
+        const newTransaction: Transaction = {
+            ...data,
+            id: `t${Date.now()}`,
+            category: 'Transaction',
+            date: format(data.date, 'yyyy-MM-dd'),
+        };
+        setItems(prev => [newTransaction, ...prev]);
+    }
   };
   
   return (
     <div className="p-4 sm:p-6 md:p-8">
       <AddTransactionDialog
-        isOpen={isAddDialogOpen}
-        onOpenChange={setIsAddDialogOpen}
+        isOpen={isFormOpen}
+        onOpenChange={setIsFormOpen}
         onSave={handleSaveTransaction}
+        initialData={editingTransaction}
       />
-      <div className="flex justify-between items-center mb-6">
+       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
         <h1 className="text-3xl font-bold">Transactions</h1>
-        <Button onClick={() => setIsAddDialogOpen(true)}>
-          <PlusCircle className="mr-2 h-4 w-4"/>
-          Add Transaction
-        </Button>
+        <div className="flex w-full sm:w-auto sm:justify-end gap-2">
+            <div className="relative flex-grow sm:flex-grow-0">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                    placeholder="Search transactions..."
+                    className="pl-10 w-full sm:w-64"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                />
+            </div>
+            <Button onClick={handleAddClick}>
+                <PlusCircle className="mr-2 h-4 w-4"/>
+                Add
+            </Button>
+        </div>
       </div>
       <Card>
         <CardHeader>
@@ -125,11 +174,12 @@ export default function TransactionsPage() {
                 <TableHead>Description</TableHead>
                 <TableHead className="text-center">Type</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {transactions.length > 0 ? (
-                transactions.map((t) => {
+              {filteredTransactions.length > 0 ? (
+                filteredTransactions.map((t) => {
                   const bird = t.relatedBirdId ? allBirds.find(b => b.id === t.relatedBirdId) : null;
                   return (
                     <TableRow key={t.id}>
@@ -147,13 +197,19 @@ export default function TransactionsPage() {
                       <TableCell className={`text-right font-medium ${t.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
                         {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
                       </TableCell>
+                       <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => handleEditClick(t)}>
+                          <Pencil className="h-4 w-4" />
+                          <span className="sr-only">Edit Transaction</span>
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   )
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
-                    No transactions yet.
+                  <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
+                    {search ? 'No transactions match your search.' : 'No transactions yet.'}
                   </TableCell>
                 </TableRow>
               )}

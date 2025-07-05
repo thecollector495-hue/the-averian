@@ -22,15 +22,17 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
             aria-expanded={open}
             disabled={disabled}
             className={cn(
-              "w-full justify-between",
+              "w-full justify-between text-left",
               !field.value && "text-muted-foreground"
             )}
           >
-            {field.value
-              ? options.find(
-                  (option) => option.value === field.value
-                )?.label
-              : placeholder}
+            <span className="truncate">
+                {field.value
+                ? options.find(
+                    (option) => option.value === field.value
+                    )?.label
+                : placeholder}
+            </span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </FormControl>
@@ -46,8 +48,8 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
                   value={option.label}
                   key={option.value}
                   onSelect={() => {
-                    field.onChange(option.value);
-                    setOpen(false);
+                    field.onChange(option.value === field.value ? '' : option.value)
+                    setOpen(false)
                   }}
                 >
                   <Check

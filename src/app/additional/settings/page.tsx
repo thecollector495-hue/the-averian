@@ -1,19 +1,22 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Crown, Star } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurrency, currencies } from "@/context/CurrencyContext";
 import { useItems, CustomSpecies, CustomMutation } from '@/context/ItemsContext';
 import { AddSpeciesFormValues } from '@/components/add-species-dialog';
 import { AddMutationFormValues } from '@/components/add-mutation-dialog';
+import { addDays, format, isFuture } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 const AddSpeciesDialog = dynamic(() => import('@/components/add-species-dialog').then(mod => mod.AddSpeciesDialog), { ssr: false });
 const AddMutationDialog = dynamic(() => import('@/components/add-mutation-dialog').then(mod => mod.AddMutationDialog), { ssr: false });
@@ -24,6 +27,22 @@ export default function SettingsPage() {
 
   const [isSpeciesDialogOpen, setIsSpeciesDialogOpen] = useState(false);
   const [isMutationDialogOpen, setIsMutationDialogOpen] = useState(false);
+  const [trialEndDate, setTrialEndDate] = useState<Date | null>(null);
+
+  useEffect(() => {
+    const trialStartDateStr = localStorage.getItem('app_trial_start_date');
+    let startDate: Date;
+
+    if (trialStartDateStr) {
+      startDate = new Date(trialStartDateStr);
+    } else {
+      startDate = new Date();
+      localStorage.setItem('app_trial_start_date', startDate.toISOString());
+    }
+    
+    setTrialEndDate(addDays(startDate, 7));
+
+  }, []);
 
   const customSpecies = items.filter((item): item is CustomSpecies => item.category === 'CustomSpecies');
   const customMutations = items.filter((item): item is CustomMutation => item.category === 'CustomMutation');
@@ -49,6 +68,8 @@ export default function SettingsPage() {
     addItem(newMutation);
   };
 
+  const isTrialActive = trialEndDate && isFuture(trialEndDate);
+
   return (
     <div className="p-4 sm:p-6 md:p-8">
       {isSpeciesDialogOpen && <AddSpeciesDialog isOpen={isSpeciesDialogOpen} onOpenChange={setIsSpeciesDialogOpen} onSave={handleSaveSpecies} />}
@@ -57,10 +78,11 @@ export default function SettingsPage() {
       <h1 className="text-3xl font-bold mb-6">Settings</h1>
       
       <Tabs defaultValue="general">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="species">Species</TabsTrigger>
           <TabsTrigger value="mutations">Mutations</TabsTrigger>
+          <TabsTrigger value="subscription">Subscription</TabsTrigger>
         </TabsList>
         <TabsContent value="general" className="mt-6">
             <Card>
@@ -137,6 +159,53 @@ export default function SettingsPage() {
                     ) : (
                          <p className="text-muted-foreground text-center py-4">No custom mutations added yet.</p>
                     )}
+                </CardContent>
+            </Card>
+        </TabsContent>
+        <TabsContent value="subscription" className="mt-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Manage Subscription</CardTitle>
+                    <CardDescription>Choose a plan that works for you.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="p-4 rounded-lg border bg-secondary/50">
+                        <h3 className="font-semibold mb-2">Current Plan</h3>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Badge variant="default">7-day Free Trial</Badge>
+                            </div>
+                             <p className="text-sm text-muted-foreground">
+                                {isTrialActive ? `Trial ends on ${format(trialEndDate!, 'PPP')}` : 'Your trial has ended.'}
+                             </p>
+                        </div>
+                    </div>
+
+                     <div className="space-y-4">
+                        <h3 className="font-semibold">Choose Your Plan</h3>
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2"><Crown className="text-muted-foreground"/> Monthly</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <p className="text-3xl font-bold">R35 <span className="text-lg font-normal text-muted-foreground">/ month</span></p>
+                                    <Button className="w-full">Subscribe</Button>
+                                </CardContent>
+                            </Card>
+                             <Card className="border-primary border-2 relative">
+                                <Badge className="absolute -top-3 right-4">Best Value</Badge>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2"><Star className="text-primary"/> Yearly</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                     <p className="text-3xl font-bold">R300 <span className="text-lg font-normal text-muted-foreground">/ year</span></p>
+                                     <p className="text-sm text-green-500 font-medium">Save R120 per year!</p>
+                                    <Button className="w-full">Subscribe</Button>
+                                </CardContent>
+                            </Card>
+                        </div>
+                     </div>
                 </CardContent>
             </Card>
         </TabsContent>

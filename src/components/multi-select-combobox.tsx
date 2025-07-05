@@ -49,7 +49,10 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                             {options.map((option) => (
                                 <CommandItem
                                     key={option.value}
-                                    onSelect={() => handleSelect(option.value)}
+                                    value={option.label}
+                                    onSelect={() => {
+                                        handleSelect(option.value);
+                                    }}
                                 >
                                      <Check
                                         className={cn(

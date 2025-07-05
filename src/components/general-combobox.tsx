@@ -44,8 +44,9 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
                 <CommandItem
                   value={option.label}
                   key={option.value}
-                  onSelect={() => {
-                    field.onChange(option.value);
+                  onSelect={(currentValue) => {
+                    const selectedOption = options.find(opt => opt.label.toLowerCase() === currentValue.toLowerCase());
+                    field.onChange(selectedOption?.value || "");
                     setOpen(false);
                   }}
                 >

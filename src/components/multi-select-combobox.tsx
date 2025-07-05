@@ -41,7 +41,7 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                                 <Badge
                                     variant="secondary"
                                     key={value}
-                                    className="cursor-pointer"
+                                    className="mr-1 mb-1"
                                     onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
@@ -68,9 +68,9 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                             {options.map((option) => (
                                 <CommandItem
                                     key={option.value}
-                                    value={option.label}
-                                    onSelect={() => {
-                                        handleSelect(option.value);
+                                    value={option.value}
+                                    onSelect={(currentValue) => {
+                                        handleSelect(currentValue);
                                     }}
                                 >
                                     <Check

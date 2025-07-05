@@ -14,7 +14,7 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
   const [open, setOpen] = React.useState(false);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover modal={true} open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild disabled={disabled}>
         <FormControl>
           <Button
@@ -39,7 +39,7 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
         </FormControl>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[--radix-popover-trigger-width] p-0"
+        className="w-[--radix-popover-trigger-width] p-0 z-[9999]"
         align="start"
       >
         <Command>

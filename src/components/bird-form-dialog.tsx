@@ -79,6 +79,17 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
   const [isCreatingCage, setIsCreatingCage] = useState(false);
   const { items } = useItems();
   
+  const [debugLog, setDebugLog] = useState<string[]>([]);
+  const addLog = (message: string) => {
+    setDebugLog(prev => [...prev, `${new Date().toLocaleTimeString()} - ${message}`]);
+  };
+  
+  useEffect(() => {
+    if(isOpen) {
+      setDebugLog(['Debug log initialized.']);
+    }
+  }, [isOpen])
+
   const form = useForm<BirdFormValues>({
     resolver: zodResolver(birdFormSchema),
     defaultValues: {
@@ -215,11 +226,19 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent
         className="sm:max-w-2xl"
+        onInteractOutside={(e) => {
+            const target = e.target as HTMLElement;
+            addLog(`-- onInteractOutside --`);
+            addLog(`Target tag: ${target.tagName}`);
+            addLog(`Target dataset: ${JSON.stringify(target.dataset)}`);
+            addLog(`Closest popper wrapper: ${!!target.closest('[data-radix-popper-content-wrapper]')}`);
+        }}
         onPointerDownOutside={(e) => {
-          const target = e.target as HTMLElement;
-          if (target.closest('[data-radix-popper-content-wrapper]')) {
-            e.preventDefault();
-          }
+            const target = e.target as HTMLElement;
+            addLog(`-- onPointerDownOutside --`);
+            addLog(`Target tag: ${target.tagName}`);
+            addLog(`Target dataset: ${JSON.stringify(target.dataset)}`);
+            addLog(`Closest popper wrapper: ${!!target.closest('[data-radix-popper-content-wrapper]')}`);
         }}
       >
         <DialogHeader>
@@ -228,6 +247,9 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
             {isEditMode ? 'Update the details for this bird.' : 'Enter the details of the new bird.'}
           </DialogDescription>
         </DialogHeader>
+        <pre className="w-full bg-muted text-muted-foreground p-2 rounded-md h-32 overflow-auto text-xs">
+          {debugLog.join('\n')}
+        </pre>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-6 pl-1">
              <p className="text-base font-medium">Core Details</p>
@@ -240,6 +262,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                     <FormLabel>Species</FormLabel>
                     <GeneralCombobox
                         field={{...field, onChange: (value) => {
+                             addLog('Species selected');
                              field.onChange(value);
                              form.setValue('subspecies', undefined);
                         }}}

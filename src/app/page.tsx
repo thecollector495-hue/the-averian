@@ -11,16 +11,17 @@ import { BirdDetailsDialog } from '@/components/bird-details-dialog';
 import { BirdCard } from '@/components/bird-card';
 import { CageCard } from '@/components/cage-card';
 import { PairCard } from '@/components/pair-card';
-import { Bird, Cage, Pair, BreedingRecord, CollectionItem, getBirdIdentifier, initialItems, Transaction, Permit, BirdFormValues } from '@/lib/data';
+import { Bird, Cage, Pair, BreedingRecord, CollectionItem, getBirdIdentifier, Transaction, Permit, BirdFormValues } from '@/lib/data';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { useItems } from '@/context/ItemsContext';
 
 const AddCageDialog = dynamic(() => import('@/components/add-cage-dialog').then(mod => mod.AddCageDialog), { ssr: false });
 const BirdFormDialog = dynamic(() => import('@/components/bird-form-dialog').then(mod => mod.BirdFormDialog), { ssr: false });
 const BreedingRecordDetailsDialog = dynamic(() => import('@/components/breeding-record-details-dialog').then(mod => mod.BreedingRecordDetailsDialog), { ssr: false });
 
 export default function BirdsPage() {
-  const [items, setItems] = useState<CollectionItem[]>(initialItems);
+  const { items, addItem, addItems, updateItem, updateItems } = useItems();
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('Bird');
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -73,7 +74,7 @@ export default function BirdsPage() {
         category: 'Cage',
         birdIds: []
     };
-    setItems(prev => [newCage, ...prev]);
+    addItem(newCage);
     toast({ title: "Cage Created", description: `Cage "${trimmedName}" has been added.` });
     return newCage.id;
   };
@@ -84,7 +85,6 @@ export default function BirdsPage() {
     if (formData.newCageName && formData.newCageName.trim() !== "") {
        const newCageId = handleCreateCage(formData.newCageName);
         if (!newCageId) {
-            // If cage creation failed (e.g., duplicate name), stop the save process.
             return; 
         }
         finalCageId = newCageId;
@@ -117,41 +117,33 @@ export default function BirdsPage() {
         buyer: formData.buyerInfo
       } : undefined,
     };
+    
+    const itemsToUpdate: CollectionItem[] = [];
+    const itemsToAdd: CollectionItem[] = [];
 
-    setItems(prevItems => {
-      let newItems: CollectionItem[] = [...prevItems];
-      const newCageId = finalCageId;
+    // Bird itself
+    if (isEditing) {
+        updateItem(birdId, birdToSave);
+    } else {
+        itemsToAdd.push(birdToSave);
+    }
 
-      const oldCage = prevItems.find(item => item.category === 'Cage' && (item as Cage).birdIds.includes(birdToSave.id)) as Cage | undefined;
-      const oldCageId = oldCage?.id;
-      
-      const birdIndex = newItems.findIndex(i => i.id === birdToSave.id && i.category === 'Bird');
-      if (birdIndex > -1) {
-        newItems[birdIndex] = birdToSave;
-      } else {
-        newItems.unshift(birdToSave);
-      }
-
-      if (newCageId !== oldCageId) {
-        if (oldCageId) {
-          const oldCageIndex = newItems.findIndex(i => i.id === oldCageId);
-          if (oldCageIndex > -1) {
-            const currentOldCage = newItems[oldCageIndex] as Cage;
-            (newItems[oldCageIndex] as Cage).birdIds = currentOldCage.birdIds.filter(id => id !== birdToSave.id);
-          }
+    // Cage logic
+    const oldCage = allCages.find(cage => cage.birdIds.includes(birdId));
+    if (oldCage && oldCage.id !== finalCageId) {
+        const updatedOldCage = { ...oldCage, birdIds: oldCage.birdIds.filter(id => id !== birdId) };
+        updateItem(oldCage.id, updatedOldCage);
+    }
+    if (finalCageId) {
+        const newCage = allCages.find(cage => cage.id === finalCageId);
+        if (newCage && !newCage.birdIds.includes(birdId)) {
+            const updatedNewCage = { ...newCage, birdIds: [...newCage.birdIds, birdId] };
+            updateItem(newCage.id, updatedNewCage);
         }
-        if (newCageId) {
-           const newCageIndex = newItems.findIndex(i => i.id === newCageId);
-            if (newCageIndex > -1) {
-              const currentNewCage = newItems[newCageIndex] as Cage;
-              if (!currentNewCage.birdIds.includes(birdToSave.id)) {
-                  (newItems[newCageIndex]as Cage).birdIds.push(birdToSave.id);
-              }
-            }
-        }
-      }
-      
-      if (formData.addToExpenses && formData.paidPrice && formData.paidPrice > 0 && !isEditing) {
+    }
+
+    // Transaction logic
+    if (formData.addToExpenses && formData.paidPrice && formData.paidPrice > 0 && !isEditing) {
         const newTransaction: Transaction = {
           id: `t${Date.now()}`,
           category: 'Transaction',
@@ -161,12 +153,12 @@ export default function BirdsPage() {
           amount: formData.paidPrice,
           relatedBirdId: birdId,
         };
-        newItems.unshift(newTransaction);
+        itemsToAdd.push(newTransaction);
         toast({ title: "Expense Added", description: `Purchase of ${getBirdIdentifier(birdToSave)} logged.` });
-      }
+    }
       
-      const wasJustSold = editingBird?.status !== 'Sold' && formData.status === 'Sold';
-      if (formData.createSaleTransaction && wasJustSold && birdToSave.saleDetails) {
+    const wasJustSold = editingBird?.status !== 'Sold' && formData.status === 'Sold';
+    if (formData.createSaleTransaction && wasJustSold && birdToSave.saleDetails) {
          const newTransaction: Transaction = {
             id: `t${Date.now()}`,
             category: 'Transaction',
@@ -176,12 +168,13 @@ export default function BirdsPage() {
             amount: birdToSave.saleDetails.price,
             relatedBirdId: birdId,
         };
-        newItems.unshift(newTransaction);
+        itemsToAdd.push(newTransaction);
         toast({ title: "Income Added", description: `Sale of ${getBirdIdentifier(birdToSave)} logged.` });
-      }
-      
-      return newItems;
-    });
+    }
+
+    if (itemsToAdd.length > 0) {
+        addItems(itemsToAdd);
+    }
 
      toast({
         title: isEditing ? "Bird Updated" : "Bird Added",

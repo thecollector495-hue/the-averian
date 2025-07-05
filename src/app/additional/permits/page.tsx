@@ -6,14 +6,15 @@ import dynamic from 'next/dynamic';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, ShieldCheck } from "lucide-react";
-import { initialItems, Permit } from '@/lib/data';
+import { Permit } from '@/lib/data';
 import { format } from 'date-fns';
 import { PermitFormValues } from '@/components/add-permit-dialog';
+import { useItems } from '@/context/ItemsContext';
 
 const AddPermitDialog = dynamic(() => import('@/components/add-permit-dialog').then(mod => mod.AddPermitDialog), { ssr: false });
 
 export default function PermitsPage() {
-  const [items, setItems] = useState(initialItems);
+  const { items, addItem } = useItems();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
   const permits = items.filter((item): item is Permit => item.category === 'Permit');
@@ -26,7 +27,7 @@ export default function PermitsPage() {
       issueDate: format(data.issueDate, 'yyyy-MM-dd'),
       expiryDate: data.expiryDate ? format(data.expiryDate, 'yyyy-MM-dd') : undefined,
     };
-    setItems(prev => [newPermit, ...prev]);
+    addItem(newPermit);
   };
   
   return (

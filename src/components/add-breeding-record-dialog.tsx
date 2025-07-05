@@ -8,7 +8,7 @@ import { format, addDays } from 'date-fns';
 import { Bird, Pair, speciesData, getBirdIdentifier } from '@/lib/data';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -18,6 +18,7 @@ import { Calendar as CalendarIcon, PlusCircle, Trash2 } from 'lucide-react';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const eggSchema = z.object({
   laidDate: z.date({ required_error: "Laid date is required." }),
@@ -30,6 +31,7 @@ const breedingRecordSchema = z.object({
   startDate: z.date({ required_error: "Start date is required." }),
   notes: z.string().optional(),
   eggs: z.array(eggSchema).default([]),
+  createHatchReminders: z.boolean().default(true),
 });
 
 type BreedingRecordFormValues = z.infer<typeof breedingRecordSchema>;
@@ -39,7 +41,8 @@ export function AddBreedingRecordDialog({ isOpen, onOpenChange, pairs, allBirds,
     resolver: zodResolver(breedingRecordSchema),
     defaultValues: {
       eggs: [],
-      notes: ""
+      notes: "",
+      createHatchReminders: true,
     },
   });
 
@@ -229,6 +232,29 @@ export function AddBreedingRecordDialog({ isOpen, onOpenChange, pairs, allBirds,
                 {fields.length === 0 && <p className="text-sm text-muted-foreground text-center py-2">No eggs added yet.</p>}
               </div>
             </div>
+            
+            <FormField
+              control={form.control}
+              name="createHatchReminders"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>
+                      Create hatch reminders
+                    </FormLabel>
+                    <FormDescription>
+                      Automatically add reminders for expected hatch dates to your notes.
+                    </FormDescription>
+                  </div>
+                </FormItem>
+              )}
+            />
 
             <DialogFooter className="pt-4">
                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

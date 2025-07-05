@@ -5,19 +5,22 @@ import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
-import { initialItems, Bird, Cage, NoteReminder } from '@/lib/data';
+import { Bird, Cage, NoteReminder } from '@/lib/data';
 import { BirdDetailsDialog } from '@/components/bird-details-dialog';
 import { NoteCard } from '@/components/note-card';
+import { useItems } from '@/context/ItemsContext';
+import { useToast } from '@/hooks/use-toast';
 
 const AddNoteDialog = dynamic(() => import('@/components/add-note-dialog').then(mod => mod.AddNoteDialog), { ssr: false });
 
 export default function NotesPage() {
-    const allItems = initialItems;
-    const allBirds = allItems.filter((item): item is Bird => item.category === 'Bird');
-    const allCages = allItems.filter((item): item is Cage => item.category === 'Cage');
-    const initialNotes = allItems.filter((item): item is NoteReminder => item.category === 'NoteReminder');
+    const { items, addItem, updateItem } = useItems();
+    const { toast } = useToast();
 
-    const [notes, setNotes] = useState<NoteReminder[]>(initialNotes);
+    const allBirds = items.filter((item): item is Bird => item.category === 'Bird');
+    const allCages = items.filter((item): item is Cage => item.category === 'Cage');
+    const notes = items.filter((item): item is NoteReminder => item.category === 'NoteReminder');
+
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [viewingBird, setViewingBird] = useState<Bird | null>(null);
 
@@ -29,11 +32,12 @@ export default function NotesPage() {
             subTasks: data.subTasks.map(t => ({ ...t, id: `st${Date.now()}${Math.random()}` })),
             completed: false,
         };
-        setNotes(prev => [newNote, ...prev]);
+        addItem(newNote);
+        toast({ title: "Note Added", description: "Your note has been saved." });
     };
     
     const handleUpdateNote = (updatedNote: NoteReminder) => {
-        setNotes(prev => prev.map(n => n.id === updatedNote.id ? updatedNote : n));
+        updateItem(updatedNote.id, updatedNote);
     };
     
     const handleViewBirdClick = (bird: Bird) => {

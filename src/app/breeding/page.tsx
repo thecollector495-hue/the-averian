@@ -5,19 +5,24 @@ import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
-import { initialItems, initialPairs, Bird, Cage, BreedingRecord } from '@/lib/data';
+import { Bird, Cage, BreedingRecord, NoteReminder, Pair, getBirdIdentifier } from '@/lib/data';
 import { BirdDetailsDialog } from '@/components/bird-details-dialog';
 import { BreedingRecordCard } from '@/components/breeding-record-card';
+import { useItems } from '@/context/ItemsContext';
+import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
 const AddBreedingRecordDialog = dynamic(() => import('@/components/add-breeding-record-dialog').then(mod => mod.AddBreedingRecordDialog), { ssr: false });
 
 export default function BreedingPage() {
-    const allItems = initialItems;
-    const allBirds = allItems.filter((item): item is Bird => item.category === 'Bird');
-    const allCages = allItems.filter((item): item is Cage => item.category === 'Cage');
-    const allBreedingRecords = allItems.filter((item): item is BreedingRecord => item.category === 'BreedingRecord');
+    const { items, addItem, addItems } = useItems();
+    const { toast } = useToast();
     
-    const [records, setRecords] = useState<BreedingRecord[]>(allBreedingRecords);
+    const allBirds = items.filter((item): item is Bird => item.category === 'Bird');
+    const allCages = items.filter((item): item is Cage => item.category === 'Cage');
+    const allPairs = items.filter((item): item is Pair => item.category === 'Pair');
+    const records = items.filter((item): item is BreedingRecord => item.category === 'BreedingRecord');
+    
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [viewingBird, setViewingBird] = useState<Bird | null>(null);
 
@@ -25,13 +30,46 @@ export default function BreedingPage() {
       setViewingBird(bird);
     };
 
-    const handleSaveRecord = (data: Omit<BreedingRecord, 'id' | 'category'>) => {
+    const handleSaveRecord = (data: Omit<BreedingRecord, 'id' | 'category'> & { createHatchReminders: boolean }) => {
         const newRecord: BreedingRecord = {
             ...data,
             id: `br${Date.now()}`,
             category: 'BreedingRecord',
         };
-        setRecords(prev => [newRecord, ...prev]);
+        
+        const itemsToAdd: (BreedingRecord | NoteReminder)[] = [newRecord];
+
+        if (data.createHatchReminders) {
+            let remindersCreated = 0;
+            const pair = allPairs.find(p => p.id === newRecord.pairId);
+            const male = allBirds.find(b => b.id === pair?.maleId);
+
+            newRecord.eggs.forEach(egg => {
+                if (egg.expectedHatchDate) {
+                    const reminder: NoteReminder = {
+                        id: `nr${Date.now()}${Math.random()}`,
+                        category: 'NoteReminder',
+                        title: `Check egg for hatch: ${male ? getBirdIdentifier(male) : `Pair ${newRecord.pairId}`}`,
+                        content: `Egg laid on ${format(new Date(egg.laidDate), 'PPP')} is expected to hatch today.`,
+                        isReminder: true,
+                        reminderDate: egg.expectedHatchDate,
+                        isRecurring: false,
+                        recurrencePattern: 'none',
+                        associatedBirdIds: pair ? [pair.maleId, pair.femaleId] : [],
+                        subTasks: [],
+                        completed: false,
+                    };
+                    itemsToAdd.push(reminder);
+                    remindersCreated++;
+                }
+            });
+            if (remindersCreated > 0) {
+                 toast({ title: "Reminders Created", description: `${remindersCreated} hatch reminders have been added to your notes.` });
+            }
+        }
+        
+        addItems(itemsToAdd);
+        toast({ title: "Breeding Record Added", description: "The new record has been saved." });
     }
 
     return (
@@ -39,7 +77,7 @@ export default function BreedingPage() {
             {isAddDialogOpen && <AddBreedingRecordDialog 
                 isOpen={isAddDialogOpen}
                 onOpenChange={setIsAddDialogOpen}
-                pairs={initialPairs}
+                pairs={allPairs}
                 allBirds={allBirds}
                 onSave={handleSaveRecord}
             />}
@@ -63,7 +101,7 @@ export default function BreedingPage() {
             {records.length > 0 ? (
                 <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                    {records.map(record => (
-                       <BreedingRecordCard key={record.id} record={record} allBirds={allBirds} allPairs={initialPairs} onBirdClick={handleViewBirdClick} />
+                       <BreedingRecordCard key={record.id} record={record} allBirds={allBirds} allPairs={allPairs} onBirdClick={handleViewBirdClick} />
                    ))}
                 </div>
             ) : (

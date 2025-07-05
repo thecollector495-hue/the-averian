@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { PlusCircle, ArrowDown, ArrowUp, Pencil, Search, Trash2 } from "lucide-react";
 import { useCurrency } from '@/context/CurrencyContext';
-import { initialItems, Transaction, getBirdIdentifier, Bird, Cage, Permit } from '@/lib/data';
+import { Transaction, getBirdIdentifier, Bird, Cage, Permit } from '@/lib/data';
 import { format, parseISO } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -16,11 +16,12 @@ import { TransactionFormValues } from '@/components/add-transaction-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { BirdDetailsDialog } from '@/components/bird-details-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useItems } from '@/context/ItemsContext';
 
 const AddTransactionDialog = dynamic(() => import('@/components/add-transaction-dialog').then(mod => mod.AddTransactionDialog), { ssr: false });
 
 export default function TransactionsPage() {
-  const [items, setItems] = useState(initialItems);
+  const { items, updateItem, addItem, deleteItem } = useItems();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
@@ -53,11 +54,11 @@ export default function TransactionsPage() {
 
   const handleSaveTransaction = (data: TransactionFormValues & { id?: string }) => {
     if (data.id) { // Editing existing
-        setItems(prev => prev.map(item =>
-            item.id === data.id
-                ? { ...item, ...data, date: format(data.date, 'yyyy-MM-dd') }
-                : item
-        ));
+        const updatedTransaction = {
+            ...data,
+            date: format(data.date, 'yyyy-MM-dd')
+        }
+        updateItem(data.id, updatedTransaction);
         toast({ title: "Transaction Updated", description: "Your transaction has been successfully updated." });
     } else { // Creating new
         const newTransaction: Transaction = {
@@ -66,14 +67,14 @@ export default function TransactionsPage() {
             category: 'Transaction',
             date: format(data.date, 'yyyy-MM-dd'),
         };
-        setItems(prev => [newTransaction, ...prev]);
+        addItem(newTransaction);
         toast({ title: "Transaction Added", description: "The new transaction has been logged." });
     }
   };
   
   const handleDeleteConfirm = () => {
     if (!deletingTransactionId) return;
-    setItems(prev => prev.filter(item => item.id !== deletingTransactionId));
+    deleteItem(deletingTransactionId);
     toast({ title: "Transaction Deleted", description: "The transaction has been removed." });
     setDeletingTransactionId(null);
   };

@@ -5,14 +5,19 @@ import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
-import { initialBirds, initialPairs, initialBreedingRecords, Bird, BreedingRecord } from '@/lib/data';
+import { initialItems, initialPairs, Bird, Cage, BreedingRecord } from '@/lib/data';
 import { BirdDetailsDialog } from '@/components/bird-details-dialog';
 import { BreedingRecordCard } from '@/components/breeding-record-card';
 
 const AddBreedingRecordDialog = dynamic(() => import('@/components/add-breeding-record-dialog').then(mod => mod.AddBreedingRecordDialog), { ssr: false });
 
 export default function BreedingPage() {
-    const [records, setRecords] = useState<BreedingRecord[]>(initialBreedingRecords);
+    const allItems = initialItems;
+    const allBirds = allItems.filter((item): item is Bird => item.category === 'Bird');
+    const allCages = allItems.filter((item): item is Cage => item.category === 'Cage');
+    const allBreedingRecords = allItems.filter((item): item is BreedingRecord => item.category === 'BreedingRecord');
+    
+    const [records, setRecords] = useState<BreedingRecord[]>(allBreedingRecords);
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [viewingBird, setViewingBird] = useState<Bird | null>(null);
 
@@ -35,12 +40,13 @@ export default function BreedingPage() {
                 isOpen={isAddDialogOpen}
                 onOpenChange={setIsAddDialogOpen}
                 pairs={initialPairs}
+                allBirds={allBirds}
                 onSave={handleSaveRecord}
             />}
              <BirdDetailsDialog
               bird={viewingBird}
-              allBirds={initialBirds}
-              allCages={[]}
+              allBirds={allBirds}
+              allCages={allCages}
               allPermits={[]}
               onClose={() => setViewingBird(null)}
               onBirdClick={(bird) => setViewingBird(bird)}
@@ -57,7 +63,7 @@ export default function BreedingPage() {
             {records.length > 0 ? (
                 <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                    {records.map(record => (
-                       <BreedingRecordCard key={record.id} record={record} allBirds={initialBirds} allPairs={initialPairs} onBirdClick={handleViewBirdClick} />
+                       <BreedingRecordCard key={record.id} record={record} allBirds={allBirds} allPairs={initialPairs} onBirdClick={handleViewBirdClick} />
                    ))}
                 </div>
             ) : (

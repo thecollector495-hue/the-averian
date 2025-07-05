@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Egg, StickyNote, Pencil } from "lucide-react";
-import { format } from 'date-fns';
+import { format, formatDistanceToNow, isFuture, parseISO } from 'date-fns';
 import { Bird, Pair, BreedingRecord, getBirdIdentifier } from '@/lib/data';
 
 export function BreedingRecordCard({ record, allBirds, allPairs, onBirdClick }: { record: BreedingRecord, allBirds: Bird[], allPairs: Pair[], onBirdClick: (bird: Bird) => void; }) {
@@ -60,16 +61,26 @@ export function BreedingRecordCard({ record, allBirds, allPairs, onBirdClick }: 
                     <div className="w-full pt-4 mt-2 border-t border-border">
                         {expandedSection === 'eggs' && (
                            <div className="space-y-2">
-                             {record.eggs.length > 0 ? record.eggs.map(egg => (
-                                 <div key={egg.id} className="text-sm p-2 border rounded-md grid grid-cols-2 gap-x-4">
-                                     <p><span className="text-muted-foreground">Laid:</span> {format(new Date(egg.laidDate), 'PPP')}</p>
-                                     <p><span className="text-muted-foreground">Status:</span> {egg.status}</p>
-                                     {egg.hatchDate && <p><span className="text-muted-foreground">Hatched:</span> {format(new Date(egg.hatchDate), 'PPP')}</p>}
-                                     {egg.chickId && allBirds.find(b => b.id === egg.chickId) && 
-                                         <p className="col-span-2"><span className="text-muted-foreground">Chick:</span> <Button variant="link" onClick={() => onBirdClick(allBirds.find(b => b.id === egg.chickId)!)} className="p-0 h-auto">{getBirdIdentifier(allBirds.find(b => b.id === egg.chickId)!)}</Button></p>
-                                     }
-                                 </div>
-                             )) : <p className="text-muted-foreground">No eggs recorded.</p>}
+                             {record.eggs.length > 0 ? record.eggs.map(egg => {
+                                const expectedDate = egg.expectedHatchDate ? parseISO(egg.expectedHatchDate) : null;
+                                const isHatched = egg.status === 'Hatched';
+                                return (
+                                    <div key={egg.id} className="text-sm p-2 border rounded-md grid grid-cols-2 gap-x-4 gap-y-1">
+                                        <p><span className="text-muted-foreground">Laid:</span> {format(new Date(egg.laidDate), 'PPP')}</p>
+                                        <p><span className="text-muted-foreground">Status:</span> {egg.status}</p>
+                                        {expectedDate && !isHatched && (
+                                            <p className="col-span-2">
+                                                <span className="text-muted-foreground">Est. Hatch:</span> {format(expectedDate, 'PPP')}
+                                                {isFuture(expectedDate) && ` (in ${formatDistanceToNow(expectedDate)})`}
+                                            </p>
+                                        )}
+                                        {egg.hatchDate && <p><span className="text-muted-foreground">Hatched:</span> {format(new Date(egg.hatchDate), 'PPP')}</p>}
+                                        {egg.chickId && allBirds.find(b => b.id === egg.chickId) && 
+                                            <p className="col-span-2"><span className="text-muted-foreground">Chick:</span> <Button variant="link" onClick={() => onBirdClick(allBirds.find(b => b.id === egg.chickId)!)} className="p-0 h-auto">{getBirdIdentifier(allBirds.find(b => b.id === egg.chickId)!)}</Button></p>
+                                        }
+                                    </div>
+                                )
+                             }) : <p className="text-muted-foreground text-center">No eggs recorded.</p>}
                          </div>
                         )}
                         {expandedSection === 'notes' && (

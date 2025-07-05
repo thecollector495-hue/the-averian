@@ -2,13 +2,13 @@
 'use client';
 
 export const speciesData = {
-  'Turdus migratorius': { name: 'American Robin', subspecies: ['T. m. migratorius', 'T. m. achrusterus'] },
-  'Cyanocitta cristata': { name: 'Blue Jay', subspecies: ['C. c. cristata', 'C. c. bromia'] },
-  'Cardinalis cardinalis': { name: 'Northern Cardinal', subspecies: ['C. c. cardinalis', 'C. c. floridanus'] },
-  'Erithacus rubecula': { name: 'European Robin', subspecies: ['E. r. rubecula', 'E. r. melophilus'] },
-  'Falco tinnunculus': { name: 'Common Kestrel', subspecies: [] },
-  'Eolophus roseicapilla': { name: 'Galah', subspecies: ['E. r. roseicapilla', 'E. r. assimilis'] },
-  'Serinus canaria domestica': { name: 'Domestic Canary', subspecies: [] },
+  'Turdus migratorius': { name: 'American Robin', subspecies: ['T. m. migratorius', 'T. m. achrusterus'], incubationPeriod: 13 },
+  'Cyanocitta cristata': { name: 'Blue Jay', subspecies: ['C. c. cristata', 'C. c. bromia'], incubationPeriod: 17 },
+  'Cardinalis cardinalis': { name: 'Northern Cardinal', subspecies: ['C. c. cardinalis', 'C. c. floridanus'], incubationPeriod: 12 },
+  'Erithacus rubecula': { name: 'European Robin', subspecies: ['E. r. rubecula', 'E. r. melophilus'], incubationPeriod: 13 },
+  'Falco tinnunculus': { name: 'Common Kestrel', subspecies: [], incubationPeriod: 28 },
+  'Eolophus roseicapilla': { name: 'Galah', subspecies: ['E. r. roseicapilla', 'E. r. assimilis'], incubationPeriod: 25 },
+  'Serinus canaria domestica': { name: 'Domestic Canary', subspecies: [], incubationPeriod: 14 },
 };
 
 export const mutationOptions = ['Opaline', 'Cinnamon', 'Lutino', 'Albino', 'Fallow', 'Spangle', 'Pied'] as const;
@@ -19,7 +19,7 @@ export type BirdFormValues = {
   sex: "male" | "female" | "unsexed";
   ringNumber?: string;
   unbanded: boolean;
-  age?: number;
+  birthDate?: Date;
   cageId?: string;
   visualMutations: string[];
   splitMutations: string[];
@@ -29,7 +29,7 @@ export type BirdFormValues = {
   offspringIds: string[];
   paidPrice?: number;
   estimatedValue?: number;
-  status: 'Available' | 'Sold' | 'Deceased';
+  status: 'Available' | 'Sold' | 'Deceased' | 'Hand-rearing';
   permitId?: string;
   saleDate?: Date;
   salePrice?: number;
@@ -38,9 +38,10 @@ export type BirdFormValues = {
   createSaleTransaction?: boolean;
 };
 
-export type Bird = Omit<BirdFormValues, 'cageId' | 'addToExpenses' | 'createSaleTransaction' | 'saleDate' | 'salePrice' | 'buyerInfo'> & { 
+export type Bird = Omit<BirdFormValues, 'cageId' | 'addToExpenses' | 'createSaleTransaction' | 'saleDate' | 'salePrice' | 'buyerInfo' | 'birthDate'> & { 
   id: string, 
   category: 'Bird',
+  birthDate?: string, // Stored as YYYY-MM-DD
   saleDetails?: {
     date: string;
     price: number;
@@ -64,7 +65,8 @@ export type Pair = {
 
 export type Egg = {
   id: string;
-  laidDate: string;
+  laidDate: string; // YYYY-MM-DD
+  expectedHatchDate?: string; // YYYY-MM-DD
   status: 'Laid' | 'Hatched' | 'Infertile' | 'Broken';
   hatchDate?: string;
   chickId?: string;
@@ -130,16 +132,16 @@ export const getBirdIdentifier = (bird: Bird) => {
 
 export const initialBirds: Bird[] = [
   {
-    id: '1', species: 'Turdus migratorius', subspecies: 'T. m. migratorius', ringNumber: 'A123', unbanded: false, category: 'Bird', sex: 'male', age: 2, visualMutations: ['Opaline'], splitMutations: ['Cinnamon', 'Pied'], fatherId: undefined, motherId: undefined, mateId: '4', offspringIds: ['3'], paidPrice: 150, estimatedValue: 200, status: 'Available', permitId: 'p1'
+    id: '1', species: 'Turdus migratorius', subspecies: 'T. m. migratorius', ringNumber: 'A123', unbanded: false, category: 'Bird', sex: 'male', birthDate: '2022-04-01', visualMutations: ['Opaline'], splitMutations: ['Cinnamon', 'Pied'], fatherId: undefined, motherId: undefined, mateId: '4', offspringIds: ['3'], paidPrice: 150, estimatedValue: 200, status: 'Available', permitId: 'p1'
   },
   {
-    id: '2', species: 'Cyanocitta cristata', subspecies: undefined, ringNumber: 'B456', unbanded: false, category: 'Bird', sex: 'female', age: 3, visualMutations: [], splitMutations: ['Lutino'], fatherId: undefined, motherId: undefined, mateId: undefined, offspringIds: [], paidPrice: 80, estimatedValue: 120, status: 'Sold', saleDetails: { date: '2024-06-10', price: 150, buyer: 'John Doe' }
+    id: '2', species: 'Cyanocitta cristata', subspecies: undefined, ringNumber: 'B456', unbanded: false, category: 'Bird', sex: 'female', birthDate: '2021-06-15', visualMutations: [], splitMutations: ['Lutino'], fatherId: undefined, motherId: undefined, mateId: undefined, offspringIds: [], paidPrice: 80, estimatedValue: 120, status: 'Sold', saleDetails: { date: '2024-06-10', price: 150, buyer: 'John Doe' }
   },
   {
-    id: '3', species: 'Turdus migratorius', subspecies: undefined, ringNumber: undefined, unbanded: true, category: 'Bird', sex: 'unsexed', age: 1, visualMutations: [], splitMutations: [], fatherId: '1', motherId: '4', mateId: undefined, offspringIds: [], paidPrice: 0, estimatedValue: 50, status: 'Available'
+    id: '3', species: 'Turdus migratorius', subspecies: undefined, ringNumber: undefined, unbanded: true, category: 'Bird', sex: 'unsexed', birthDate: '2024-05-30', visualMutations: [], splitMutations: [], fatherId: '1', motherId: '4', mateId: undefined, offspringIds: [], paidPrice: 0, estimatedValue: 50, status: 'Hand-rearing'
   },
   {
-    id: '4', species: 'Turdus migratorius', subspecies: 'T. m. achrusterus', ringNumber: 'C789', unbanded: false, category: 'Bird', sex: 'female', age: 2, visualMutations: ['Cinnamon'], splitMutations: [], fatherId: undefined, motherId: undefined, mateId: '1', offspringIds: ['3'], paidPrice: 160, estimatedValue: 220, status: 'Available'
+    id: '4', species: 'Turdus migratorius', subspecies: 'T. m. achrusterus', ringNumber: 'C789', unbanded: false, category: 'Bird', sex: 'female', birthDate: '2022-03-20', visualMutations: ['Cinnamon'], splitMutations: [], fatherId: undefined, motherId: undefined, mateId: '1', offspringIds: ['3'], paidPrice: 160, estimatedValue: 220, status: 'Available'
   },
 ];
 
@@ -159,9 +161,9 @@ export const initialBreedingRecords: BreedingRecord[] = [
         pairId: 'p1',
         startDate: '2024-05-01',
         eggs: [
-            { id: 'e1', laidDate: '2024-05-10', status: 'Hatched', hatchDate: '2024-05-30', chickId: '3' },
-            { id: 'e2', laidDate: '2024-05-12', status: 'Laid' },
-            { id: 'e3', laidDate: '2024-05-14', status: 'Infertile' },
+            { id: 'e1', laidDate: '2024-05-10', expectedHatchDate: '2024-05-23', status: 'Hatched', hatchDate: '2024-05-30', chickId: '3' },
+            { id: 'e2', laidDate: '2024-05-12', expectedHatchDate: '2024-05-25', status: 'Laid' },
+            { id: 'e3', laidDate: '2024-05-14', expectedHatchDate: '2024-05-27', status: 'Infertile' },
         ],
         notes: 'First clutch of the season. Pair seems to be doing well.'
     }

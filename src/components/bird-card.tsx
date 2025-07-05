@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -10,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Bird, Cage, Pair, BreedingRecord, Permit, speciesData, getBirdIdentifier } from '@/lib/data';
 import { useCurrency } from '@/context/CurrencyContext';
 import { cn } from '@/lib/utils';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, formatDistanceToNowStrict } from 'date-fns';
 
 export function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecords, allPermits, handleEditClick, onBirdClick, onViewBreedingRecord }: { bird: Bird; allBirds: Bird[]; allCages: Cage[]; allPairs: Pair[], allBreedingRecords: BreedingRecord[], allPermits: Permit[], handleEditClick: (bird: Bird) => void; onBirdClick: (bird: Bird) => void; onViewBreedingRecord: (record: BreedingRecord) => void; }) {
   const { formatCurrency } = useCurrency();
@@ -36,11 +37,21 @@ export function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecord
   const mother = allBirds.find(b => b.id === bird.motherId);
   const mate = allBirds.find(b => b.id === bird.mateId);
   const offspring = allBirds.filter(b => bird.offspringIds.includes(b.id));
+
+  const getAgeString = (birthDate: string | undefined): string => {
+    if (!birthDate) return 'N/A';
+    try {
+        return formatDistanceToNowStrict(parseISO(birthDate), { addSuffix: false });
+    } catch (e) {
+        return 'Invalid date';
+    }
+  }
   
   const getStatusBadgeVariant = () => {
     switch(bird.status) {
         case 'Sold': return 'destructive';
         case 'Deceased': return 'secondary';
+        case 'Hand-rearing': return 'outline';
         case 'Available':
         default: return 'default';
     }
@@ -83,7 +94,7 @@ export function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecord
         <div className="flex justify-between items-center text-sm pt-2">
           <span className="text-muted-foreground">Ring: <span className="font-medium text-foreground">{bird.ringNumber || 'Unbanded'}</span></span>
            <span className="text-muted-foreground">Age: <span className="font-medium text-foreground">
-             {bird.age ? `${new Date().getFullYear() - bird.age} (${bird.age} yrs)` : 'N/A'}
+             {getAgeString(bird.birthDate)}
            </span></span>
         </div>
       </CardContent>

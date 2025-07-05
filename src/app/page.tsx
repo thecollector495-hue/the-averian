@@ -79,7 +79,7 @@ export default function BirdsPage() {
   };
 
 
-  const handleSaveBird = (formData: BirdFormValues) => {
+  const handleSaveBird = (formData: BirdFormValues & { newCageName?: string }) => {
     let finalCageId = formData.cageId;
     if (formData.newCageName && formData.newCageName.trim() !== "") {
        const newCageId = handleCreateCage(formData.newCageName);
@@ -98,7 +98,7 @@ export default function BirdsPage() {
       sex: formData.sex,
       ringNumber: formData.ringNumber,
       unbanded: formData.unbanded,
-      age: formData.age,
+      birthDate: formData.birthDate ? format(formData.birthDate, 'yyyy-MM-dd') : undefined,
       visualMutations: formData.visualMutations,
       splitMutations: formData.splitMutations,
       fatherId: formData.fatherId,
@@ -197,7 +197,7 @@ export default function BirdsPage() {
     }
 
     const bird = item as Bird;
-    const birdIdentifier = `${bird.species} ${bird.subspecies || ''} ${bird.ringNumber || ''} ${bird.age || ''} ${(bird.visualMutations || []).join(' ')} ${(bird.splitMutations || []).join(' ')}`.toLowerCase();
+    const birdIdentifier = `${bird.species} ${bird.subspecies || ''} ${bird.ringNumber || ''} ${bird.birthDate || ''} ${(bird.visualMutations || []).join(' ')} ${(bird.splitMutations || []).join(' ')}`.toLowerCase();
     return birdIdentifier.includes(search.toLowerCase());
   });
 

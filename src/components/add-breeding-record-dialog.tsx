@@ -1,11 +1,11 @@
+
 'use client';
 
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format } from 'date-fns';
-import { initialBirds, Pair } from '@/lib/data';
-import { getBirdIdentifier } from '@/lib/data';
+import { format, addDays } from 'date-fns';
+import { Bird, Pair, speciesData, getBirdIdentifier } from '@/lib/data';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -22,6 +22,7 @@ import { Separator } from '@/components/ui/separator';
 const eggSchema = z.object({
   laidDate: z.date({ required_error: "Laid date is required." }),
   status: z.enum(['Laid', 'Hatched', 'Infertile', 'Broken']),
+  expectedHatchDate: z.date().optional(),
 });
 
 const breedingRecordSchema = z.object({
@@ -33,7 +34,7 @@ const breedingRecordSchema = z.object({
 
 type BreedingRecordFormValues = z.infer<typeof breedingRecordSchema>;
 
-export function AddBreedingRecordDialog({ isOpen, onOpenChange, pairs, onSave }: { isOpen: boolean, onOpenChange: (open: boolean) => void, pairs: Pair[], onSave: (data: any) => void }) {
+export function AddBreedingRecordDialog({ isOpen, onOpenChange, pairs, allBirds, onSave }: { isOpen: boolean, onOpenChange: (open: boolean) => void, pairs: Pair[], allBirds: Bird[], onSave: (data: any) => void }) {
   const form = useForm<BreedingRecordFormValues>({
     resolver: zodResolver(breedingRecordSchema),
     defaultValues: {
@@ -46,16 +47,43 @@ export function AddBreedingRecordDialog({ isOpen, onOpenChange, pairs, onSave }:
     control: form.control,
     name: "eggs",
   });
+  
+  const selectedPairId = form.watch("pairId");
+
+  const getIncubationPeriod = () => {
+      if (!selectedPairId) return null;
+      const pair = pairs.find(p => p.id === selectedPairId);
+      if (!pair) return null;
+      const bird = allBirds.find(b => b.id === pair.maleId || b.id === pair.femaleId);
+      if (!bird) return null;
+      const speciesInfo = speciesData[bird.species as keyof typeof speciesData];
+      return speciesInfo?.incubationPeriod || null;
+  };
 
   function onSubmit(data: BreedingRecordFormValues) {
     onSave({
       ...data,
       startDate: format(data.startDate, 'yyyy-MM-dd'),
-      eggs: data.eggs.map(e => ({ ...e, laidDate: format(e.laidDate, 'yyyy-MM-dd'), id: `e${Date.now()}${Math.random()}` }))
+      eggs: data.eggs.map(e => ({ 
+        ...e, 
+        laidDate: format(e.laidDate, 'yyyy-MM-dd'), 
+        expectedHatchDate: e.expectedHatchDate ? format(e.expectedHatchDate, 'yyyy-MM-dd') : undefined,
+        id: `e${Date.now()}${Math.random()}` 
+      }))
     });
     onOpenChange(false);
     form.reset();
   }
+
+  const handleAddEgg = () => {
+    const laidDate = new Date();
+    let expectedHatchDate: Date | undefined = undefined;
+    const incubationPeriod = getIncubationPeriod();
+    if (incubationPeriod) {
+        expectedHatchDate = addDays(laidDate, incubationPeriod);
+    }
+    append({ laidDate, status: 'Laid', expectedHatchDate });
+  };
   
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -79,8 +107,8 @@ export function AddBreedingRecordDialog({ isOpen, onOpenChange, pairs, onSave }:
                       </FormControl>
                       <SelectContent>
                         {pairs.map(p => {
-                          const male = initialBirds.find(b => b.id === p.maleId);
-                          const female = initialBirds.find(b => b.id === p.femaleId);
+                          const male = allBirds.find(b => b.id === p.maleId);
+                          const female = allBirds.find(b => b.id === p.femaleId);
                           if (!male || !female) return null;
                           return <SelectItem key={p.id} value={p.id}>{getBirdIdentifier(male)} & {getBirdIdentifier(female)}</SelectItem>
                         })}
@@ -136,43 +164,66 @@ export function AddBreedingRecordDialog({ isOpen, onOpenChange, pairs, onSave }:
             <div>
               <div className="flex justify-between items-center mb-2">
                 <h4 className="font-medium">Eggs</h4>
-                <Button type="button" size="sm" variant="outline" onClick={() => append({ laidDate: new Date(), status: 'Laid' })}>
+                <Button type="button" size="sm" variant="outline" onClick={handleAddEgg}>
                   <PlusCircle className="mr-2 h-4 w-4"/> Add Egg
                 </Button>
               </div>
               <div className="space-y-3">
                 {fields.map((field, index) => (
-                  <div key={field.id} className="flex items-end gap-2 p-2 border rounded-md">
+                  <div key={field.id} className="flex flex-col gap-2 p-3 border rounded-md">
+                    <div className="flex items-end gap-2">
+                        <FormField
+                            control={form.control}
+                            name={`eggs.${index}.laidDate`}
+                            render={({ field: dateField }) => (
+                            <FormItem className="flex-grow">
+                                <FormLabel>Laid Date</FormLabel>
+                                <Popover>
+                                    <PopoverTrigger asChild><FormControl><Button variant="outline" className="w-full justify-start text-left font-normal"><CalendarIcon className="mr-2 h-4 w-4"/>{dateField.value ? format(dateField.value, "PPP") : ""}</Button></FormControl></PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={dateField.value} onSelect={(date) => {
+                                        dateField.onChange(date);
+                                        const incubationPeriod = getIncubationPeriod();
+                                        if (incubationPeriod && date) {
+                                            form.setValue(`eggs.${index}.expectedHatchDate`, addDays(date, incubationPeriod));
+                                        }
+                                    }} /></PopoverContent>
+                                </Popover>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name={`eggs.${index}.status`}
+                            render={({ field: statusField }) => (
+                            <FormItem className="flex-grow">
+                                <FormLabel>Status</FormLabel>
+                                <Select onValueChange={statusField.onChange} defaultValue={statusField.value}>
+                                <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    {['Laid', 'Hatched', 'Infertile', 'Broken'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                </SelectContent>
+                                </Select>
+                            </FormItem>
+                            )}
+                        />
+                        <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4"/></Button>
+                    </div>
                      <FormField
                         control={form.control}
-                        name={`eggs.${index}.laidDate`}
+                        name={`eggs.${index}.expectedHatchDate`}
                         render={({ field: dateField }) => (
-                           <FormItem className="flex-grow">
-                             <FormLabel>Laid Date</FormLabel>
-                             <Popover>
-                                <PopoverTrigger asChild><FormControl><Button variant="outline" className="w-full justify-start text-left font-normal"><CalendarIcon className="mr-2 h-4 w-4"/>{dateField.value ? format(dateField.value, "PPP") : ""}</Button></FormControl></PopoverTrigger>
-                                <PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={dateField.value} onSelect={dateField.onChange} /></PopoverContent>
-                             </Popover>
-                             <FormMessage />
-                           </FormItem>
+                            <FormItem>
+                                <FormLabel className="text-xs text-muted-foreground">Expected Hatch Date</FormLabel>
+                                <Input
+                                    readOnly
+                                    disabled
+                                    value={dateField.value ? format(dateField.value, 'PPP') : 'Select pair to calculate'}
+                                    className="disabled:opacity-100 disabled:cursor-default"
+                                />
+                            </FormItem>
                         )}
                       />
-                     <FormField
-                        control={form.control}
-                        name={`eggs.${index}.status`}
-                        render={({ field: statusField }) => (
-                          <FormItem className="flex-grow">
-                             <FormLabel>Status</FormLabel>
-                             <Select onValueChange={statusField.onChange} defaultValue={statusField.value}>
-                               <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                               <SelectContent>
-                                 {['Laid', 'Hatched', 'Infertile', 'Broken'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                               </SelectContent>
-                             </Select>
-                          </FormItem>
-                        )}
-                      />
-                    <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4"/></Button>
                   </div>
                 ))}
                 {fields.length === 0 && <p className="text-sm text-muted-foreground text-center py-2">No eggs added yet.</p>}

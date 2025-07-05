@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -33,10 +34,7 @@ const birdFormSchema = z.object({
   }),
   ringNumber: z.string().optional(),
   unbanded: z.boolean().default(false),
-  age: z.preprocess(
-      (val) => (val === "" ? undefined : val),
-      z.coerce.number({ invalid_type_error: "Age must be a number."}).int().min(0, "Age can't be negative.").optional()
-  ),
+  birthDate: z.date().optional(),
   cageId: z.string().optional(),
   newCageName: z.string().optional(),
   visualMutations: z.array(z.string()).default([]),
@@ -54,7 +52,7 @@ const birdFormSchema = z.object({
       z.coerce.number({ invalid_type_error: "Value must be a number."}).min(0, "Value can't be negative.").optional()
   ),
   addToExpenses: z.boolean().default(false),
-  status: z.enum(['Available', 'Sold', 'Deceased'], { required_error: "Status is required." }),
+  status: z.enum(['Available', 'Sold', 'Deceased', 'Hand-rearing'], { required_error: "Status is required." }),
   permitId: z.string().optional(),
   salePrice: z.preprocess(
       (val) => (val === "" ? undefined : val),
@@ -76,7 +74,7 @@ const birdFormSchema = z.object({
 export type BirdFormValues = z.infer<typeof birdFormSchema>;
 
 
-export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, allCages, allPermits }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onSave: (data: BirdFormValues) => void, initialData: Bird | null, allBirds: Bird[], allCages: Cage[], allPermits: Permit[] }) {
+export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, allCages, allPermits }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onSave: (data: BirdFormValues & { newCageName?: string }) => void, initialData: Bird | null, allBirds: Bird[], allCages: Cage[], allPermits: Permit[] }) {
   const [isCreatingCage, setIsCreatingCage] = useState(false);
   
   const form = useForm<BirdFormValues>({
@@ -100,6 +98,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
       const currentCage = allCages.find(cage => cage.birdIds.includes(initialData.id));
       form.reset({
         ...initialData,
+        birthDate: initialData.birthDate ? parseISO(initialData.birthDate) : undefined,
         cageId: currentCage?.id,
         newCageName: "",
         addToExpenses: !initialData.paidPrice,
@@ -114,7 +113,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
         sex: undefined,
         ringNumber: "",
         unbanded: false,
-        age: undefined,
+        birthDate: undefined,
         cageId: undefined,
         newCageName: "",
         visualMutations: [],
@@ -170,7 +169,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
   }, [status, form]);
 
 
-  function onSubmit(data: BirdFormValues) {
+  function onSubmit(data: BirdFormValues & { newCageName?: string }) {
     onSave(data);
     onOpenChange(false);
   }
@@ -306,18 +305,46 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="age"
-                  render={({ field }) => (
-                    <FormItem className="flex-grow">
-                      <FormLabel>Age</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="e.g., 2" {...field} onChange={event => field.onChange(event.target.valueAsNumber)} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                 <FormField
+                    control={form.control}
+                    name="birthDate"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-col flex-grow">
+                            <FormLabel>Birth Date</FormLabel>
+                            <Popover>
+                            <PopoverTrigger asChild>
+                                <FormControl>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                    "w-full pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                    )}
+                                >
+                                    {field.value ? (
+                                    format(field.value, "PPP")
+                                    ) : (
+                                    <span>Pick a date</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                                </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) =>
+                                    date > new Date() || date < new Date("1900-01-01")
+                                }
+                                initialFocus
+                                />
+                            </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                        </FormItem>
+                    )}
                 />
               </div>
                <FormField
@@ -330,6 +357,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                         <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
                         <SelectContent>
                           <SelectItem value="Available">Available</SelectItem>
+                          <SelectItem value="Hand-rearing">Hand-rearing</SelectItem>
                           <SelectItem value="Sold">Sold</SelectItem>
                           <SelectItem value="Deceased">Deceased</SelectItem>
                         </SelectContent>

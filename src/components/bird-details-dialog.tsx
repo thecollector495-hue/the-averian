@@ -7,6 +7,7 @@ import { Bird, Cage, getBirdIdentifier, Permit } from '@/lib/data';
 import { useCurrency } from '@/context/CurrencyContext';
 import { ShieldCheck } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { format, parseISO, formatDistanceToNowStrict } from 'date-fns';
 
 // This is a helper component to avoid code duplication.
 const BirdLink = ({ bird, onBirdClick }: { bird: Bird | undefined, onBirdClick: (bird: Bird) => void }) => {
@@ -33,6 +34,15 @@ export function BirdDetailsDialog({ bird, allBirds, allCages, allPermits, onClos
   const mate = allBirds.find(b => b.id === bird.mateId);
   const offspring = allBirds.filter(b => bird.offspringIds.includes(b.id));
 
+  const getAgeString = (birthDate: string | undefined): string => {
+    if (!birthDate) return 'N/A';
+    try {
+        return formatDistanceToNowStrict(parseISO(birthDate), { addSuffix: false });
+    } catch (e) {
+        return 'Invalid date';
+    }
+  }
+
   return (
     <Dialog open={!!bird} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
       <DialogContent className="sm:max-w-lg">
@@ -48,7 +58,7 @@ export function BirdDetailsDialog({ bird, allBirds, allCages, allPermits, onClos
             <div className="grid grid-cols-2 gap-x-4 gap-y-2">
               <div><span className="text-muted-foreground">Status:</span> <span className="font-semibold capitalize">{bird.status}</span></div>
               <div><span className="text-muted-foreground">Sex:</span> <span className="font-semibold capitalize">{bird.sex}</span></div>
-              <div><span className="text-muted-foreground">Age:</span> <span className="font-semibold">{bird.age !== undefined ? `${new Date().getFullYear() - bird.age} (${bird.age} yrs)`: 'N/A'}</span></div>
+              <div><span className="text-muted-foreground">Age:</span> <span className="font-semibold">{getAgeString(bird.birthDate)}</span></div>
               <div><span className="text-muted-foreground">Ring:</span> <span className="font-semibold">{bird.ringNumber || 'Unbanded'}</span></div>
               <div className="flex items-center gap-1"><span className="text-muted-foreground">Permit:</span>
                  {permit ? (

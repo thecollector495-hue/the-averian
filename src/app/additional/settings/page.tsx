@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Crown, Star } from 'lucide-react';
+import { PlusCircle, Crown, Star, Check } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurrency, currencies } from "@/context/CurrencyContext";
 import { useItems, CustomSpecies, CustomMutation } from '@/context/ItemsContext';
@@ -69,6 +69,13 @@ export default function SettingsPage() {
   };
 
   const isTrialActive = trialEndDate && isFuture(trialEndDate);
+  
+  const premiumFeatures = [
+    "Unlimited bird, cage, and pair entries",
+    "Advanced breeding and incubation tracking",
+    "Comprehensive financial reports",
+    "Custom species and mutation management"
+  ];
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
@@ -78,7 +85,7 @@ export default function SettingsPage() {
       <h1 className="text-3xl font-bold mb-6">Settings</h1>
       
       <Tabs defaultValue="general">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="species">Species</TabsTrigger>
           <TabsTrigger value="mutations">Mutations</TabsTrigger>
@@ -190,7 +197,10 @@ export default function SettingsPage() {
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <p className="text-3xl font-bold">R35 <span className="text-lg font-normal text-muted-foreground">/ month</span></p>
-                                    <Button className="w-full">Subscribe</Button>
+                                    <ul className="text-sm text-muted-foreground space-y-2 flex-grow">
+                                        {premiumFeatures.map(feature => <li key={feature} className="flex items-start gap-2"><Check className="h-4 w-4 mt-0.5 text-green-500 shrink-0"/><span>{feature}</span></li>)}
+                                    </ul>
+                                    <Button className="w-full" variant="outline">Subscribe</Button>
                                 </CardContent>
                             </Card>
                              <Card className="border-primary border-2 relative">
@@ -201,6 +211,9 @@ export default function SettingsPage() {
                                 <CardContent className="space-y-4">
                                      <p className="text-3xl font-bold">R300 <span className="text-lg font-normal text-muted-foreground">/ year</span></p>
                                      <p className="text-sm text-green-500 font-medium">Save R120 per year!</p>
+                                     <ul className="text-sm text-muted-foreground space-y-2 flex-grow">
+                                        {premiumFeatures.map(feature => <li key={feature} className="flex items-start gap-2"><Check className="h-4 w-4 mt-0.5 text-green-500 shrink-0"/><span>{feature}</span></li>)}
+                                     </ul>
                                     <Button className="w-full">Subscribe</Button>
                                 </CardContent>
                             </Card>

@@ -1,3 +1,4 @@
+
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
@@ -6,8 +7,8 @@ import { CurrencyProvider } from '@/context/CurrencyContext';
 import { ItemsProvider } from '@/context/ItemsContext';
 
 export const metadata: Metadata = {
-  title: 'Bird Watcher',
-  description: 'Explore the world of birds.',
+  title: 'The Avarian',
+  description: 'Your modern aviary management solution.',
 };
 
 export default function RootLayout({

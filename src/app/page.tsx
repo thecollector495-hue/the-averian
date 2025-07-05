@@ -230,8 +230,8 @@ export default function BirdsPage() {
         onBirdClick={handleViewBirdClick}
       />}
       <div className="flex flex-col gap-4 mb-8">
-        <h1 className="text-4xl md:text-5xl font-bold font-headline text-center">Bird Watcher</h1>
-        <p className="text-lg text-muted-foreground text-center">Explore the world of birds.</p>
+        <h1 className="text-4xl md:text-5xl font-bold font-headline text-center">The Avarian</h1>
+        <p className="text-lg text-muted-foreground text-center">Your modern aviary management solution.</p>
         <div className="max-w-4xl mx-auto w-full flex flex-col sm:flex-row items-center gap-4">
           <div className="relative w-full flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />

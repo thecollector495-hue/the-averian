@@ -131,62 +131,112 @@ export default function TransactionsPage() {
           <CardDescription>A log of all your income and expenses.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead className="text-center">Type</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredTransactions.length > 0 ? (
-                filteredTransactions.map((t) => {
-                  const bird = t.relatedBirdId ? allBirds.find(b => b.id === t.relatedBirdId) : null;
-                  return (
-                    <TableRow key={t.id}>
-                      <TableCell>{format(parseISO(t.date), 'PPP')}</TableCell>
-                      <TableCell>
-                        {t.description}
-                        {bird && (
-                          <Button variant="link" className="p-0 h-auto font-normal text-xs block text-muted-foreground" onClick={() => setViewingBird(bird)}>
-                            {getBirdIdentifier(bird)}
-                          </Button>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={t.type === 'income' ? 'default' : 'secondary'} className="capitalize">
-                          {t.type === 'income' ? <ArrowUp className="h-3 w-3 mr-1"/> : <ArrowDown className="h-3 w-3 mr-1"/>}
-                          {t.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className={`text-right font-medium ${t.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
-                        {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
-                      </TableCell>
-                       <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleEditClick(t)}>
-                          <Pencil className="h-4 w-4" />
-                          <span className="sr-only">Edit</span>
-                        </Button>
-                         <Button variant="ghost" size="icon" onClick={() => setDeletingTransactionId(t.id)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                          <span className="sr-only">Delete</span>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
-              ) : (
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
-                    {search ? 'No transactions match your search.' : 'No transactions yet.'}
-                  </TableCell>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead className="text-center">Type</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredTransactions.length > 0 ? (
+                  filteredTransactions.map((t) => {
+                    const bird = t.relatedBirdId ? allBirds.find(b => b.id === t.relatedBirdId) : null;
+                    return (
+                      <TableRow key={t.id}>
+                        <TableCell>{format(parseISO(t.date), 'PPP')}</TableCell>
+                        <TableCell>
+                          {t.description}
+                          {bird && (
+                            <Button variant="link" className="p-0 h-auto font-normal text-xs block text-muted-foreground" onClick={() => setViewingBird(bird)}>
+                              {getBirdIdentifier(bird)}
+                            </Button>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant={t.type === 'income' ? 'default' : 'secondary'} className="capitalize">
+                            {t.type === 'income' ? <ArrowUp className="h-3 w-3 mr-1"/> : <ArrowDown className="h-3 w-3 mr-1"/>}
+                            {t.type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className={`text-right font-medium ${t.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
+                          {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => handleEditClick(t)}>
+                            <Pencil className="h-4 w-4" />
+                            <span className="sr-only">Edit</span>
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => setDeletingTransactionId(t.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <span className="sr-only">Delete</span>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
+                      {search ? 'No transactions match your search.' : 'No transactions yet.'}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="md:hidden space-y-4">
+            {filteredTransactions.length > 0 ? (
+                filteredTransactions.map(t => {
+                    const bird = t.relatedBirdId ? allBirds.find(b => b.id === t.relatedBirdId) : null;
+                    return (
+                        <Card key={t.id} className="w-full">
+                            <CardContent className="p-4 space-y-4">
+                                <div className="flex justify-between items-start gap-4">
+                                    <div>
+                                        <p className="font-semibold">{t.description}</p>
+                                        <p className="text-sm text-muted-foreground">{format(parseISO(t.date), 'PPP')}</p>
+                                        {bird && (
+                                            <Button variant="link" className="p-0 h-auto font-normal text-xs block text-muted-foreground" onClick={() => setViewingBird(bird)}>
+                                                {getBirdIdentifier(bird)}
+                                            </Button>
+                                        )}
+                                    </div>
+                                    <div className="text-right flex-shrink-0">
+                                        <p className={`font-bold text-lg ${t.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
+                                            {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
+                                        </p>
+                                        <Badge variant={t.type === 'income' ? 'default' : 'secondary'} className="capitalize mt-1">
+                                            {t.type === 'income' ? <ArrowUp className="h-3 w-3 mr-1"/> : <ArrowDown className="h-3 w-3 mr-1"/>}
+                                            {t.type}
+                                        </Badge>
+                                    </div>
+                                </div>
+                                <div className="flex justify-end gap-2">
+                                     <Button variant="outline" size="sm" onClick={() => handleEditClick(t)}>
+                                        <Pencil className="h-4 w-4 mr-2" />
+                                        Edit
+                                    </Button>
+                                    <Button variant="outline" size="sm" onClick={() => setDeletingTransactionId(t.id)}>
+                                        <Trash2 className="h-4 w-4 mr-2 text-destructive" />
+                                        Delete
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )
+                })
+            ) : (
+                <div className="text-center text-muted-foreground py-12">
+                    {search ? 'No transactions match your search.' : 'No transactions yet.'}
+                </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

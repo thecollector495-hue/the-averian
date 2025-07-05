@@ -25,7 +25,9 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
         field.onChange(Array.from(newSelectedValues));
     };
 
-    const handleUnselect = (value: string) => {
+    const handleUnselect = (e: React.MouseEvent<HTMLButtonElement>, value: string) => {
+        e.preventDefault();
+        e.stopPropagation();
         const newSelectedValues = new Set(selectedValues);
         newSelectedValues.delete(value);
         field.onChange(Array.from(newSelectedValues));
@@ -48,14 +50,16 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                                 <Badge
                                     variant="secondary"
                                     key={value}
-                                    className="mr-1 mb-1"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      handleUnselect(value);
-                                    }}
+                                    className="mr-1"
                                 >
                                     {getLabel(value)}
-                                    <X className="h-3 w-3 ml-1 text-muted-foreground hover:text-foreground" />
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleUnselect(e, value)}
+                                      className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                    >
+                                     <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                                    </button>
                                 </Badge>
                             ))
                         ) : (
@@ -68,15 +72,15 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                 <Command>
                     <CommandInput placeholder="Search..." />
-                    <CommandEmpty>No item found.</CommandEmpty>
                     <CommandList>
+                        <CommandEmpty>No item found.</CommandEmpty>
                         <CommandGroup>
                             {options.map((option) => (
                                 <CommandItem
                                     key={option.value}
-                                    value={option.label}
-                                    onSelect={() => {
-                                        handleSelect(option.value);
+                                    value={option.value}
+                                    onSelect={(currentValue) => {
+                                        handleSelect(currentValue);
                                     }}
                                 >
                                     <Check

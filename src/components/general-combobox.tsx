@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -46,17 +45,17 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
-                  value={option.label}
                   key={option.value}
-                  onSelect={() => {
-                    field.onChange(option.value === field.value ? "" : option.value);
+                  value={option.value}
+                  onSelect={(currentValue) => {
+                    field.onChange(currentValue === field.value ? "" : currentValue);
                     setOpen(false);
                   }}
                 >
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      option.value === field.value
+                      field.value === option.value
                         ? "opacity-100"
                         : "opacity-0"
                     )}

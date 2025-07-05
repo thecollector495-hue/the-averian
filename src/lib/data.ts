@@ -85,7 +85,17 @@ export type NoteReminder = {
     completed: boolean;
 }
 
-export type CollectionItem = Bird | Cage | Pair | BreedingRecord | NoteReminder;
+export type Transaction = {
+  id: string;
+  category: 'Transaction';
+  type: 'income' | 'expense';
+  date: string; // YYYY-MM-DD
+  description: string;
+  amount: number;
+  relatedBirdId?: string;
+}
+
+export type CollectionItem = Bird | Cage | Pair | BreedingRecord | NoteReminder | Transaction;
 
 export const getBirdIdentifier = (bird: Bird) => {
     const identifier = bird.ringNumber ? `(${bird.ringNumber})` : '(Unbanded)';
@@ -165,4 +175,12 @@ export const initialNotes: NoteReminder[] = [
     }
 ]
 
-export const initialItems: CollectionItem[] = [...initialBirds, ...initialPairs, ...initialCages, ...initialBreedingRecords, ...initialNotes];
+export const initialTransactions: Transaction[] = [
+    { id: 't1', category: 'Transaction', type: 'expense', date: '2024-04-15', description: 'Purchase of American Robin (A123)', amount: 150, relatedBirdId: '1' },
+    { id: 't2', category: 'Transaction', type: 'expense', date: '2024-04-20', description: 'Purchase of Blue Jay (B456)', amount: 80, relatedBirdId: '2' },
+    { id: 't3', category: 'Transaction', type: 'expense', date: '2024-05-05', description: 'Cage supplies', amount: 45.50 },
+    { id: 't4', category: 'Transaction', type: 'income', date: '2024-05-18', description: 'Sale of surplus seed', amount: 25 },
+    { id: 't5', category: 'Transaction', type: 'expense', date: '2024-06-01', description: 'Vet checkup for C789', amount: 60, relatedBirdId: '4' },
+];
+
+export const initialItems: CollectionItem[] = [...initialBirds, ...initialPairs, ...initialCages, ...initialBreedingRecords, ...initialNotes, ...initialTransactions];

@@ -34,7 +34,7 @@ import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useCurrency } from '@/context/CurrencyContext';
-import { Bird, Cage, Pair, BreedingRecord, CollectionItem, speciesData, mutationOptions, getBirdIdentifier, initialItems, Egg as EggType } from '@/lib/data';
+import { Bird, Cage, Pair, BreedingRecord, CollectionItem, speciesData, mutationOptions, getBirdIdentifier, initialItems, Egg as EggType, Transaction } from '@/lib/data';
 import { format } from 'date-fns';
 import { Calendar } from "@/components/ui/calendar"
 import { Textarea } from '@/components/ui/textarea';
@@ -72,6 +72,7 @@ const birdFormSchema = z.object({
       (val) => (val === "" ? undefined : val),
       z.coerce.number({ invalid_type_error: "Value must be a number."}).min(0, "Value can't be negative.").optional()
   ),
+  addToExpenses: z.boolean().default(false),
 }).refine(data => !data.cageId || !data.newCageName, {
     message: "Cannot select a cage and create a new one.",
     path: ["cageId"],
@@ -268,6 +269,7 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
       offspringIds: [],
       cageId: undefined,
       newCageName: "",
+      addToExpenses: true,
     },
   });
   
@@ -279,6 +281,7 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
         ...initialData,
         cageId: currentCage?.id,
         newCageName: "",
+        addToExpenses: !initialData.paidPrice,
       });
     } else {
       form.reset({
@@ -298,6 +301,7 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
         offspringIds: [],
         paidPrice: undefined,
         estimatedValue: undefined,
+        addToExpenses: true,
       });
     }
   }, [initialData, form, isOpen, allCages]);
@@ -305,6 +309,7 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
 
   const watchedSpecies = form.watch("species");
   const unbanded = form.watch("unbanded");
+  const paidPrice = form.watch("paidPrice");
   const subspeciesOptions = watchedSpecies ? speciesData[watchedSpecies as keyof typeof speciesData]?.subspecies : [];
   
   const potentialRelatives = allBirds
@@ -624,6 +629,30 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
                         </FormItem>
                     )} />
                 </div>
+                 {paidPrice !== undefined && paidPrice > 0 && !isEditMode && (
+                  <FormField
+                    control={form.control}
+                    name="addToExpenses"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>
+                            Add purchase to expenses
+                          </FormLabel>
+                          <FormDescription>
+                            This will create an expense entry for this bird's purchase price.
+                          </FormDescription>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                )}
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit">{isEditMode ? 'Save Changes' : 'Add Bird'}</Button>
@@ -981,12 +1010,13 @@ export default function BirdsPage() {
   };
 
 
-  const handleSaveBird = (formData: BirdFormValues) => {
+  const handleSaveBird = (formData: BirdFormValues & { addToExpenses?: boolean }) => {
     let finalCageId = formData.cageId;
     if (formData.newCageName && formData.newCageName.trim() !== "") {
       finalCageId = handleCreateCage(formData.newCageName);
     }
 
+    const birdId = editingBird?.id || `b${Date.now()}`;
     const birdToSave: Bird = {
       species: formData.species,
       subspecies: formData.subspecies,
@@ -1002,12 +1032,12 @@ export default function BirdsPage() {
       offspringIds: formData.offspringIds,
       paidPrice: formData.paidPrice,
       estimatedValue: formData.estimatedValue,
-      id: editingBird?.id || Date.now().toString(),
+      id: birdId,
       category: 'Bird',
     };
 
     setItems(prevItems => {
-      let newItems = [...prevItems];
+      let newItems: CollectionItem[] = [...prevItems];
       const newCageId = finalCageId;
 
       // Find old cage ID before updating the bird
@@ -1042,6 +1072,20 @@ export default function BirdsPage() {
               }
             }
         }
+      }
+      
+      // Add transaction if needed
+      if (formData.addToExpenses && formData.paidPrice && formData.paidPrice > 0 && !editingBird) {
+        const newTransaction: Transaction = {
+          id: `t${Date.now()}`,
+          category: 'Transaction',
+          type: 'expense',
+          date: format(new Date(), 'yyyy-MM-dd'),
+          description: `Purchase of ${getBirdIdentifier(birdToSave)}`,
+          amount: formData.paidPrice,
+          relatedBirdId: birdId,
+        };
+        newItems.unshift(newTransaction);
       }
       
       return newItems;

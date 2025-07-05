@@ -140,10 +140,13 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
   const customSpecies = useMemo(() => items.filter((item): item is CustomSpecies => item.category === 'CustomSpecies'), [items]);
   const customMutations = useMemo(() => items.filter((item): item is CustomMutation => item.category === 'CustomMutation'), [items]);
 
-  const allSpeciesOptions = useMemo(() => [
-    ...Object.entries(speciesData).map(([code, { name }]) => ({ value: code, label: `${name} (${code})` })),
-    ...customSpecies.map(s => ({ value: s.id, label: `${s.name} (Custom)` })),
-  ], [customSpecies]);
+  const allSpeciesOptions = useMemo(() => {
+    const options = [
+      ...Object.entries(speciesData).map(([code, { name }]) => ({ value: code, label: name })),
+      ...customSpecies.map(s => ({ value: s.id, label: `${s.name} (Custom)` })),
+    ];
+    return options.sort((a, b) => a.label.localeCompare(b.label));
+  }, [customSpecies]);
 
   const allMutationOptions = useMemo(() => {
     const combined = [...mutationOptions, ...customMutations.map(m => m.name)];

@@ -63,7 +63,6 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
             <PopoverContent
                 className="w-[--radix-popover-trigger-width] p-0 z-[9999]"
                 align="start"
-                onOpenAutoFocus={(e) => e.preventDefault()}
             >
                 <Command>
                     <CommandInput placeholder="Search..." />

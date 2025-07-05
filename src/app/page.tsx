@@ -75,61 +75,120 @@ const birdFormSchema = z.object({
 type BirdFormValues = z.infer<typeof birdFormSchema>;
 
 
-function MultiSelectPopover({ field, options, placeholder }: { field: ControllerRenderProps<any, any>, options: { value: string; label: string }[], placeholder: string }) {
-  const selectedValues = field.value || [];
+function MultiSelectCombobox({ field, options, placeholder }: { field: ControllerRenderProps<any, any>, options: { value: string; label: string }[], placeholder: string }) {
+    const [open, setOpen] = useState(false);
+    const selectedValues = new Set(field.value || []);
+
+    const handleSelect = (value: string) => {
+        const newSelectedValues = new Set(selectedValues);
+        if (newSelectedValues.has(value)) {
+            newSelectedValues.delete(value);
+        } else {
+            newSelectedValues.add(value);
+        }
+        field.onChange(Array.from(newSelectedValues));
+    };
+    
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-start h-auto min-h-10">
+                    <div className="flex gap-1 flex-wrap">
+                        {selectedValues.size > 0 ? (
+                            Array.from(selectedValues).map(val => (
+                                <Badge variant="secondary" key={val} >
+                                    {options.find(o => o.value === val)?.label || val}
+                                </Badge>
+                            ))
+                        ) : (
+                            <span className="text-muted-foreground">{placeholder}</span>
+                        )}
+                    </div>
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                    <CommandInput placeholder="Search..." />
+                    <CommandList>
+                        <CommandEmpty>No results found.</CommandEmpty>
+                        <CommandGroup>
+                            {options.map((option) => (
+                                <CommandItem
+                                    key={option.value}
+                                    onSelect={() => handleSelect(option.value)}
+                                >
+                                     <Check
+                                        className={cn(
+                                            "mr-2 h-4 w-4",
+                                            selectedValues.has(option.value)
+                                                ? "opacity-100"
+                                                : "opacity-0"
+                                        )}
+                                    />
+                                    {option.label}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
+}
+
+function BirdCombobox({ field, options, placeholder }: { field: ControllerRenderProps<any, any>; options: { value: string; label:string }[]; placeholder: string }) {
+  const [open, setOpen] = useState(false);
   
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <FormControl>
           <Button
             variant="outline"
             role="combobox"
             className={cn(
-              "w-full justify-between h-10",
-              !selectedValues.length && "text-muted-foreground"
+              "w-full justify-between",
+              !field.value && "text-muted-foreground"
             )}
           >
-            <span className="truncate">
-              {selectedValues.length
-                ? selectedValues.length === 1
-                  ? options.find(o => o.value === selectedValues[0])?.label ?? selectedValues[0]
-                  : `${selectedValues.length} selected`
-                : placeholder}
-            </span>
+            {field.value
+              ? options.find(
+                  (option) => option.value === field.value
+                )?.label
+              : placeholder}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </FormControl>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] max-h-60 overflow-y-auto p-0">
-        <div className="p-2 space-y-1">
-          {options.map((option) => (
-            <FormField
-              key={option.value}
-              control={undefined}
-              name={field.name}
-              render={() => (
-                <FormItem className="flex flex-row items-center space-x-2 space-y-0 p-1 rounded-md hover:bg-accent">
-                  <FormControl>
-                    <Checkbox
-                      checked={selectedValues.includes(option.value)}
-                      onCheckedChange={(checked) => {
-                        return checked
-                          ? field.onChange([...selectedValues, option.value])
-                          : field.onChange(
-                              selectedValues.filter(
-                                (value) => value !== option.value
-                              )
-                            );
-                      }}
-                    />
-                  </FormControl>
-                  <FormLabel className="font-normal w-full cursor-pointer py-1">{option.label}</FormLabel>
-                </FormItem>
-              )}
-            />
-          ))}
-        </div>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+        <Command>
+          <CommandInput placeholder="Search bird..." />
+          <CommandList>
+            <CommandEmpty>No bird found.</CommandEmpty>
+            <CommandGroup>
+              {options.map((option) => (
+                <CommandItem
+                  value={option.label}
+                  key={option.value}
+                  onSelect={() => {
+                    field.onChange(option.value);
+                    setOpen(false);
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      option.value === field.value
+                        ? "opacity-100"
+                        : "opacity-0"
+                    )}
+                  />
+                  {option.label}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
       </PopoverContent>
     </Popover>
   );
@@ -139,6 +198,8 @@ function CageCombobox({ field, allCages, onCageCreate }: { field: ControllerRend
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const selectedCageName = allCages.find(cage => cage.id === field.value)?.name || "";
+
+  const exactMatchExists = allCages.some(cage => cage.name.toLowerCase() === searchValue.toLowerCase());
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -160,25 +221,26 @@ function CageCombobox({ field, allCages, onCageCreate }: { field: ControllerRend
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <Command>
           <CommandInput 
-            placeholder="Search cages..." 
+            placeholder="Search or create cage..." 
             value={searchValue}
             onValueChange={setSearchValue}
           />
           <CommandList>
-            <CommandEmpty>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => {
-                  onCageCreate(searchValue);
-                  setOpen(false);
-                  setSearchValue("");
-                }}
-              >
-                Create "{searchValue}"
-              </Button>
-            </CommandEmpty>
+            <CommandEmpty>No cage found. Type to create one.</CommandEmpty>
             <CommandGroup>
+               {searchValue && !exactMatchExists && (
+                <CommandItem
+                  onSelect={() => {
+                    onCageCreate(searchValue);
+                    setOpen(false);
+                    setSearchValue("");
+                  }}
+                  className="cursor-pointer"
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Create "{searchValue}"
+                </CommandItem>
+              )}
               {allCages.map((cage) => (
                 <CommandItem
                   key={cage.id}
@@ -186,6 +248,7 @@ function CageCombobox({ field, allCages, onCageCreate }: { field: ControllerRend
                   onSelect={() => {
                     field.onChange(cage.id);
                     setOpen(false);
+                    setSearchValue("");
                   }}
                 >
                   <Check
@@ -217,6 +280,11 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
       offspringIds: [],
       cageId: undefined,
     },
+  });
+  
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: 'visualMutations' // Placeholder, not used but required
   });
   
   useEffect(() => {
@@ -442,29 +510,29 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
                 />
              <Separator />
              <p className="text-base font-medium">Genetics</p>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="visualMutations"
-                render={({ field }) => (
+             <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="visualMutations"
+                  render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Visual Mutations</FormLabel>
-                        <MultiSelectPopover field={field} options={mutationOptions.map(m => ({value:m, label:m}))} placeholder="Select visual mutations" />
-                        <FormMessage />
+                      <FormLabel>Visual Mutations</FormLabel>
+                       <MultiSelectCombobox field={field} options={mutationOptions.map(m => ({value:m, label:m}))} placeholder="Select visual mutations" />
+                      <FormMessage />
                     </FormItem>
-                )}
-               />
-               <FormField
-                control={form.control}
-                name="splitMutations"
-                render={({ field }) => (
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="splitMutations"
+                  render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Split Mutations</FormLabel>
-                        <MultiSelectPopover field={field} options={mutationOptions.map(m => ({value:m, label:m}))} placeholder="Select split mutations" />
-                        <FormMessage />
+                      <FormLabel>Split Mutations</FormLabel>
+                       <MultiSelectCombobox field={field} options={mutationOptions.map(m => ({value:m, label:m}))} placeholder="Select split mutations" />
+                      <FormMessage />
                     </FormItem>
-                )}
-               />
+                  )}
+                />
               </div>
               <Separator />
                <p className="text-base font-medium">Relationships</p>
@@ -472,37 +540,44 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
                   <FormField control={form.control} name="fatherId" render={({field}) => (
                     <FormItem>
                       <FormLabel>Father</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} disabled={!watchedSpecies}>
-                          <FormControl><SelectTrigger><SelectValue placeholder={watchedSpecies ? "Select father" : "Select species first"} /></SelectTrigger></FormControl>
-                          <SelectContent>{relationshipOptions.father.map(b => <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>)}</SelectContent>
-                      </Select>
+                      <BirdCombobox
+                        field={field}
+                        options={relationshipOptions.father}
+                        placeholder={watchedSpecies ? "Select father" : "Select species first"}
+                      />
                       <FormMessage />
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="motherId" render={({field}) => (
                     <FormItem>
                       <FormLabel>Mother</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} disabled={!watchedSpecies}>
-                          <FormControl><SelectTrigger><SelectValue placeholder={watchedSpecies ? "Select mother" : "Select species first"} /></SelectTrigger></FormControl>
-                          <SelectContent>{relationshipOptions.mother.map(b => <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>)}</SelectContent>
-                      </Select>
+                      <BirdCombobox
+                        field={field}
+                        options={relationshipOptions.mother}
+                        placeholder={watchedSpecies ? "Select mother" : "Select species first"}
+                      />
                       <FormMessage />
                     </FormItem>
                   )} />
                    <FormField control={form.control} name="mateId" render={({field}) => (
                     <FormItem>
                       <FormLabel>Mate</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} disabled={!watchedSpecies}>
-                          <FormControl><SelectTrigger><SelectValue placeholder={watchedSpecies ? "Select mate" : "Select species first"} /></SelectTrigger></FormControl>
-                          <SelectContent>{relationshipOptions.mate.map(b => <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>)}</SelectContent>
-                      </Select>
+                       <BirdCombobox
+                        field={field}
+                        options={relationshipOptions.mate}
+                        placeholder={watchedSpecies ? "Select mate" : "Select species first"}
+                      />
                       <FormMessage />
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="offspringIds" render={({field}) => (
                     <FormItem>
                       <FormLabel>Offspring</FormLabel>
-                      <MultiSelectPopover field={field} options={relationshipOptions.offspring} placeholder={watchedSpecies ? "Select offspring" : "Select species first"} />
+                      <MultiSelectCombobox
+                        field={field}
+                        options={relationshipOptions.offspring}
+                        placeholder={watchedSpecies ? "Select offspring" : "Select species first"}
+                      />
                       <FormMessage />
                     </FormItem>
                   )} />
@@ -762,7 +837,7 @@ function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecords, hand
         </div>
         
         {mutationDisplay && (
-            <p className="text-sm font-semibold">{mutationDisplay}</p>
+             <p className="text-sm font-semibold">{mutationDisplay}</p>
         )}
         
         <div className="flex justify-between items-center text-sm pt-2">

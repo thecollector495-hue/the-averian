@@ -37,7 +37,11 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
           </Button>
         </FormControl>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      <PopoverContent
+        className="w-[--radix-popover-trigger-width] p-0"
+        align="start"
+        onPointerDownOutside={(e) => e.preventDefault()}
+      >
         <Command>
           <CommandInput placeholder="Search..." />
           <CommandList>
@@ -46,9 +50,9 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.value}
-                  onSelect={(currentValue) => {
-                    field.onChange(currentValue === field.value ? "" : currentValue);
+                  value={option.label}
+                  onSelect={() => {
+                    field.onChange(option.value === field.value ? "" : option.value);
                     setOpen(false);
                   }}
                 >

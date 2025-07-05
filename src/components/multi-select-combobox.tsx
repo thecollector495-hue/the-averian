@@ -41,7 +41,7 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                                 <Badge
                                     variant="secondary"
                                     key={value}
-                                    className="mr-1 mb-1"
+                                    className="mr-1"
                                     onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
@@ -59,7 +59,11 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                     <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+            <PopoverContent
+                className="w-[--radix-popover-trigger-width] p-0"
+                align="start"
+                onPointerDownOutside={(e) => e.preventDefault()}
+            >
                 <Command>
                     <CommandInput placeholder="Search..." />
                     <CommandList>
@@ -68,10 +72,8 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                             {options.map((option) => (
                                 <CommandItem
                                     key={option.value}
-                                    value={option.value}
-                                    onSelect={(currentValue) => {
-                                        handleSelect(currentValue);
-                                    }}
+                                    value={option.label}
+                                    onSelect={() => handleSelect(option.value)}
                                 >
                                     <Check
                                         className={cn(

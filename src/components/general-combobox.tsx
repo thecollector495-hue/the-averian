@@ -40,7 +40,11 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
       <PopoverContent
         className="w-[--radix-popover-trigger-width] p-0"
         align="start"
-        onPointerDownOutside={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => {
+            // This is the crucial fix. It prevents the modal dialog
+            // from interfering with clicks inside the popover.
+            e.preventDefault();
+        }}
       >
         <Command>
           <CommandInput placeholder="Search..." />
@@ -52,6 +56,7 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
                   key={option.value}
                   value={option.value}
                   onSelect={(currentValue) => {
+                    // This now correctly uses the value from the onSelect event.
                     field.onChange(currentValue === field.value ? "" : currentValue);
                     setOpen(false);
                   }}

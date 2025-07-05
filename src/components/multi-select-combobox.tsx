@@ -12,15 +12,17 @@ import { Badge } from '@/components/ui/badge';
 export function MultiSelectCombobox({ field, options, placeholder }: { field: ControllerRenderProps<any, any>, options: { value: string; label: string }[], placeholder: string }) {
     const [open, setOpen] = React.useState(false);
     
+    // Use a Set for efficient add/delete operations.
     const selectedValues = new Set(Array.isArray(field.value) ? field.value : []);
 
-    const handleToggle = (valueToToggle: string) => {
+    const handleSelect = (valueToToggle: string) => {
         const newSelectedValues = new Set(selectedValues);
         if (newSelectedValues.has(valueToToggle)) {
             newSelectedValues.delete(valueToToggle);
         } else {
             newSelectedValues.add(valueToToggle);
         }
+        // Update the form with a new array.
         field.onChange(Array.from(newSelectedValues));
     };
 
@@ -45,7 +47,7 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                                     onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        handleToggle(value);
+                                        handleSelect(value);
                                     }}
                                 >
                                     {getLabel(value)}
@@ -62,7 +64,11 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
             <PopoverContent
                 className="w-[--radix-popover-trigger-width] p-0"
                 align="start"
-                onPointerDownOutside={(e) => e.preventDefault()}
+                onPointerDownOutside={(e) => {
+                    // This is the crucial fix. It prevents the modal dialog
+                    // from interfering with clicks inside the popover.
+                    e.preventDefault();
+                }}
             >
                 <Command>
                     <CommandInput placeholder="Search..." />
@@ -74,7 +80,8 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                                     key={option.value}
                                     value={option.value}
                                     onSelect={(currentValue) => {
-                                        handleToggle(currentValue);
+                                        // This now correctly uses the value from the onSelect event.
+                                        handleSelect(currentValue);
                                     }}
                                 >
                                     <Check

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -22,7 +23,7 @@ const transactionSchema = z.object({
   date: z.date({ required_error: "Date is required." }),
   description: z.string().min(1, { message: "Description is required." }),
   amount: z.preprocess(
-    (val) => (val === "" ? undefined : val),
+    (val) => (val === "" || val === null || val === undefined ? undefined : val),
     z.coerce.number({ invalid_type_error: "Amount must be a number." }).min(0.01, "Amount must be positive.")
   ),
 });
@@ -32,23 +33,33 @@ export type TransactionFormValues = z.infer<typeof transactionSchema>;
 export function AddTransactionDialog({ isOpen, onOpenChange, onSave, initialData }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onSave: (data: TransactionFormValues & { id?: string }) => void, initialData: Transaction | null }) {
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),
-  });
-
-  useEffect(() => {
-    if (initialData) {
-      form.reset({
-        ...initialData,
-        date: parseISO(initialData.date),
-      });
-    } else {
-      form.reset({
+    defaultValues: {
         type: 'expense',
         date: new Date(),
         description: '',
         amount: undefined,
-      });
     }
-  }, [initialData, form, isOpen]);
+  });
+
+  const { reset } = form;
+
+  useEffect(() => {
+    if (isOpen) {
+        if (initialData) {
+            reset({
+                ...initialData,
+                date: parseISO(initialData.date),
+            });
+        } else {
+            reset({
+                type: 'expense',
+                date: new Date(),
+                description: '',
+                amount: undefined,
+            });
+        }
+    }
+  }, [initialData, reset, isOpen]);
 
   function onSubmit(data: TransactionFormValues) {
     onSave({ ...data, id: initialData?.id });
@@ -76,7 +87,7 @@ export function AddTransactionDialog({ isOpen, onOpenChange, onSave, initialData
               <FormItem><FormLabel>Description</FormLabel><FormControl><Input placeholder="e.g., Bird food" {...field} /></FormControl><FormMessage /></FormItem>
             )} />
             <FormField control={form.control} name="amount" render={({ field }) => (
-              <FormItem><FormLabel>Amount</FormLabel><FormControl><Input type="number" step="0.01" placeholder="e.g., 25.50" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>Amount</FormLabel><FormControl><Input type="number" step="0.01" placeholder="e.g., 25.50" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : e.target.valueAsNumber)} /></FormControl><FormMessage /></FormItem>
             )} />
             <DialogFooter><Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button><Button type="submit">{isEditMode ? 'Save Changes' : 'Save Transaction'}</Button></DialogFooter>
           </form>

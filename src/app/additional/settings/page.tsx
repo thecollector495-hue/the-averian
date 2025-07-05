@@ -85,7 +85,7 @@ export default function SettingsPage() {
       <h1 className="text-3xl font-bold mb-6">Settings</h1>
       
       <Tabs defaultValue="general">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+        <TabsList className="grid h-auto w-full grid-cols-1 md:grid-cols-4">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="species">Species</TabsTrigger>
           <TabsTrigger value="mutations">Mutations</TabsTrigger>

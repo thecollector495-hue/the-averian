@@ -6,9 +6,9 @@ import { X, Check, ChevronsUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Command, CommandGroup, CommandItem, CommandList, CommandInput, CommandEmpty } from "@/components/ui/command";
 import { ControllerRenderProps } from 'react-hook-form';
-import { cn } from '@/lib/utils';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 export function MultiSelectCombobox({ field, options, placeholder }: { field: ControllerRenderProps<any, any>, options: { value: string; label: string }[], placeholder: string }) {
     const [open, setOpen] = React.useState(false);
@@ -25,7 +25,7 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
         field.onChange(Array.from(newSelectedValues));
     };
 
-    const handleUnselect = (e: React.MouseEvent<HTMLButtonElement>, value: string) => {
+    const handleUnselect = (e: React.MouseEvent<HTMLButtonElement> | React.KeyboardEvent<HTMLButtonElement>, value: string) => {
         e.preventDefault();
         e.stopPropagation();
         const newSelectedValues = new Set(selectedValues);
@@ -51,11 +51,21 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                                     variant="secondary"
                                     key={value}
                                     className="mr-1"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Backspace' || e.key === 'Delete') {
+                                            handleUnselect(e, value);
+                                        }
+                                    }}
                                 >
                                     {getLabel(value)}
                                     <button
                                       type="button"
                                       onClick={(e) => handleUnselect(e, value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                             handleUnselect(e, value);
+                                        }
+                                      }}
                                       className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
                                     >
                                      <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
@@ -78,9 +88,9 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                             {options.map((option) => (
                                 <CommandItem
                                     key={option.value}
-                                    value={option.value}
-                                    onSelect={(currentValue) => {
-                                        handleSelect(currentValue);
+                                    value={option.label}
+                                    onSelect={() => {
+                                        handleSelect(option.value);
                                     }}
                                 >
                                     <Check

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import * as React from 'react';
 import { ControllerRenderProps } from 'react-hook-form';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { FormControl } from '@/components/ui/form';
@@ -10,7 +10,7 @@ import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function GeneralCombobox({ field, options, placeholder, disabled = false }: { field: ControllerRenderProps<any, any>; options: { value: string; label:string }[]; placeholder: string; disabled?: boolean; }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = React.useState(false);
   
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -19,6 +19,7 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
           <Button
             variant="outline"
             role="combobox"
+            aria-expanded={open}
             disabled={disabled}
             className={cn(
               "w-full justify-between",
@@ -44,9 +45,8 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
                 <CommandItem
                   value={option.label}
                   key={option.value}
-                  onSelect={(currentValue) => {
-                    const selectedOption = options.find(opt => opt.label.toLowerCase() === currentValue.toLowerCase());
-                    field.onChange(selectedOption?.value || "");
+                  onSelect={() => {
+                    field.onChange(option.value);
                     setOpen(false);
                   }}
                 >

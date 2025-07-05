@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import * as React from 'react';
 import { ControllerRenderProps } from 'react-hook-form';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function MultiSelectCombobox({ field, options, placeholder }: { field: ControllerRenderProps<any, any>, options: { value: string; label: string }[], placeholder: string }) {
-    const [open, setOpen] = useState(false);
+    const [open, setOpen] = React.useState(false);
     const selectedValues = new Set(field.value || []);
 
     const handleSelect = (value: string) => {
@@ -46,25 +46,31 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                     <CommandList>
                         <CommandEmpty>No results found.</CommandEmpty>
                         <CommandGroup>
-                            {options.map((option) => (
+                            {options.map((option) => {
+                                const isSelected = selectedValues.has(option.value);
+                                return (
                                 <CommandItem
                                     key={option.value}
                                     value={option.label}
-                                    onSelect={() => {
-                                        handleSelect(option.value);
+                                    onSelect={() => handleSelect(option.value)}
+                                    onPointerDown={(e) => e.preventDefault()} // Prevents popover from closing on select
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                            handleSelect(option.value)
+                                        }
                                     }}
                                 >
                                      <Check
                                         className={cn(
                                             "mr-2 h-4 w-4",
-                                            selectedValues.has(option.value)
+                                            isSelected
                                                 ? "opacity-100"
                                                 : "opacity-0"
                                         )}
                                     />
                                     {option.label}
                                 </CommandItem>
-                            ))}
+                            )})}
                         </CommandGroup>
                     </CommandList>
                 </Command>

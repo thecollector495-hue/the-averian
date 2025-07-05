@@ -12,7 +12,6 @@ import { Badge } from '@/components/ui/badge';
 export function MultiSelectCombobox({ field, options, placeholder }: { field: ControllerRenderProps<any, any>, options: { value: string; label: string }[], placeholder: string }) {
     const [open, setOpen] = React.useState(false);
     
-    // Use a Set for efficient add/delete operations.
     const selectedValues = new Set(Array.isArray(field.value) ? field.value : []);
 
     const handleSelect = (valueToToggle: string) => {
@@ -22,7 +21,6 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
         } else {
             newSelectedValues.add(valueToToggle);
         }
-        // Update the form with a new array.
         field.onChange(Array.from(newSelectedValues));
     };
 
@@ -65,8 +63,6 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                 className="w-[--radix-popover-trigger-width] p-0"
                 align="start"
                 onPointerDownOutside={(e) => {
-                    // This is the crucial fix. It prevents the modal dialog
-                    // from interfering with clicks inside the popover.
                     e.preventDefault();
                 }}
             >
@@ -80,7 +76,6 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                                     key={option.value}
                                     value={option.value}
                                     onSelect={(currentValue) => {
-                                        // This now correctly uses the value from the onSelect event.
                                         handleSelect(currentValue);
                                     }}
                                 >

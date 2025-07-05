@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, PlusCircle, ChevronsUpDown, Users2, Egg, Pencil, Landmark, StickyNote, Trash2, Calendar as CalendarIcon } from 'lucide-react';
+import { Search, PlusCircle, ChevronsUpDown, Users2, Egg, Pencil, Landmark, StickyNote, Trash2, Calendar as CalendarIcon, Check } from 'lucide-react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, ControllerRenderProps, useFieldArray, Controller } from "react-hook-form";
 import { z } from "zod";
@@ -38,6 +38,7 @@ import { Bird, Cage, Pair, BreedingRecord, CollectionItem, speciesData, mutation
 import { format } from 'date-fns';
 import { Calendar } from "@/components/ui/calendar"
 import { Textarea } from '@/components/ui/textarea';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 
 const birdFormSchema = z.object({
@@ -134,8 +135,78 @@ function MultiSelectPopover({ field, options, placeholder }: { field: Controller
   );
 }
 
+function CageCombobox({ field, allCages, onCageCreate }: { field: ControllerRenderProps<BirdFormValues, 'cageId'>; allCages: Cage[]; onCageCreate: (name: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+  const selectedCageName = allCages.find(cage => cage.id === field.value)?.name || "";
 
-function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, allCages }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onSave: (data: BirdFormValues) => void, initialData: Bird | null, allBirds: Bird[], allCages: Cage[] }) {
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <FormControl>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between"
+          >
+            {field.value
+              ? selectedCageName
+              : "Select or create cage..."}
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </FormControl>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+        <Command>
+          <CommandInput 
+            placeholder="Search cages..." 
+            value={searchValue}
+            onValueChange={setSearchValue}
+          />
+          <CommandList>
+            <CommandEmpty>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  onCageCreate(searchValue);
+                  setOpen(false);
+                  setSearchValue("");
+                }}
+              >
+                Create "{searchValue}"
+              </Button>
+            </CommandEmpty>
+            <CommandGroup>
+              {allCages.map((cage) => (
+                <CommandItem
+                  key={cage.id}
+                  value={cage.name}
+                  onSelect={() => {
+                    field.onChange(cage.id);
+                    setOpen(false);
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      field.value === cage.id ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {cage.name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+
+function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, allCages, handleCreateCage }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onSave: (data: BirdFormValues) => void, initialData: Bird | null, allBirds: Bird[], allCages: Cage[], handleCreateCage: (name: string) => string }) {
   const form = useForm<BirdFormValues>({
     resolver: zodResolver(birdFormSchema),
     defaultValues: {
@@ -355,22 +426,16 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
                   control={form.control}
                   name="cageId"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-col">
                       <FormLabel>Cage</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a cage (optional)" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {allCages.map((cage) => (
-                            <SelectItem key={cage.id} value={cage.id}>
-                              {cage.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                       <CageCombobox
+                          field={field}
+                          allCages={allCages}
+                          onCageCreate={(cageName) => {
+                            const newCageId = handleCreateCage(cageName);
+                            field.onChange(newCageId);
+                          }}
+                        />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -475,50 +540,62 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
   );
 }
 
-const BirdRelations = ({ bird, allBirds, onBirdClick }: { bird: Bird, allBirds: Bird[], onBirdClick: (bird: Bird) => void }) => {
+const cageFormSchema = z.object({
+  name: z.string().min(1, { message: "Cage name is required." }),
+});
+type CageFormValues = z.infer<typeof cageFormSchema>;
 
-    const getBirdLabel = (targetBird: Bird | undefined) => {
-        if (!targetBird) return <span className="text-muted-foreground">N/A</span>;
-        
-        const identifier = getBirdIdentifier(targetBird);
+function AddCageDialog({ isOpen, onOpenChange, onSave }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onSave: (data: CageFormValues) => void }) {
+  const form = useForm<CageFormValues>({
+    resolver: zodResolver(cageFormSchema),
+    defaultValues: {
+      name: "",
+    },
+  });
 
-        return (
-            <Button variant="link" className="p-0 h-auto font-normal text-base text-left justify-start" onClick={() => onBirdClick(targetBird)}>
-                {identifier}
-            </Button>
-        );
-    };
+  function onSubmit(data: CageFormValues) {
+    onSave(data);
+    onOpenChange(false);
+    form.reset();
+  }
 
-    const father = allBirds.find(b => b.id === bird.fatherId);
-    const mother = allBirds.find(b => b.id === bird.motherId);
-    const mate = allBirds.find(b => b.id === bird.mateId);
-    const offspring = allBirds.filter(b => bird.offspringIds.includes(b.id));
-
-    return (
-        <div className="space-y-3 pl-4 text-sm">
-            <div className="flex items-start gap-2">
-                <strong className="w-20 shrink-0 pt-1">Father:</strong>
-                <span>{getBirdLabel(father)}</span>
-            </div>
-            <div className="flex items-start gap-2">
-                <strong className="w-20 shrink-0 pt-1">Mother:</strong>
-                <span>{getBirdLabel(mother)}</span>
-            </div>
-            <div className="flex items-start gap-2">
-                <strong className="w-20 shrink-0 pt-1">Mate:</strong>
-                <span>{getBirdLabel(mate)}</span>
-            </div>
-            <div className="flex flex-col gap-1">
-                <strong>Offspring:</strong>
-                {offspring.length > 0 ? (
-                    <ul className="list-disc pl-6 space-y-1 mt-1">
-                        {offspring.map(o => <li key={o.id}>{getBirdLabel(o)}</li>)}
-                    </ul>
-                ) : <span className="text-muted-foreground ml-2">N/A</span>}
-            </div>
-        </div>
-    );
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add New Cage</DialogTitle>
+          <DialogDescription>
+            Enter a name for the new cage.
+          </DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cage Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Flight Cage 1" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">Add Cage</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
 }
+
 
 function BirdDetailsDialog({ bird, allBirds, allCages, onClose, onBirdClick }: { bird: Bird | null; allBirds: Bird[]; allCages: Cage[]; onClose: () => void; onBirdClick: (bird: Bird) => void; }) {
   const { formatCurrency } = useCurrency();
@@ -648,7 +725,6 @@ function BreedingRecordDetailsDialog({ record, allBirds, allPairs, onClose, onBi
     );
 }
 
-
 function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecords, handleEditClick, onBirdClick, onViewBreedingRecord }: { bird: Bird; allBirds: Bird[]; allCages: Cage[]; allPairs: Pair[], allBreedingRecords: BreedingRecord[], handleEditClick: (bird: Bird) => void; onBirdClick: (bird: Bird) => void; onViewBreedingRecord: (record: BreedingRecord) => void; }) {
   const { formatCurrency } = useCurrency();
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
@@ -660,18 +736,22 @@ function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecords, hand
   const cage = allCages.find(c => c.birdIds.includes(bird.id));
 
   const visualText = bird.visualMutations.join(' ');
-  const splitText = bird.splitMutations.length > 0 ? ` / (split) ${bird.splitMutations.join(' ')}` : '';
-  const mutationDisplay = `${visualText}${splitText}`.trim();
+  const splitText = bird.splitMutations.length > 0 ? `/(split) ${bird.splitMutations.join(' ')}` : '';
+  const mutationDisplay = `${visualText} ${splitText}`.trim();
   
   const birdBreedingRecords = allBreedingRecords.filter(r => {
     const pair = allPairs.find(p => p.id === r.pairId);
     return pair && (pair.maleId === bird.id || pair.femaleId === bird.id);
   });
-
+  
+  const father = allBirds.find(b => b.id === bird.fatherId);
+  const mother = allBirds.find(b => b.id === bird.motherId);
+  const mate = allBirds.find(b => b.id === bird.mateId);
+  const offspring = allBirds.filter(b => bird.offspringIds.includes(b.id));
 
   return (
     <Card key={bird.id} className="flex flex-col h-full">
-       <CardHeader className="flex flex-row items-start justify-between p-4 pb-2">
+      <CardHeader className="flex flex-row items-start justify-between p-4 pb-2">
         <Badge variant={bird.sex === 'male' ? 'default' : bird.sex === 'female' ? 'destructive' : 'secondary'} className="capitalize">{bird.sex}</Badge>
         <span className="text-sm text-muted-foreground text-right">{cage?.name || 'No Cage'}</span>
       </CardHeader>
@@ -712,7 +792,32 @@ function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecords, hand
         </div>
         {expandedSection && (
             <div className="w-full pt-4 mt-2 border-t border-border">
-                {expandedSection === 'family' && <BirdRelations bird={bird} allBirds={allBirds} onBirdClick={onBirdClick} />}
+                {expandedSection === 'family' && (
+                  <div className="space-y-3 pl-4 text-sm">
+                    {[
+                      { label: 'Father', bird: father },
+                      { label: 'Mother', bird: mother },
+                      { label: 'Mate', bird: mate },
+                    ].map(({label, bird}) => (
+                      <div className="flex items-start gap-2" key={label}>
+                          <strong className="w-16 shrink-0 pt-1">{label}:</strong>
+                          <span>
+                            {bird ? (
+                              <Button variant="link" className="p-0 h-auto font-normal text-sm text-left justify-start" onClick={() => onBirdClick(bird)}>{getBirdIdentifier(bird)}</Button>
+                            ) : <span className="text-muted-foreground">N/A</span>}
+                          </span>
+                      </div>
+                    ))}
+                    <div className="flex flex-col gap-1">
+                        <strong>Offspring:</strong>
+                        {offspring.length > 0 ? (
+                            <ul className="list-disc pl-6 space-y-1 mt-1">
+                                {offspring.map(o => <li key={o.id}><Button variant="link" className="p-0 h-auto font-normal text-sm text-left justify-start" onClick={() => onBirdClick(o)}>{getBirdIdentifier(o)}</Button></li>)}
+                            </ul>
+                        ) : <span className="text-muted-foreground ml-2">N/A</span>}
+                    </div>
+                  </div>
+                )}
                 {expandedSection === 'breeding' && (
                   <div className="px-2 py-1 text-sm space-y-2">
                     {birdBreedingRecords.length > 0 ? birdBreedingRecords.map(rec => (
@@ -817,6 +922,7 @@ export default function BirdsPage() {
   const [editingBird, setEditingBird] = useState<Bird | null>(null);
   const [viewingBird, setViewingBird] = useState<Bird | null>(null);
   const [viewingBreedingRecord, setViewingBreedingRecord] = useState<BreedingRecord | null>(null);
+  const [isAddCageDialogOpen, setIsAddCageDialogOpen] = useState(false);
   
   const allBirds = items.filter((item): item is Bird => item.category === 'Bird');
   const allCages = items.filter((item): item is Cage => item.category === 'Cage');
@@ -841,6 +947,18 @@ export default function BirdsPage() {
     setViewingBreedingRecord(record);
   }
 
+  const handleCreateCage = (cageName: string): string => {
+    const newCage: Cage = {
+        id: `c${Date.now()}`,
+        name: cageName,
+        category: 'Cage',
+        birdIds: []
+    };
+    setItems(prev => [newCage, ...prev]);
+    return newCage.id;
+  };
+
+
   const handleSaveBird = (formData: BirdFormValues) => {
     const birdToSave: Bird = {
       species: formData.species,
@@ -862,12 +980,14 @@ export default function BirdsPage() {
     };
 
     setItems(prevItems => {
-      const newItems = [...prevItems];
+      let newItems = [...prevItems];
       const newCageId = formData.cageId;
 
+      // Find old cage ID before updating the bird
       const oldCage = prevItems.find(item => item.category === 'Cage' && (item as Cage).birdIds.includes(birdToSave.id)) as Cage | undefined;
       const oldCageId = oldCage?.id;
-
+      
+      // Add or update the bird
       const birdIndex = newItems.findIndex(i => i.id === birdToSave.id && i.category === 'Bird');
       if (birdIndex > -1) {
         newItems[birdIndex] = birdToSave;
@@ -875,7 +995,9 @@ export default function BirdsPage() {
         newItems.unshift(birdToSave);
       }
 
+      // Update cage memberships
       if (newCageId !== oldCageId) {
+        // Remove from old cage
         if (oldCageId) {
           const oldCageIndex = newItems.findIndex(i => i.id === oldCageId);
           if (oldCageIndex > -1) {
@@ -883,14 +1005,15 @@ export default function BirdsPage() {
             (newItems[oldCageIndex] as Cage).birdIds = currentOldCage.birdIds.filter(id => id !== birdToSave.id);
           }
         }
+        // Add to new cage
         if (newCageId) {
-          const newCageIndex = newItems.findIndex(i => i.id === newCageId);
-          if (newCageIndex > -1) {
-            const currentNewCage = newItems[newCageIndex] as Cage;
-            if (!currentNewCage.birdIds.includes(birdToSave.id)) {
-               (newItems[newCageIndex] as Cage).birdIds.push(birdToSave.id);
+           const newCageIndex = newItems.findIndex(i => i.id === newCageId);
+            if (newCageIndex > -1) {
+              const currentNewCage = newItems[newCageIndex] as Cage;
+              if (!currentNewCage.birdIds.includes(birdToSave.id)) {
+                  (newItems[newCageIndex] as Cage).birdIds.push(birdToSave.id);
+              }
             }
-          }
         }
       }
       
@@ -914,6 +1037,11 @@ export default function BirdsPage() {
 
   return (
     <div className="container mx-auto p-4 sm:p-6 md:p-8">
+      <AddCageDialog
+        isOpen={isAddCageDialogOpen}
+        onOpenChange={setIsAddCageDialogOpen}
+        onSave={(data) => handleCreateCage(data.name)}
+       />
       <BirdFormDialog
         isOpen={isFormOpen}
         onOpenChange={setIsFormOpen}
@@ -921,6 +1049,7 @@ export default function BirdsPage() {
         initialData={editingBird}
         allBirds={allBirds}
         allCages={allCages}
+        handleCreateCage={handleCreateCage}
       />
       <BirdDetailsDialog
         bird={viewingBird}
@@ -928,7 +1057,6 @@ export default function BirdsPage() {
         allCages={allCages}
         onClose={() => setViewingBird(null)}
         onBirdClick={(bird) => {
-            // This allows clicking through birds in the details dialog
             setViewingBird(bird);
         }}
       />
@@ -943,10 +1071,18 @@ export default function BirdsPage() {
         <h1 className="text-4xl md:text-5xl font-bold font-headline text-center">Bird Watcher</h1>
         <p className="text-lg text-muted-foreground text-center">Explore the world of birds.</p>
         <div className="max-w-3xl mx-auto w-full flex flex-col sm:flex-row items-center gap-4">
-          <Button onClick={handleAddClick}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Bird
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleAddClick}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Bird
+            </Button>
+            {filterCategory === 'Cage' && (
+              <Button onClick={() => setIsAddCageDialogOpen(true)}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Cage
+              </Button>
+            )}
+          </div>
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
@@ -995,5 +1131,3 @@ export default function BirdsPage() {
     </div>
   );
 }
-
-

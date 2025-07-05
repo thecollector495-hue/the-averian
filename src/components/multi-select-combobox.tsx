@@ -27,7 +27,7 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
     const getLabel = (value: string) => options.find(o => o.value === value)?.label || value;
     
     return (
-        <Popover open={open} onOpenChange={setOpen} modal={false}>
+        <Popover open={open} onOpenChange={setOpen} modal={true}>
             <PopoverTrigger asChild>
                 <Button
                     variant="outline"
@@ -41,6 +41,7 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                                 <Badge
                                     variant="secondary"
                                     key={value}
+                                    className="cursor-pointer"
                                     onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
@@ -67,9 +68,9 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                             {options.map((option) => (
                                 <CommandItem
                                     key={option.value}
-                                    value={option.value}
-                                    onSelect={(selectedValue) => {
-                                        handleSelect(selectedValue);
+                                    value={option.label}
+                                    onSelect={() => {
+                                        handleSelect(option.value);
                                     }}
                                 >
                                     <Check

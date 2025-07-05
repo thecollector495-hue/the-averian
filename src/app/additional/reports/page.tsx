@@ -57,12 +57,12 @@ export default function ReportsPage() {
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
-       <div className="flex justify-between items-center mb-6">
+       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <h1 className="text-3xl font-bold">Reports</h1>
-        <Tabs value={timeFilter} onValueChange={(value) => setTimeFilter(value as TimeFilter)} className="w-auto">
-          <TabsList>
-            <TabsTrigger value="month">This Month</TabsTrigger>
-            <TabsTrigger value="year">This Year</TabsTrigger>
+        <Tabs value={timeFilter} onValueChange={(value) => setTimeFilter(value as TimeFilter)} className="w-full sm:w-auto">
+          <TabsList className="grid w-full grid-cols-3 sm:w-auto">
+            <TabsTrigger value="month">Month</TabsTrigger>
+            <TabsTrigger value="year">Year</TabsTrigger>
             <TabsTrigger value="all">All Time</TabsTrigger>
           </TabsList>
         </Tabs>

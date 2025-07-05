@@ -239,8 +239,30 @@ export default function BirdsPage() {
       <div className="flex flex-col gap-4 mb-8">
         <h1 className="text-4xl md:text-5xl font-bold font-headline text-center">Bird Watcher</h1>
         <p className="text-lg text-muted-foreground text-center">Explore the world of birds.</p>
-        <div className="max-w-3xl mx-auto w-full flex flex-col sm:flex-row items-center gap-4">
-          <div className="flex gap-2">
+        <div className="max-w-4xl mx-auto w-full flex flex-col sm:flex-row items-center gap-4">
+          <div className="relative w-full flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              placeholder={filterCategory === 'Bird' ? "Search for birds..." : `Cannot search in ${filterCategory}s`}
+              className="pl-10"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              disabled={filterCategory !== 'Bird'}
+            />
+          </div>
+          <div className="flex w-full sm:w-auto items-center gap-2">
+            <Select value={filterCategory} onValueChange={setFilterCategory}>
+              <SelectTrigger className="w-full sm:w-[120px]">
+                <SelectValue placeholder="Filter" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map(category => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button onClick={handleAddClick}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Bird
@@ -252,28 +274,6 @@ export default function BirdsPage() {
               </Button>
             )}
           </div>
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              placeholder={filterCategory === 'Bird' ? "Search for birds..." : `Cannot search in ${filterCategory}s`}
-              className="pl-10"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              disabled={filterCategory !== 'Bird'}
-            />
-          </div>
-          <Select value={filterCategory} onValueChange={setFilterCategory}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Filter by type" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map(category => (
-                <SelectItem key={category} value={category}>
-                  {category}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
       </div>
       

@@ -2,13 +2,128 @@
 'use client';
 
 export const speciesData = {
-  'Turdus migratorius': { name: 'American Robin', subspecies: ['T. m. migratorius', 'T. m. achrusterus'], incubationPeriod: 13 },
-  'Cyanocitta cristata': { name: 'Blue Jay', subspecies: ['C. c. cristata', 'C. c. bromia'], incubationPeriod: 17 },
-  'Cardinalis cardinalis': { name: 'Northern Cardinal', subspecies: ['C. c. cardinalis', 'C. c. floridanus'], incubationPeriod: 12 },
-  'Erithacus rubecula': { name: 'European Robin', subspecies: ['E. r. rubecula', 'E. r. melophilus'], incubationPeriod: 13 },
-  'Falco tinnunculus': { name: 'Common Kestrel', subspecies: [], incubationPeriod: 28 },
-  'Eolophus roseicapilla': { name: 'Galah', subspecies: ['E. r. roseicapilla', 'E. r. assimilis'], incubationPeriod: 25 },
-  'Serinus canaria domestica': { name: 'Domestic Canary', subspecies: [], incubationPeriod: 14 },
+    'Cockatoo': {
+        name: 'Cockatoo',
+        incubationPeriod: 26,
+        subspecies: [
+            'Sulphur-crested Cockatoo - Cacatua galerita',
+            'Major Mitchell\'s Cockatoo - Lophochroa leadbeateri',
+            'Galah / Rose-breasted Cockatoo - Eolophus roseicapilla',
+            'Cockatiel - Nymphicus hollandicus',
+            'Umbrella Cockatoo - Cacatua alba',
+            'Moluccan Cockatoo - Cacatua moluccensis',
+        ]
+    },
+    'Macaw': {
+        name: 'Macaw',
+        incubationPeriod: 28,
+        subspecies: [
+            'Blue-and-gold Macaw - Ara ararauna',
+            'Green-winged Macaw - Ara chloropterus',
+            'Scarlet Macaw - Ara macao',
+            'Hyacinth Macaw - Anodorhynchus hyacinthinus',
+            'Hahn\'s Macaw - Diopsittaca nobilis nobilis',
+            'Severe Macaw - Ara severus',
+        ]
+    },
+    'Conure': {
+        name: 'Conure',
+        incubationPeriod: 24,
+        subspecies: [
+            'Sun Conure - Aratinga solstitialis',
+            'Jenday Conure - Aratinga jandaya',
+            'Green-cheeked Conure - Pyrrhura molinae',
+            'Nanday Conure - Aratinga nenday',
+            'Blue-crowned Conure - Thectocercus acuticaudatus',
+            'Patagonian Conure - Cyanoliseus patagonus',
+        ]
+    },
+    'African Grey Parrot': {
+        name: 'African Grey Parrot',
+        incubationPeriod: 28,
+        subspecies: [
+            'Congo African Grey - Psittacus erithacus',
+            'Timneh African Grey - Psittacus timneh',
+        ]
+    },
+    'Poicephalus': {
+        name: 'Poicephalus',
+        incubationPeriod: 26,
+        subspecies: [
+            'Senegal Parrot - Poicephalus senegalus',
+            'Meyer\'s Parrot - Poicephalus meyeri',
+            'Red-bellied Parrot - Poicephalus rufiventris',
+            'Cape Parrot - Poicephalus robustus',
+        ]
+    },
+    'Lovebird': {
+        name: 'Lovebird',
+        incubationPeriod: 23,
+        subspecies: [
+            'Peach-faced Lovebird - Agapornis roseicollis',
+            'Fischer\'s Lovebird - Agapornis fischeri',
+            'Masked Lovebird - Agapornis personatus',
+            'Nyasa Lovebird - Agapornis lilianae',
+        ]
+    },
+    'Amazon Parrot': {
+        name: 'Amazon Parrot',
+        incubationPeriod: 27,
+        subspecies: [
+            'Blue-fronted Amazon - Amazona aestiva',
+            'Yellow-naped Amazon - Amazona auropalliata',
+            'Double Yellow-headed Amazon - Amazona oratrix',
+            'Orange-winged Amazon - Amazona amazonica',
+            'Lilac-crowned Amazon - Amazona finschi',
+        ]
+    },
+    'Lory & Lorikeet': {
+        name: 'Lory & Lorikeet',
+        incubationPeriod: 25,
+        subspecies: [
+            'Rainbow Lorikeet - Trichoglossus moluccanus',
+            'Chattering Lory - Lorius garrulus',
+            'Black-capped Lory - Lorius lory',
+            'Red Lory - Eos bornea',
+        ]
+    },
+    'Australian Parakeet': {
+        name: 'Australian Parakeet',
+        incubationPeriod: 18,
+        subspecies: [
+            'Budgerigar - Melopsittacus undulatus',
+            'Eastern Rosella - Platycercus eximius',
+            'Princess Parrot - Polytelis alexandrae',
+            'Red-rumped Parrot - Psephotus haematonotus',
+        ]
+    },
+    'Asiatic Parakeet': {
+        name: 'Asiatic Parakeet',
+        incubationPeriod: 23,
+        subspecies: [
+            'Indian Ringneck Parakeet - Psittacula krameri manillensis',
+            'Alexandrine Parakeet - Psittacula eupatria',
+            'Plum-headed Parakeet - Psittacula cyanocephala',
+            'Moustached Parakeet - Psittacula alexandri',
+        ]
+    },
+    'Eclectus Parrot': {
+        name: 'Eclectus Parrot',
+        incubationPeriod: 28,
+        subspecies: [
+            'Solomon Island Eclectus - Eclectus roratus solomonensis',
+            'Vosmaeri Eclectus - Eclectus roratus vosmaeri',
+            'Red-sided Eclectus - Eclectus roratus polychloros',
+        ]
+    },
+    'Caique': {
+        name: 'Caique',
+        incubationPeriod: 26,
+        subspecies: [
+            'Black-headed Caique - Pionites melanocephalus',
+            'White-bellied Caique - Pionites leucogaster',
+        ]
+    }
 };
 
 export const mutationOptions = ['Opaline', 'Cinnamon', 'Lutino', 'Albino', 'Fallow', 'Spangle', 'Pied'] as const;
@@ -146,16 +261,16 @@ export const getBirdIdentifier = (bird: Bird) => {
 
 export const initialBirds: Bird[] = [
   {
-    id: '1', species: 'Turdus migratorius', subspecies: 'T. m. migratorius', ringNumber: 'A123', unbanded: false, category: 'Bird', sex: 'male', birthDate: '2022-04-01', visualMutations: ['Opaline'], splitMutations: ['Cinnamon', 'Pied'], fatherId: undefined, motherId: undefined, mateId: '4', offspringIds: ['3'], paidPrice: 150, estimatedValue: 200, status: 'Available', permitId: 'p1'
+    id: '1', species: 'Cockatoo', subspecies: 'Cockatiel - Nymphicus hollandicus', ringNumber: 'A123', unbanded: false, category: 'Bird', sex: 'male', birthDate: '2022-04-01', visualMutations: ['Opaline'], splitMutations: ['Cinnamon', 'Pied'], fatherId: undefined, motherId: undefined, mateId: '4', offspringIds: ['3'], paidPrice: 150, estimatedValue: 200, status: 'Available', permitId: 'p1'
   },
   {
-    id: '2', species: 'Cyanocitta cristata', subspecies: undefined, ringNumber: 'B456', unbanded: false, category: 'Bird', sex: 'female', birthDate: '2021-06-15', visualMutations: [], splitMutations: ['Lutino'], fatherId: undefined, motherId: undefined, mateId: undefined, offspringIds: [], paidPrice: 80, estimatedValue: 120, status: 'Sold', saleDetails: { date: '2024-06-10', price: 150, buyer: 'John Doe' }
+    id: '2', species: 'African Grey Parrot', subspecies: 'Congo African Grey - Psittacus erithacus', ringNumber: 'B456', unbanded: false, category: 'Bird', sex: 'female', birthDate: '2021-06-15', visualMutations: [], splitMutations: ['Lutino'], fatherId: undefined, motherId: undefined, mateId: undefined, offspringIds: [], paidPrice: 80, estimatedValue: 120, status: 'Sold', saleDetails: { date: '2024-06-10', price: 150, buyer: 'John Doe' }
   },
   {
-    id: '3', species: 'Turdus migratorius', subspecies: undefined, ringNumber: undefined, unbanded: true, category: 'Bird', sex: 'unsexed', birthDate: '2024-05-30', visualMutations: [], splitMutations: [], fatherId: '1', motherId: '4', mateId: undefined, offspringIds: [], paidPrice: 0, estimatedValue: 50, status: 'Hand-rearing'
+    id: '3', species: 'Cockatoo', subspecies: undefined, ringNumber: undefined, unbanded: true, category: 'Bird', sex: 'unsexed', birthDate: '2024-05-30', visualMutations: [], splitMutations: [], fatherId: '1', motherId: '4', mateId: undefined, offspringIds: [], paidPrice: 0, estimatedValue: 50, status: 'Hand-rearing'
   },
   {
-    id: '4', species: 'Turdus migratorius', subspecies: 'T. m. achrusterus', ringNumber: 'C789', unbanded: false, category: 'Bird', sex: 'female', birthDate: '2022-03-20', visualMutations: ['Cinnamon'], splitMutations: [], fatherId: undefined, motherId: undefined, mateId: '1', offspringIds: ['3'], paidPrice: 160, estimatedValue: 220, status: 'Available'
+    id: '4', species: 'Cockatoo', subspecies: 'Galah / Rose-breasted Cockatoo - Eolophus roseicapilla', ringNumber: 'C789', unbanded: false, category: 'Bird', sex: 'female', birthDate: '2022-03-20', visualMutations: ['Cinnamon'], splitMutations: [], fatherId: undefined, motherId: undefined, mateId: '1', offspringIds: ['3'], paidPrice: 160, estimatedValue: 220, status: 'Available'
   },
 ];
 
@@ -197,7 +312,7 @@ export const initialNotes: NoteReminder[] = [
         subTasks: [
             { id: 'st1', text: 'Scrub perches for Breeding Cage A', completed: false, associatedBirdIds: ['1', '4'] },
             { id: 'st2', text: 'Replace substrate for all cages', completed: false, associatedBirdIds: ['1', '2', '3', '4'] },
-            { id: 'st3', text: 'Check on Blue Jay', completed: true, associatedBirdIds: ['2'] },
+            { id: 'st3', text: 'Check on African Grey', completed: true, associatedBirdIds: ['2'] },
         ],
         completed: false,
     },
@@ -216,12 +331,12 @@ export const initialNotes: NoteReminder[] = [
 ]
 
 export const initialTransactions: Transaction[] = [
-    { id: 't1', category: 'Transaction', type: 'expense', date: '2024-04-15', description: 'Purchase of American Robin (A123)', amount: 150, relatedBirdId: '1' },
-    { id: 't2', category: 'Transaction', type: 'expense', date: '2024-04-20', description: 'Purchase of Blue Jay (B456)', amount: 80, relatedBirdId: '2' },
+    { id: 't1', category: 'Transaction', type: 'expense', date: '2024-04-15', description: 'Purchase of Cockatoo (A123)', amount: 150, relatedBirdId: '1' },
+    { id: 't2', category: 'Transaction', type: 'expense', date: '2024-04-20', description: 'Purchase of African Grey Parrot (B456)', amount: 80, relatedBirdId: '2' },
     { id: 't3', category: 'Transaction', type: 'expense', date: '2024-05-05', description: 'Cage supplies', amount: 45.50 },
     { id: 't4', category: 'Transaction', type: 'income', date: '2024-05-18', description: 'Sale of surplus seed', amount: 25 },
     { id: 't5', category: 'Transaction', type: 'expense', date: '2024-06-01', description: 'Vet checkup for C789', amount: 60, relatedBirdId: '4' },
-    { id: 't6', category: 'Transaction', type: 'income', date: '2024-06-10', description: 'Sale of Cyanocitta cristata (B456)', amount: 150, relatedBirdId: '2' }
+    { id: 't6', category: 'Transaction', type: 'income', date: '2024-06-10', description: 'Sale of African Grey Parrot (B456)', amount: 150, relatedBirdId: '2' }
 ];
 
 export const initialPermits: Permit[] = [

@@ -28,7 +28,7 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
     const getLabel = (value: string) => options.find(o => o.value === value)?.label || value;
     
     return (
-        <Popover modal={true} open={open} onOpenChange={setOpen}>
+        <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <Button
                     variant="outline"
@@ -61,7 +61,7 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                 </Button>
             </PopoverTrigger>
             <PopoverContent
-                className="w-[--radix-popover-trigger-width] p-0 z-[9999]"
+                className="w-[--radix-popover-trigger-width] p-0"
                 align="start"
             >
                 <Command>

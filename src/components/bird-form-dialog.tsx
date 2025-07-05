@@ -213,7 +213,16 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent
+        className="sm:max-w-2xl"
+        onPointerDownOutside={(e) => {
+            const target = e.target as HTMLElement;
+            // Allow interaction with cmdk popovers
+            if (target.closest('[cmdk-root]')) {
+                e.preventDefault();
+            }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit Bird' : 'Add a New Bird'}</DialogTitle>
           <DialogDescription>

@@ -64,8 +64,27 @@ export type BreedingRecord = {
   notes?: string;
 }
 
+export type SubTask = {
+    id: string;
+    text: string;
+    completed: boolean;
+};
 
-export type CollectionItem = Bird | Cage | Pair | BreedingRecord;
+export type NoteReminder = {
+    id: string;
+    category: 'NoteReminder';
+    title: string;
+    content?: string;
+    isReminder: boolean;
+    reminderDate?: string;
+    isRecurring: boolean;
+    recurrencePattern: 'daily' | 'weekly' | 'monthly' | 'none';
+    associatedBirdIds: string[];
+    subTasks: SubTask[];
+    completed: boolean;
+}
+
+export type CollectionItem = Bird | Cage | Pair | BreedingRecord | NoteReminder;
 
 export const getBirdIdentifier = (bird: Bird) => {
     const identifier = bird.ringNumber ? `(${bird.ringNumber})` : '(Unbanded)';
@@ -113,4 +132,36 @@ export const initialBreedingRecords: BreedingRecord[] = [
     }
 ];
 
-export const initialItems: CollectionItem[] = [...initialBirds, ...initialPairs, ...initialCages, ...initialBreedingRecords];
+export const initialNotes: NoteReminder[] = [
+    {
+        id: 'nr1',
+        category: 'NoteReminder',
+        title: 'Clean cages',
+        content: 'Deep clean all breeding and flight cages.',
+        isReminder: true,
+        reminderDate: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString(),
+        isRecurring: true,
+        recurrencePattern: 'weekly',
+        associatedBirdIds: ['1', '2', '3', '4'],
+        subTasks: [
+            { id: 'st1', text: 'Scrub perches', completed: false },
+            { id: 'st2', text: 'Replace substrate', completed: false },
+            { id: 'st3', text: 'Wash food and water bowls', completed: true },
+        ],
+        completed: false,
+    },
+    {
+        id: 'nr2',
+        category: 'NoteReminder',
+        title: 'Order more seed mix',
+        content: 'Get the usual 20kg bag.',
+        isReminder: false,
+        isRecurring: false,
+        recurrencePattern: 'none',
+        associatedBirdIds: [],
+        subTasks: [],
+        completed: true,
+    }
+]
+
+export const initialItems: CollectionItem[] = [...initialBirds, ...initialPairs, ...initialCages, ...initialBreedingRecords, ...initialNotes];

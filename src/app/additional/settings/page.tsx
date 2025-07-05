@@ -29,7 +29,7 @@ export default function SettingsPage() {
   const customMutations = items.filter((item): item is CustomMutation => item.category === 'CustomMutation');
   
   const handleSaveSpecies = (data: AddSpeciesFormValues) => {
-    const subspeciesArray = data.subspecies ? data.subspecies.split('\n').map(s => s.trim()).filter(Boolean) : [];
+    const subspeciesArray = data.subspecies.map(s => s.value.trim()).filter(Boolean);
     const newSpecies: CustomSpecies = {
         id: `cs_${Date.now()}`,
         category: 'CustomSpecies',

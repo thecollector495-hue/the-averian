@@ -63,6 +63,7 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
             <PopoverContent
                 className="w-[--radix-popover-trigger-width] p-0 z-[9999]"
                 align="start"
+                onOpenAutoFocus={(e) => e.preventDefault()}
             >
                 <Command>
                     <CommandInput placeholder="Search..." />
@@ -72,7 +73,7 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                             {options.map((option) => (
                                 <CommandItem
                                     key={option.value}
-                                    value={option.label} // Use label for filtering
+                                    value={option.label}
                                     onSelect={() => {
                                         handleSelect(option.value);
                                     }}

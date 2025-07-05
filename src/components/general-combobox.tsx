@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 
 export function GeneralCombobox({ field, options, placeholder, disabled = false }: { field: ControllerRenderProps<any, any>; options: { value: string; label:string }[]; placeholder: string; disabled?: boolean; }) {
   const [open, setOpen] = React.useState(false);
-  
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild disabled={disabled}>
@@ -37,7 +37,7 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
           </Button>
         </FormControl>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search..." />
           <CommandList>
@@ -45,11 +45,11 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
-                  value={option.label}
+                  value={option.value}
                   key={option.value}
-                  onSelect={() => {
-                    field.onChange(option.value === field.value ? '' : option.value)
-                    setOpen(false)
+                  onSelect={(currentValue) => {
+                    field.onChange(currentValue === field.value ? "" : currentValue);
+                    setOpen(false);
                   }}
                 >
                   <Check

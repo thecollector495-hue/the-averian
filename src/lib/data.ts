@@ -121,7 +121,21 @@ export type Permit = {
   expiryDate?: string; // YYYY-MM-DD
 }
 
-export type CollectionItem = Bird | Cage | Pair | BreedingRecord | NoteReminder | Transaction | Permit;
+export type CustomSpecies = {
+  id: string;
+  category: 'CustomSpecies';
+  name: string;
+  incubationPeriod: number;
+  subspecies: string[];
+};
+
+export type CustomMutation = {
+  id: string;
+  category: 'CustomMutation';
+  name: string;
+};
+
+export type CollectionItem = Bird | Cage | Pair | BreedingRecord | NoteReminder | Transaction | Permit | CustomSpecies | CustomMutation;
 
 export const getBirdIdentifier = (bird: Bird) => {
     const identifier = bird.ringNumber ? `(${bird.ringNumber})` : '(Unbanded)';

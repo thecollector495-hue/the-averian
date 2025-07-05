@@ -1,13 +1,14 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, ControllerRenderProps } from "react-hook-form";
 import { z } from "zod";
 import { format, parseISO } from 'date-fns';
 
-import { Bird, Cage, Permit, speciesData, mutationOptions, getBirdIdentifier } from '@/lib/data';
+import { Bird, Cage, Permit, speciesData, mutationOptions, getBirdIdentifier, CustomSpecies, CustomMutation } from '@/lib/data';
+import { useItems } from '@/context/ItemsContext';
 import { cn } from '@/lib/utils';
 import { MultiSelectCombobox } from './multi-select-combobox';
 import { GeneralCombobox } from './general-combobox';
@@ -76,6 +77,7 @@ export type BirdFormValues = z.infer<typeof birdFormSchema>;
 
 export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, allCages, allPermits }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onSave: (data: BirdFormValues & { newCageName?: string }) => void, initialData: Bird | null, allBirds: Bird[], allCages: Cage[], allPermits: Permit[] }) {
   const [isCreatingCage, setIsCreatingCage] = useState(false);
+  const { items } = useItems();
   
   const form = useForm<BirdFormValues>({
     resolver: zodResolver(birdFormSchema),
@@ -135,12 +137,42 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
     }
   }, [initialData, form, isOpen, allCages]);
 
+  const customSpecies = useMemo(() => items.filter((item): item is CustomSpecies => item.category === 'CustomSpecies'), [items]);
+  const customMutations = useMemo(() => items.filter((item): item is CustomMutation => item.category === 'CustomMutation'), [items]);
+
+  const allSpeciesOptions = useMemo(() => [
+    ...Object.entries(speciesData).map(([code, { name }]) => ({ value: code, label: `${name} (${code})` })),
+    ...customSpecies.map(s => ({ value: s.id, label: `${s.name} (Custom)` })),
+  ], [customSpecies]);
+
+  const allMutationOptions = useMemo(() => {
+    const combined = [...mutationOptions, ...customMutations.map(m => m.name)];
+    return [...new Set(combined)].map(m => ({ value: m, label: m }));
+  }, [customMutations]);
 
   const watchedSpecies = form.watch("species");
   const unbanded = form.watch("unbanded");
   const paidPrice = form.watch("paidPrice");
   const status = form.watch("status");
-  const subspeciesOptions = watchedSpecies ? speciesData[watchedSpecies as keyof typeof speciesData]?.subspecies : [];
+
+  const subspeciesOptions = useMemo(() => {
+    if (!watchedSpecies) return [];
+    
+    // Check built-in data first
+    const builtinSpecies = speciesData[watchedSpecies as keyof typeof speciesData];
+    if (builtinSpecies) {
+      return builtinSpecies.subspecies || [];
+    }
+    
+    // Check custom data
+    const custom = customSpecies.find(s => s.id === watchedSpecies);
+    if (custom) {
+      return custom.subspecies;
+    }
+
+    return [];
+  }, [watchedSpecies, customSpecies]);
+
   
   const potentialRelatives = allBirds
     .filter(bird => bird.id !== initialData?.id && bird.species === watchedSpecies);
@@ -195,26 +227,14 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Species</FormLabel>
-                    <Select
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        form.setValue('subspecies', undefined);
-                      }}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a species" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {Object.entries(speciesData).map(([code, { name }]) => (
-                           <SelectItem key={code} value={code}>
-                             {name} <span className="text-muted-foreground ml-2">({code})</span>
-                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <GeneralCombobox
+                        field={{...field, onChange: (value) => {
+                             field.onChange(value);
+                             form.setValue('subspecies', undefined);
+                        }}}
+                        options={allSpeciesOptions}
+                        placeholder="Select a species"
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -437,7 +457,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Visual Mutations</FormLabel>
-                       <MultiSelectCombobox field={field} options={mutationOptions.map(m => ({value:m, label:m}))} placeholder="Select visual mutations" />
+                       <MultiSelectCombobox field={field} options={allMutationOptions} placeholder="Select visual mutations" />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -448,7 +468,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Split Mutations</FormLabel>
-                       <MultiSelectCombobox field={field} options={mutationOptions.map(m => ({value:m, label:m}))} placeholder="Select split mutations" />
+                       <MultiSelectCombobox field={field} options={allMutationOptions} placeholder="Select split mutations" />
                       <FormMessage />
                     </FormItem>
                   )}

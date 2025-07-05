@@ -150,7 +150,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
 
   const allMutationOptions = useMemo(() => {
     const combined = [...mutationOptions, ...customMutations.map(m => m.name)];
-    return [...new Set(combined)].map(m => ({ value: m, label: m }));
+    return [...new Set(combined)].map(m => ({ value: m, label: m })).sort((a, b) => a.label.localeCompare(b.label));
   }, [customMutations]);
 
   const watchedSpecies = form.watch("species");
@@ -163,14 +163,14 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
     
     // Check built-in data first
     const builtinSpecies = speciesData[watchedSpecies as keyof typeof speciesData];
-    if (builtinSpecies) {
-      return builtinSpecies.subspecies || [];
+    if (builtinSpecies && builtinSpecies.subspecies) {
+      return builtinSpecies.subspecies.sort((a,b) => a.localeCompare(b));
     }
     
     // Check custom data
     const custom = customSpecies.find(s => s.id === watchedSpecies);
-    if (custom) {
-      return custom.subspecies;
+    if (custom && custom.subspecies) {
+      return custom.subspecies.sort((a,b) => a.localeCompare(b));
     }
 
     return [];
@@ -248,24 +248,15 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Subspecies</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
+                    <GeneralCombobox
+                      field={field}
+                      options={subspeciesOptions.map((sub) => ({
+                        value: sub,
+                        label: sub,
+                      }))}
+                      placeholder="Select subspecies (if any)"
                       disabled={!subspeciesOptions || subspeciesOptions.length === 0}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select subspecies (if any)" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {subspeciesOptions.map((sub) => (
-                          <SelectItem key={sub} value={sub}>
-                            {sub}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    />
                     <FormMessage />
                   </FormItem>
                 )}

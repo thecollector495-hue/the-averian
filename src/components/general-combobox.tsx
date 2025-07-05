@@ -9,16 +9,17 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export function GeneralCombobox({ field, options, placeholder }: { field: ControllerRenderProps<any, any>; options: { value: string; label:string }[]; placeholder: string }) {
+export function GeneralCombobox({ field, options, placeholder, disabled = false }: { field: ControllerRenderProps<any, any>; options: { value: string; label:string }[]; placeholder: string; disabled?: boolean; }) {
   const [open, setOpen] = useState(false);
   
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+      <PopoverTrigger asChild disabled={disabled}>
         <FormControl>
           <Button
             variant="outline"
             role="combobox"
+            disabled={disabled}
             className={cn(
               "w-full justify-between",
               !field.value && "text-muted-foreground"

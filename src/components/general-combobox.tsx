@@ -40,7 +40,6 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
       <PopoverContent
         className="w-[--radix-popover-trigger-width] p-0"
         align="start"
-        onPointerDownOutside={(e) => e.preventDefault()}
       >
         <Command>
           <CommandInput placeholder="Search..." />

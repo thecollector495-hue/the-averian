@@ -215,9 +215,6 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent
         className="sm:max-w-2xl"
-        onFocusOutside={(e) => {
-            e.preventDefault();
-        }}
       >
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit Bird' : 'Add a New Bird'}</DialogTitle>

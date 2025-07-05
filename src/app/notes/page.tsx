@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useForm, useFieldArray, Controller, ControllerRenderProps } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -27,6 +27,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { BirdDetailsDialog } from '@/components/bird-details-dialog';
 
 const subTaskSchema = z.object({
+  id: z.string().optional(), // Keep optional for new tasks
   text: z.string().min(1, "Task text cannot be empty."),
   completed: z.boolean().default(false),
   associatedBirdIds: z.array(z.string()).default([]),

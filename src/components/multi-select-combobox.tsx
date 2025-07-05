@@ -1,14 +1,13 @@
 'use client';
 
 import * as React from 'react';
-import { X, Check, ChevronsUpDown } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Command, CommandGroup, CommandItem, CommandList, CommandInput, CommandEmpty } from "@/components/ui/command";
 import { ControllerRenderProps } from 'react-hook-form';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Check, ChevronsUpDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Separator } from "@/components/ui/separator";
+import { Badge } from '@/components/ui/badge';
 
 export function MultiSelectCombobox({ field, options, placeholder }: { field: ControllerRenderProps<any, any>, options: { value: string; label: string }[], placeholder: string }) {
     const [open, setOpen] = React.useState(false);
@@ -24,11 +23,11 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
         }
         field.onChange(Array.from(newSelectedValues));
     };
-    
+
     const getLabel = (value: string) => options.find(o => o.value === value)?.label || value;
     
     return (
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover open={open} onOpenChange={setOpen} modal={false}>
             <PopoverTrigger asChild>
                 <Button
                     variant="outline"
@@ -38,7 +37,20 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                 >
                     <div className="flex gap-1 flex-wrap">
                         {selectedValues.size > 0 ? (
-                             <span className="text-foreground">{selectedValues.size} selected</span>
+                             Array.from(selectedValues).map((value) => (
+                                <Badge
+                                    variant="secondary"
+                                    key={value}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleSelect(value);
+                                    }}
+                                >
+                                    {getLabel(value)}
+                                    <X className="ml-1 h-3 w-3" />
+                                </Badge>
+                            ))
                         ) : (
                             <span className="text-muted-foreground">{placeholder}</span>
                         )}
@@ -55,9 +67,9 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                             {options.map((option) => (
                                 <CommandItem
                                     key={option.value}
-                                    value={option.label}
-                                    onSelect={() => {
-                                        handleSelect(option.value);
+                                    value={option.value}
+                                    onSelect={(selectedValue) => {
+                                        handleSelect(selectedValue);
                                     }}
                                 >
                                     <Check
@@ -74,32 +86,6 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                         </CommandGroup>
                     </CommandList>
                 </Command>
-                {selectedValues.size > 0 && (
-                    <>
-                        <Separator />
-                        <div className="p-2 flex gap-1 flex-wrap">
-                            {Array.from(selectedValues).map((value) => (
-                                <Badge
-                                    variant="secondary"
-                                    key={value}
-                                >
-                                    {getLabel(value)}
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        handleSelect(value);
-                                      }}
-                                      className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                                    >
-                                     <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                                    </button>
-                                </Badge>
-                            ))}
-                        </div>
-                    </>
-                )}
             </PopoverContent>
         </Popover>
     );

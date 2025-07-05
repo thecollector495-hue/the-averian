@@ -29,6 +29,7 @@ import { BirdDetailsDialog } from '@/components/bird-details-dialog';
 const subTaskSchema = z.object({
   text: z.string().min(1, "Task text cannot be empty."),
   completed: z.boolean().default(false),
+  associatedBirdIds: z.array(z.string()).default([]),
 });
 
 const noteReminderSchema = z.object({
@@ -145,6 +146,13 @@ function AddNoteDialog({ isOpen, onOpenChange, onSave, allBirds }: { isOpen: boo
     }
     
     const birdOptions = allBirds.map(b => ({ value: b.id, label: getBirdIdentifier(b) }));
+    
+    const handleAddSubTask = () => {
+        if (subTaskText.trim()) {
+            append({ text: subTaskText, completed: false, associatedBirdIds: [] });
+            setSubTaskText("");
+        }
+    }
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -166,7 +174,7 @@ function AddNoteDialog({ isOpen, onOpenChange, onSave, allBirds }: { isOpen: boo
                             name="associatedBirdIds"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Associate Birds (optional)</FormLabel>
+                                    <FormLabel>Associate Birds with Note (optional)</FormLabel>
                                     <MultiSelectCombobox field={field} options={birdOptions} placeholder="Select birds" />
                                     <FormMessage />
                                 </FormItem>
@@ -175,22 +183,35 @@ function AddNoteDialog({ isOpen, onOpenChange, onSave, allBirds }: { isOpen: boo
                         <Separator />
                         <div>
                             <h4 className="font-medium mb-2">Sub-tasks</h4>
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                                 {fields.map((field, index) => (
-                                    <div key={field.id} className="flex items-center gap-2">
-                                        <FormField control={form.control} name={`subTasks.${index}.completed`} render={({ field }) => (
-                                            <FormItem><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
-                                        )} />
-                                         <FormField control={form.control} name={`subTasks.${index}.text`} render={({ field }) => (
-                                            <FormItem className="flex-grow"><FormControl><Input {...field} /></FormControl></FormItem>
-                                        )} />
-                                        <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4"/></Button>
+                                    <div key={field.id} className="flex flex-col gap-2 p-3 border rounded-md relative">
+                                        <div className="flex items-center gap-2">
+                                            <FormField control={form.control} name={`subTasks.${index}.completed`} render={({ field: checkboxField }) => (
+                                                <FormItem className="mt-1"><FormControl><Checkbox checked={checkboxField.value} onCheckedChange={checkboxField.onChange} /></FormControl></FormItem>
+                                            )} />
+                                            <FormField control={form.control} name={`subTasks.${index}.text`} render={({ field: textField }) => (
+                                                <FormItem className="flex-grow"><FormControl><Input {...textField} /></FormControl></FormItem>
+                                            )} />
+                                            <Button type="button" variant="ghost" size="icon" className="shrink-0" onClick={() => remove(index)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
+                                        </div>
+                                        <FormField
+                                            control={form.control}
+                                            name={`subTasks.${index}.associatedBirdIds`}
+                                            render={({ field: birdField }) => (
+                                                <FormItem>
+                                                    <FormLabel className="text-xs text-muted-foreground">Assign birds to this sub-task</FormLabel>
+                                                    <MultiSelectCombobox field={birdField} options={birdOptions} placeholder="Select birds" />
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
                                     </div>
                                 ))}
                             </div>
                              <div className="flex items-center gap-2 mt-3">
-                                <Input value={subTaskText} onChange={e => setSubTaskText(e.target.value)} placeholder="New sub-task..." onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); if (subTaskText.trim()) { append({ text: subTaskText, completed: false }); setSubTaskText(""); }}}}/>
-                                <Button type="button" onClick={() => { if(subTaskText.trim()){ append({ text: subTaskText, completed: false }); setSubTaskText(""); } }}>Add Task</Button>
+                                <Input value={subTaskText} onChange={e => setSubTaskText(e.target.value)} placeholder="New sub-task..." onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleAddSubTask(); }}}/>
+                                <Button type="button" onClick={handleAddSubTask}>Add Task</Button>
                              </div>
                         </div>
 
@@ -282,20 +303,10 @@ function NoteCard({ note, allBirds, onUpdate, onBirdClick }: { note: NoteReminde
             </CardHeader>
             <CardContent className="flex-grow space-y-4">
                 {note.content && <p className="text-sm text-muted-foreground">{note.content}</p>}
-                {note.subTasks.length > 0 && (
-                    <div className="space-y-2">
-                        <h4 className="text-sm font-medium">Sub-tasks</h4>
-                        {note.subTasks.map(task => (
-                            <div key={task.id} className="flex items-center space-x-2">
-                                <Checkbox id={task.id} checked={task.completed} onCheckedChange={(checked) => handleSubTaskToggle(task.id, !!checked)} />
-                                <label htmlFor={task.id} className={cn("text-sm", task.completed && "line-through text-muted-foreground")}>{task.text}</label>
-                            </div>
-                        ))}
-                    </div>
-                )}
+                
                 {associatedBirds.length > 0 && (
                      <div className="space-y-2">
-                        <h4 className="text-sm font-medium">Associated Birds</h4>
+                        <h4 className="text-sm font-medium">Associated with Note</h4>
                          <div className="flex flex-wrap gap-2">
                             {associatedBirds.map(bird => (
                                 <Button key={bird.id} variant="outline" size="sm" className="h-auto" onClick={() => onBirdClick(bird)}>
@@ -305,6 +316,33 @@ function NoteCard({ note, allBirds, onUpdate, onBirdClick }: { note: NoteReminde
                          </div>
                     </div>
                 )}
+
+                {note.subTasks.length > 0 && (
+                    <div className="space-y-2">
+                        <h4 className="text-sm font-medium">Sub-tasks</h4>
+                        {note.subTasks.map(task => {
+                             const subTaskBirds = allBirds.filter(b => task.associatedBirdIds.includes(b.id));
+                             return (
+                                <div key={task.id} className="p-2.5 border rounded-md space-y-2 bg-background/50">
+                                    <div className="flex items-center space-x-3">
+                                        <Checkbox id={task.id} checked={task.completed} onCheckedChange={(checked) => handleSubTaskToggle(task.id, !!checked)} />
+                                        <label htmlFor={task.id} className={cn("text-sm flex-grow", task.completed && "line-through text-muted-foreground")}>{task.text}</label>
+                                    </div>
+                                    {subTaskBirds.length > 0 && (
+                                        <div className="pl-7 flex flex-wrap gap-1">
+                                            {subTaskBirds.map(bird => (
+                                                <Button key={bird.id} variant="secondary" size="sm" className="h-auto px-1.5 py-0.5 text-xs" onClick={() => onBirdClick(bird)}>
+                                                    {getBirdIdentifier(bird)}
+                                                </Button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })}
+                    </div>
+                )}
+
             </CardContent>
             <CardFooter>
                  <Button variant="outline" size="sm" disabled>

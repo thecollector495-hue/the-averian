@@ -68,6 +68,7 @@ export type SubTask = {
     id: string;
     text: string;
     completed: boolean;
+    associatedBirdIds: string[];
 };
 
 export type NoteReminder = {
@@ -136,17 +137,17 @@ export const initialNotes: NoteReminder[] = [
     {
         id: 'nr1',
         category: 'NoteReminder',
-        title: 'Clean cages',
-        content: 'Deep clean all breeding and flight cages.',
+        title: 'Weekly Maintenance',
+        content: 'Perform weekly checks on all birds and cages.',
         isReminder: true,
         reminderDate: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString(),
         isRecurring: true,
         recurrencePattern: 'weekly',
-        associatedBirdIds: ['1', '2', '3', '4'],
+        associatedBirdIds: [],
         subTasks: [
-            { id: 'st1', text: 'Scrub perches', completed: false },
-            { id: 'st2', text: 'Replace substrate', completed: false },
-            { id: 'st3', text: 'Wash food and water bowls', completed: true },
+            { id: 'st1', text: 'Scrub perches for Breeding Cage A', completed: false, associatedBirdIds: ['1', '4'] },
+            { id: 'st2', text: 'Replace substrate for all cages', completed: false, associatedBirdIds: ['1', '2', '3', '4'] },
+            { id: 'st3', text: 'Check on Blue Jay', completed: true, associatedBirdIds: ['2'] },
         ],
         completed: false,
     },

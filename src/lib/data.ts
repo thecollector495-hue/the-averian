@@ -29,9 +29,24 @@ export type BirdFormValues = {
   offspringIds: string[];
   paidPrice?: number;
   estimatedValue?: number;
+  status: 'Available' | 'Sold' | 'Deceased';
+  permitId?: string;
+  saleDate?: Date;
+  salePrice?: number;
+  buyerInfo?: string;
+  addToExpenses?: boolean;
+  createSaleTransaction?: boolean;
 };
 
-export type Bird = Omit<BirdFormValues, 'cageId'> & { id: string, category: 'Bird' };
+export type Bird = Omit<BirdFormValues, 'cageId' | 'addToExpenses' | 'createSaleTransaction' | 'saleDate' | 'salePrice' | 'buyerInfo'> & { 
+  id: string, 
+  category: 'Bird',
+  saleDetails?: {
+    date: string;
+    price: number;
+    buyer: string;
+  }
+};
 
 export type Cage = {
   id: string;
@@ -72,7 +87,7 @@ export type SubTask = {
 };
 
 export type NoteReminder = {
-    id: string;
+    id:string;
     category: 'NoteReminder';
     title: string;
     content?: string;
@@ -95,7 +110,16 @@ export type Transaction = {
   relatedBirdId?: string;
 }
 
-export type CollectionItem = Bird | Cage | Pair | BreedingRecord | NoteReminder | Transaction;
+export type Permit = {
+  id: string;
+  category: 'Permit';
+  permitNumber: string;
+  issuingAuthority: string;
+  issueDate: string; // YYYY-MM-DD
+  expiryDate?: string; // YYYY-MM-DD
+}
+
+export type CollectionItem = Bird | Cage | Pair | BreedingRecord | NoteReminder | Transaction | Permit;
 
 export const getBirdIdentifier = (bird: Bird) => {
     const identifier = bird.ringNumber ? `(${bird.ringNumber})` : '(Unbanded)';
@@ -106,16 +130,16 @@ export const getBirdIdentifier = (bird: Bird) => {
 
 export const initialBirds: Bird[] = [
   {
-    id: '1', species: 'Turdus migratorius', subspecies: 'T. m. migratorius', ringNumber: 'A123', unbanded: false, category: 'Bird', sex: 'male', age: 2, visualMutations: ['Opaline'], splitMutations: ['Cinnamon', 'Pied'], fatherId: undefined, motherId: undefined, mateId: '4', offspringIds: ['3'], paidPrice: 150, estimatedValue: 200,
+    id: '1', species: 'Turdus migratorius', subspecies: 'T. m. migratorius', ringNumber: 'A123', unbanded: false, category: 'Bird', sex: 'male', age: 2, visualMutations: ['Opaline'], splitMutations: ['Cinnamon', 'Pied'], fatherId: undefined, motherId: undefined, mateId: '4', offspringIds: ['3'], paidPrice: 150, estimatedValue: 200, status: 'Available', permitId: 'p1'
   },
   {
-    id: '2', species: 'Cyanocitta cristata', subspecies: undefined, ringNumber: 'B456', unbanded: false, category: 'Bird', sex: 'female', age: 3, visualMutations: [], splitMutations: ['Lutino'], fatherId: undefined, motherId: undefined, mateId: undefined, offspringIds: [], paidPrice: 80, estimatedValue: 120,
+    id: '2', species: 'Cyanocitta cristata', subspecies: undefined, ringNumber: 'B456', unbanded: false, category: 'Bird', sex: 'female', age: 3, visualMutations: [], splitMutations: ['Lutino'], fatherId: undefined, motherId: undefined, mateId: undefined, offspringIds: [], paidPrice: 80, estimatedValue: 120, status: 'Sold', saleDetails: { date: '2024-06-10', price: 150, buyer: 'John Doe' }
   },
   {
-    id: '3', species: 'Turdus migratorius', subspecies: undefined, ringNumber: undefined, unbanded: true, category: 'Bird', sex: 'unsexed', age: 1, visualMutations: [], splitMutations: [], fatherId: '1', motherId: '4', mateId: undefined, offspringIds: [], paidPrice: 0, estimatedValue: 50,
+    id: '3', species: 'Turdus migratorius', subspecies: undefined, ringNumber: undefined, unbanded: true, category: 'Bird', sex: 'unsexed', age: 1, visualMutations: [], splitMutations: [], fatherId: '1', motherId: '4', mateId: undefined, offspringIds: [], paidPrice: 0, estimatedValue: 50, status: 'Available'
   },
   {
-    id: '4', species: 'Turdus migratorius', subspecies: 'T. m. achrusterus', ringNumber: 'C789', unbanded: false, category: 'Bird', sex: 'female', age: 2, visualMutations: ['Cinnamon'], splitMutations: [], fatherId: undefined, motherId: undefined, mateId: '1', offspringIds: ['3'], paidPrice: 160, estimatedValue: 220,
+    id: '4', species: 'Turdus migratorius', subspecies: 'T. m. achrusterus', ringNumber: 'C789', unbanded: false, category: 'Bird', sex: 'female', age: 2, visualMutations: ['Cinnamon'], splitMutations: [], fatherId: undefined, motherId: undefined, mateId: '1', offspringIds: ['3'], paidPrice: 160, estimatedValue: 220, status: 'Available'
   },
 ];
 
@@ -181,6 +205,13 @@ export const initialTransactions: Transaction[] = [
     { id: 't3', category: 'Transaction', type: 'expense', date: '2024-05-05', description: 'Cage supplies', amount: 45.50 },
     { id: 't4', category: 'Transaction', type: 'income', date: '2024-05-18', description: 'Sale of surplus seed', amount: 25 },
     { id: 't5', category: 'Transaction', type: 'expense', date: '2024-06-01', description: 'Vet checkup for C789', amount: 60, relatedBirdId: '4' },
+    { id: 't6', category: 'Transaction', type: 'income', date: '2024-06-10', description: 'Sale of Cyanocitta cristata (B456)', amount: 150, relatedBirdId: '2' }
 ];
 
-export const initialItems: CollectionItem[] = [...initialBirds, ...initialPairs, ...initialCages, ...initialBreedingRecords, ...initialNotes, ...initialTransactions];
+export const initialPermits: Permit[] = [
+    { id: 'p1', category: 'Permit', permitNumber: 'ZA-WC-12345', issuingAuthority: 'CapeNature', issueDate: '2024-01-01', expiryDate: '2025-01-01' },
+    { id: 'p2', category: 'Permit', permitNumber: 'ZA-GP-67890', issuingAuthority: 'GDARD', issueDate: '2023-07-15' }
+];
+
+
+export const initialItems: CollectionItem[] = [...initialBirds, ...initialPairs, ...initialCages, ...initialBreedingRecords, ...initialNotes, ...initialTransactions, ...initialPermits];

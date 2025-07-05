@@ -3,8 +3,10 @@
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Bird, Cage, getBirdIdentifier } from '@/lib/data';
+import { Bird, Cage, getBirdIdentifier, Permit } from '@/lib/data';
 import { useCurrency } from '@/context/CurrencyContext';
+import { ShieldCheck } from 'lucide-react';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 // This is a helper component to avoid code duplication.
 const BirdLink = ({ bird, onBirdClick }: { bird: Bird | undefined, onBirdClick: (bird: Bird) => void }) => {
@@ -16,7 +18,7 @@ const BirdLink = ({ bird, onBirdClick }: { bird: Bird | undefined, onBirdClick: 
     );
 }
 
-export function BirdDetailsDialog({ bird, allBirds, allCages, onClose, onBirdClick }: { bird: Bird | null; allBirds: Bird[]; allCages: Cage[]; onClose: () => void; onBirdClick: (bird: Bird) => void; }) {
+export function BirdDetailsDialog({ bird, allBirds, allCages, allPermits, onClose, onBirdClick }: { bird: Bird | null; allBirds: Bird[]; allCages: Cage[]; allPermits: Permit[]; onClose: () => void; onBirdClick: (bird: Bird) => void; }) {
   const { formatCurrency } = useCurrency();
   if (!bird) return null;
 
@@ -25,6 +27,7 @@ export function BirdDetailsDialog({ bird, allBirds, allCages, onClose, onBirdCli
   const mutationDisplay = `${visualText} ${splitText}`.trim();
 
   const cage = allCages.find(c => c.birdIds.includes(bird.id));
+  const permit = allPermits.find(p => p.id === bird.permitId);
   const father = allBirds.find(b => b.id === bird.fatherId);
   const mother = allBirds.find(b => b.id === bird.motherId);
   const mate = allBirds.find(b => b.id === bird.mateId);
@@ -43,9 +46,25 @@ export function BirdDetailsDialog({ bird, allBirds, allCages, onClose, onBirdCli
           <div className="space-y-2 rounded-lg border p-3">
             <h4 className="font-medium text-base">Core Details</h4>
             <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+              <div><span className="text-muted-foreground">Status:</span> <span className="font-semibold capitalize">{bird.status}</span></div>
               <div><span className="text-muted-foreground">Sex:</span> <span className="font-semibold capitalize">{bird.sex}</span></div>
               <div><span className="text-muted-foreground">Age:</span> <span className="font-semibold">{bird.age !== undefined ? `${new Date().getFullYear() - bird.age} (${bird.age} yrs)`: 'N/A'}</span></div>
               <div><span className="text-muted-foreground">Ring:</span> <span className="font-semibold">{bird.ringNumber || 'Unbanded'}</span></div>
+              <div className="flex items-center gap-1"><span className="text-muted-foreground">Permit:</span>
+                 {permit ? (
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger className="flex items-center gap-1 font-semibold">
+                                <ShieldCheck className="h-4 w-4 text-primary" /> {permit.permitNumber}
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Authority: {permit.issuingAuthority}</p>
+                                <p>Expires: {permit.expiryDate || 'N/A'}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                 ) : <span className="font-semibold">N/A</span>}
+              </div>
               <div><span className="text-muted-foreground">Cage:</span> <span className="font-semibold">{cage?.name || 'N/A'}</span></div>
             </div>
           </div>
@@ -71,6 +90,14 @@ export function BirdDetailsDialog({ bird, allBirds, allCages, onClose, onBirdCli
             <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 <div><span className="text-muted-foreground">Paid:</span> <span className="font-semibold">{formatCurrency(bird.paidPrice)}</span></div>
                 <div><span className="text-muted-foreground">Value:</span> <span className="font-semibold">{formatCurrency(bird.estimatedValue)}</span></div>
+                {bird.saleDetails && (
+                    <>
+                        <div className="col-span-2 mt-2 font-medium">Sale Details</div>
+                        <div><span className="text-muted-foreground">Price:</span> <span className="font-semibold">{formatCurrency(bird.saleDetails.price)}</span></div>
+                        <div><span className="text-muted-foreground">Date:</span> <span className="font-semibold">{bird.saleDetails.date}</span></div>
+                        <div className="col-span-2"><span className="text-muted-foreground">Buyer:</span> <span className="font-semibold">{bird.saleDetails.buyer}</span></div>
+                    </>
+                )}
             </div>
            </div>
         </div>

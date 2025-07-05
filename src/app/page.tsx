@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, PlusCircle, ChevronsUpDown, Users2, Egg, Pencil, Landmark, StickyNote, Trash2, Calendar as CalendarIcon, Check } from 'lucide-react';
+import { Search, PlusCircle, ChevronsUpDown, Users2, Egg, Pencil, Landmark, StickyNote, Trash2, Calendar as CalendarIcon, Check, ShieldCheck } from 'lucide-react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, ControllerRenderProps, useFieldArray, Controller } from "react-hook-form";
 import { z } from "zod";
@@ -34,12 +34,13 @@ import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useCurrency } from '@/context/CurrencyContext';
-import { Bird, Cage, Pair, BreedingRecord, CollectionItem, speciesData, mutationOptions, getBirdIdentifier, initialItems, Egg as EggType, Transaction } from '@/lib/data';
-import { format } from 'date-fns';
+import { Bird, Cage, Pair, BreedingRecord, CollectionItem, speciesData, mutationOptions, getBirdIdentifier, initialItems, Egg as EggType, Transaction, Permit } from '@/lib/data';
+import { format, parseISO } from 'date-fns';
 import { Calendar } from "@/components/ui/calendar"
 import { Textarea } from '@/components/ui/textarea';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { BirdDetailsDialog } from '@/components/bird-details-dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 const birdFormSchema = z.object({
@@ -73,10 +74,24 @@ const birdFormSchema = z.object({
       z.coerce.number({ invalid_type_error: "Value must be a number."}).min(0, "Value can't be negative.").optional()
   ),
   addToExpenses: z.boolean().default(false),
+  status: z.enum(['Available', 'Sold', 'Deceased'], { required_error: "Status is required." }),
+  permitId: z.string().optional(),
+  salePrice: z.preprocess(
+      (val) => (val === "" ? undefined : val),
+      z.coerce.number({ invalid_type_error: "Sale price must be a number." }).min(0, "Price can't be negative.").optional()
+  ),
+  saleDate: z.date().optional(),
+  buyerInfo: z.string().optional(),
+  createSaleTransaction: z.boolean().default(false),
 }).refine(data => !data.cageId || !data.newCageName, {
     message: "Cannot select a cage and create a new one.",
     path: ["cageId"],
-});
+}).refine(data => {
+    if (data.status === 'Sold') {
+        return !!data.salePrice && !!data.saleDate && !!data.buyerInfo;
+    }
+    return true;
+}, { message: "Sale details (price, date, buyer) are required when status is 'Sold'.", path: ['salePrice'] });
 
 type BirdFormValues = z.infer<typeof birdFormSchema>;
 
@@ -142,7 +157,7 @@ function MultiSelectCombobox({ field, options, placeholder }: { field: Controlle
     );
 }
 
-function BirdCombobox({ field, options, placeholder }: { field: ControllerRenderProps<any, any>; options: { value: string; label:string }[]; placeholder: string }) {
+function GeneralCombobox({ field, options, placeholder }: { field: ControllerRenderProps<any, any>; options: { value: string; label:string }[]; placeholder: string }) {
   const [open, setOpen] = useState(false);
   
   return (
@@ -168,9 +183,9 @@ function BirdCombobox({ field, options, placeholder }: { field: ControllerRender
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <Command>
-          <CommandInput placeholder="Search bird..." />
+          <CommandInput placeholder="Search..." />
           <CommandList>
-            <CommandEmpty>No bird found.</CommandEmpty>
+            <CommandEmpty>No item found.</CommandEmpty>
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
@@ -200,63 +215,8 @@ function BirdCombobox({ field, options, placeholder }: { field: ControllerRender
   );
 }
 
-function CageCombobox({ field, allCages }: { field: ControllerRenderProps<BirdFormValues, 'cageId'>; allCages: Cage[]; }) {
-  const [open, setOpen] = useState(false);
-  const selectedCageName = allCages.find(cage => cage.id === field.value)?.name || "";
 
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <FormControl>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between"
-          >
-            {field.value
-              ? selectedCageName
-              : "Select cage..."}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </FormControl>
-      </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-        <Command>
-          <CommandInput 
-            placeholder="Search cage..." 
-          />
-          <CommandList>
-            <CommandEmpty>No cage found.</CommandEmpty>
-            <CommandGroup>
-              {allCages.map((cage) => (
-                <CommandItem
-                  key={cage.id}
-                  value={cage.name}
-                  onSelect={() => {
-                    field.onChange(cage.id);
-                    setOpen(false);
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      field.value === cage.id ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {cage.name}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-
-function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, allCages, handleCreateCage }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onSave: (data: BirdFormValues) => void, initialData: Bird | null, allBirds: Bird[], allCages: Cage[], handleCreateCage: (name: string) => string }) {
+function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, allCages, allPermits }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onSave: (data: BirdFormValues) => void, initialData: Bird | null, allBirds: Bird[], allCages: Cage[], allPermits: Permit[] }) {
   const [isCreatingCage, setIsCreatingCage] = useState(false);
   
   const form = useForm<BirdFormValues>({
@@ -270,6 +230,7 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
       cageId: undefined,
       newCageName: "",
       addToExpenses: true,
+      status: 'Available',
     },
   });
   
@@ -282,6 +243,9 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
         cageId: currentCage?.id,
         newCageName: "",
         addToExpenses: !initialData.paidPrice,
+        saleDate: initialData.saleDetails ? parseISO(initialData.saleDetails.date) : undefined,
+        salePrice: initialData.saleDetails?.price,
+        buyerInfo: initialData.saleDetails?.buyer,
       });
     } else {
       form.reset({
@@ -302,6 +266,12 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
         paidPrice: undefined,
         estimatedValue: undefined,
         addToExpenses: true,
+        status: 'Available',
+        permitId: undefined,
+        salePrice: undefined,
+        saleDate: undefined,
+        buyerInfo: "",
+        createSaleTransaction: true,
       });
     }
   }, [initialData, form, isOpen, allCages]);
@@ -310,6 +280,7 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
   const watchedSpecies = form.watch("species");
   const unbanded = form.watch("unbanded");
   const paidPrice = form.watch("paidPrice");
+  const status = form.watch("status");
   const subspeciesOptions = watchedSpecies ? speciesData[watchedSpecies as keyof typeof speciesData]?.subspecies : [];
   
   const potentialRelatives = allBirds
@@ -322,11 +293,21 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
     offspring: potentialRelatives.map(b => ({ value: b.id, label: getBirdIdentifier(b) })),
   };
 
+  const permitOptions = allPermits.map(p => ({ value: p.id, label: `${p.permitNumber} (${p.issuingAuthority})`}));
+
   useEffect(() => {
     if (unbanded) {
       form.setValue("ringNumber", "");
     }
   }, [unbanded, form]);
+
+  useEffect(() => {
+    if (status !== 'Sold') {
+      form.setValue('salePrice', undefined);
+      form.setValue('saleDate', undefined);
+      form.setValue('buyerInfo', '');
+    }
+  }, [status, form]);
 
 
   function onSubmit(data: BirdFormValues) {
@@ -338,7 +319,7 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit Bird' : 'Add a New Bird'}</DialogTitle>
           <DialogDescription>
@@ -479,6 +460,35 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
                   )}
                 />
               </div>
+               <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                        <SelectContent>
+                          <SelectItem value="Available">Available</SelectItem>
+                          <SelectItem value="Sold">Sold</SelectItem>
+                          <SelectItem value="Deceased">Deceased</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="permitId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Permit</FormLabel>
+                      <GeneralCombobox field={field} options={permitOptions} placeholder="Assign a permit" />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
             </div>
              <Separator />
               <p className="text-base font-medium">Housing</p>
@@ -503,10 +513,7 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>Cage</FormLabel>
-                        <CageCombobox
-                          field={field}
-                          allCages={allCages}
-                        />
+                        <GeneralCombobox field={field} options={allCages.map(c => ({value: c.id, label: c.name}))} placeholder="Select a cage" />
                         <FormMessage />
                       </FormItem>
                     )}
@@ -565,7 +572,7 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
                   <FormField control={form.control} name="fatherId" render={({field}) => (
                     <FormItem>
                       <FormLabel>Father</FormLabel>
-                      <BirdCombobox
+                      <GeneralCombobox
                         field={field}
                         options={relationshipOptions.father}
                         placeholder={watchedSpecies ? "Select father" : "Select species first"}
@@ -576,7 +583,7 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
                   <FormField control={form.control} name="motherId" render={({field}) => (
                     <FormItem>
                       <FormLabel>Mother</FormLabel>
-                      <BirdCombobox
+                      <GeneralCombobox
                         field={field}
                         options={relationshipOptions.mother}
                         placeholder={watchedSpecies ? "Select mother" : "Select species first"}
@@ -587,7 +594,7 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
                    <FormField control={form.control} name="mateId" render={({field}) => (
                     <FormItem>
                       <FormLabel>Mate</FormLabel>
-                       <BirdCombobox
+                       <GeneralCombobox
                         field={field}
                         options={relationshipOptions.mate}
                         placeholder={watchedSpecies ? "Select mate" : "Select species first"}
@@ -652,6 +659,53 @@ function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, a
                       </FormItem>
                     )}
                   />
+                )}
+                {status === 'Sold' && (
+                    <>
+                        <Separator />
+                        <p className="text-base font-medium">Sale Details</p>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField control={form.control} name="salePrice" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Sale Price</FormLabel>
+                                    <FormControl><Input type="number" placeholder="e.g., 200" {...field} onChange={event => field.onChange(event.target.valueAsNumber)}/></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                             <FormField control={form.control} name="saleDate" render={({ field }) => (
+                              <FormItem className="flex flex-col"><FormLabel>Sale Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}><> {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={form.control} name="buyerInfo" render={({ field }) => (
+                                <FormItem className="md:col-span-2">
+                                    <FormLabel>Buyer Info</FormLabel>
+                                    <FormControl><Input placeholder="Buyer's name or details" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                         </div>
+                        <FormField
+                            control={form.control}
+                            name="createSaleTransaction"
+                            render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                                <FormControl>
+                                <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                <FormLabel>
+                                    Create income transaction
+                                </FormLabel>
+                                <FormDescription>
+                                    This will create an income entry for this bird's sale price.
+                                </FormDescription>
+                                </div>
+                            </FormItem>
+                            )}
+                        />
+                    </>
                 )}
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -776,7 +830,7 @@ function BreedingRecordDetailsDialog({ record, allBirds, allPairs, onClose, onBi
     );
 }
 
-function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecords, handleEditClick, onBirdClick, onViewBreedingRecord }: { bird: Bird; allBirds: Bird[]; allCages: Cage[]; allPairs: Pair[], allBreedingRecords: BreedingRecord[], handleEditClick: (bird: Bird) => void; onBirdClick: (bird: Bird) => void; onViewBreedingRecord: (record: BreedingRecord) => void; }) {
+function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecords, allPermits, handleEditClick, onBirdClick, onViewBreedingRecord }: { bird: Bird; allBirds: Bird[]; allCages: Cage[]; allPairs: Pair[], allBreedingRecords: BreedingRecord[], allPermits: Permit[], handleEditClick: (bird: Bird) => void; onBirdClick: (bird: Bird) => void; onViewBreedingRecord: (record: BreedingRecord) => void; }) {
   const { formatCurrency } = useCurrency();
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
@@ -785,6 +839,7 @@ function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecords, hand
   };
   
   const cage = allCages.find(c => c.birdIds.includes(bird.id));
+  const permit = allPermits.find(p => p.id === bird.permitId);
 
   const visualText = bird.visualMutations.join(' ');
   const splitText = bird.splitMutations.length > 0 ? `/(split) ${bird.splitMutations.join(' ')}` : '';
@@ -799,12 +854,39 @@ function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecords, hand
   const mother = allBirds.find(b => b.id === bird.motherId);
   const mate = allBirds.find(b => b.id === bird.mateId);
   const offspring = allBirds.filter(b => bird.offspringIds.includes(b.id));
+  
+  const getStatusBadgeVariant = () => {
+    switch(bird.status) {
+        case 'Sold': return 'destructive';
+        case 'Deceased': return 'secondary';
+        case 'Available':
+        default: return 'default';
+    }
+  }
 
   return (
-    <Card key={bird.id} className="flex flex-col h-full">
+    <Card key={bird.id} className={cn("flex flex-col h-full", (bird.status === 'Sold' || bird.status === 'Deceased') && "opacity-60")}>
       <CardHeader className="flex flex-row items-start justify-between p-4 pb-2">
-        <Badge variant={bird.sex === 'male' ? 'default' : bird.sex === 'female' ? 'destructive' : 'secondary'} className="capitalize">{bird.sex}</Badge>
-        <span className="text-sm text-muted-foreground text-right">{cage?.name || 'No Cage'}</span>
+        <div>
+            <Badge variant={bird.sex === 'male' ? 'default' : bird.sex === 'female' ? 'destructive' : 'secondary'} className="capitalize">{bird.sex}</Badge>
+            <Badge variant={getStatusBadgeVariant()} className="capitalize ml-2">{bird.status}</Badge>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground text-right">
+          {permit && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                    <ShieldCheck className="h-5 w-5 text-primary"/>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>Permit: {permit.permitNumber}</p>
+                    <p>Authority: {permit.issuingAuthority}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          <span>{cage?.name || 'No Cage'}</span>
+        </div>
       </CardHeader>
       <CardContent className="flex-grow space-y-3 p-4 pt-0">
         <div>
@@ -827,13 +909,13 @@ function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecords, hand
         <div className="w-full pt-2 flex justify-between items-center gap-2">
             <div className="flex gap-2">
                 <Button size="sm" variant={expandedSection === 'family' ? 'default' : 'secondary'} onClick={() => toggleSection('family')}>
-                    <Users2 className="h-4 w-4" />
+                    <Users2 className="h-4 w-4" /> <span className="hidden sm:inline ml-2">Family</span>
                 </Button>
                 <Button size="sm" variant={expandedSection === 'breeding' ? 'default' : 'secondary'} onClick={() => toggleSection('breeding')}>
-                    <Egg className="h-4 w-4" />
+                    <Egg className="h-4 w-4" /> <span className="hidden sm:inline ml-2">Breeding</span>
                 </Button>
                 <Button size="sm" variant={expandedSection === 'financials' ? 'default' : 'secondary'} onClick={() => toggleSection('financials')}>
-                    <Landmark className="h-4 w-4" />
+                    <Landmark className="h-4 w-4" /> <span className="hidden sm:inline ml-2">Financials</span>
                 </Button>
             </div>
              <Button variant="outline" size="sm" onClick={() => handleEditClick(bird)}>
@@ -879,11 +961,22 @@ function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecords, hand
                   </div>
                 )}
                 {expandedSection === 'financials' && (
-                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm pl-4">
+                     <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm pl-4">
                         <div className="font-medium text-muted-foreground">Paid Price</div>
                         <div>{formatCurrency(bird.paidPrice)}</div>
                         <div className="font-medium text-muted-foreground">Est. Value</div>
                         <div>{formatCurrency(bird.estimatedValue)}</div>
+                        {bird.status === 'Sold' && bird.saleDetails && (
+                            <>
+                                <Separator className="col-span-2 my-1" />
+                                <div className="font-medium text-muted-foreground">Sale Price</div>
+                                <div className="font-bold text-green-500">{formatCurrency(bird.saleDetails.price)}</div>
+                                <div className="font-medium text-muted-foreground">Sale Date</div>
+                                <div>{format(parseISO(bird.saleDetails.date), 'PPP')}</div>
+                                <div className="font-medium text-muted-foreground">Buyer</div>
+                                <div>{bird.saleDetails.buyer}</div>
+                            </>
+                        )}
                     </div>
                 )}
             </div>
@@ -979,6 +1072,7 @@ export default function BirdsPage() {
   const allCages = items.filter((item): item is Cage => item.category === 'Cage');
   const allPairs = items.filter((item): item is Pair => item.category === 'Pair');
   const allBreedingRecords = items.filter((item): item is BreedingRecord => item.category === 'BreedingRecord');
+  const allPermits = items.filter((item): item is Permit => item.category === 'Permit');
 
   const handleAddClick = () => {
     setEditingBird(null);
@@ -1010,7 +1104,7 @@ export default function BirdsPage() {
   };
 
 
-  const handleSaveBird = (formData: BirdFormValues & { addToExpenses?: boolean }) => {
+  const handleSaveBird = (formData: BirdFormValues) => {
     let finalCageId = formData.cageId;
     if (formData.newCageName && formData.newCageName.trim() !== "") {
       finalCageId = handleCreateCage(formData.newCageName);
@@ -1034,6 +1128,13 @@ export default function BirdsPage() {
       estimatedValue: formData.estimatedValue,
       id: birdId,
       category: 'Bird',
+      status: formData.status,
+      permitId: formData.permitId,
+      saleDetails: formData.status === 'Sold' && formData.saleDate && formData.salePrice && formData.buyerInfo ? {
+        date: format(formData.saleDate, 'yyyy-MM-dd'),
+        price: formData.salePrice,
+        buyer: formData.buyerInfo
+      } : undefined,
     };
 
     setItems(prevItems => {
@@ -1068,13 +1169,13 @@ export default function BirdsPage() {
             if (newCageIndex > -1) {
               const currentNewCage = newItems[newCageIndex] as Cage;
               if (!currentNewCage.birdIds.includes(birdToSave.id)) {
-                  (newItems[newCageIndex] as Cage).birdIds.push(birdToSave.id);
+                  (newItems[newCageIndex]as Cage).birdIds.push(birdToSave.id);
               }
             }
         }
       }
       
-      // Add transaction if needed
+      // Add purchase transaction if needed
       if (formData.addToExpenses && formData.paidPrice && formData.paidPrice > 0 && !editingBird) {
         const newTransaction: Transaction = {
           id: `t${Date.now()}`,
@@ -1084,6 +1185,21 @@ export default function BirdsPage() {
           description: `Purchase of ${getBirdIdentifier(birdToSave)}`,
           amount: formData.paidPrice,
           relatedBirdId: birdId,
+        };
+        newItems.unshift(newTransaction);
+      }
+      
+      // Add sale transaction if needed
+      const wasJustSold = editingBird?.status !== 'Sold' && formData.status === 'Sold';
+      if (formData.createSaleTransaction && wasJustSold && birdToSave.saleDetails) {
+         const newTransaction: Transaction = {
+            id: `t${Date.now()}`,
+            category: 'Transaction',
+            type: 'income',
+            date: birdToSave.saleDetails.date,
+            description: `Sale of ${getBirdIdentifier(birdToSave)}`,
+            amount: birdToSave.saleDetails.price,
+            relatedBirdId: birdId,
         };
         newItems.unshift(newTransaction);
       }
@@ -1120,12 +1236,13 @@ export default function BirdsPage() {
         initialData={editingBird}
         allBirds={allBirds}
         allCages={allCages}
-        handleCreateCage={handleCreateCage}
+        allPermits={allPermits}
       />
       <BirdDetailsDialog
         bird={viewingBird}
         allBirds={allBirds}
         allCages={allCages}
+        allPermits={allPermits}
         onClose={() => setViewingBird(null)}
         onBirdClick={(bird) => {
             setViewingBird(bird);
@@ -1183,7 +1300,7 @@ export default function BirdsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredItems.map((item) => {
             if (item.category === 'Bird') {
-              return <BirdCard key={item.id} bird={item} allBirds={allBirds} allCages={allCages} allPairs={allPairs} allBreedingRecords={allBreedingRecords} handleEditClick={handleEditClick} onBirdClick={handleViewBirdClick} onViewBreedingRecord={handleViewBreedingRecord} />
+              return <BirdCard key={item.id} bird={item} allBirds={allBirds} allCages={allCages} allPairs={allPairs} allBreedingRecords={allBreedingRecords} allPermits={allPermits} handleEditClick={handleEditClick} onBirdClick={handleViewBirdClick} onViewBreedingRecord={handleViewBreedingRecord} />
             }
             if (item.category === 'Cage') {
                 return <CageCard key={item.id} cage={item} allBirds={allBirds} onBirdClick={handleViewBirdClick} />

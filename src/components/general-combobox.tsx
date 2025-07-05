@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -13,7 +14,7 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
   const [open, setOpen] = React.useState(false);
 
   return (
-    <Popover open={open} onOpenChange={setOpen} modal={true}>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild disabled={disabled}>
         <FormControl>
           <Button
@@ -40,7 +41,6 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
       <PopoverContent
         className="w-[--radix-popover-trigger-width] p-0"
         align="start"
-        onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <Command>
           <CommandInput placeholder="Search..." />

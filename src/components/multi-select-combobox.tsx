@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -27,7 +28,7 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
     const getLabel = (value: string) => options.find(o => o.value === value)?.label || value;
     
     return (
-        <Popover open={open} onOpenChange={setOpen} modal={true}>
+        <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <Button
                     variant="outline"
@@ -62,7 +63,6 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
             <PopoverContent
                 className="w-[--radix-popover-trigger-width] p-0"
                 align="start"
-                onOpenAutoFocus={(e) => e.preventDefault()}
             >
                 <Command>
                     <CommandInput placeholder="Search..." />
@@ -72,9 +72,9 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                             {options.map((option) => (
                                 <CommandItem
                                     key={option.value}
-                                    value={option.value}
-                                    onSelect={(currentValue) => {
-                                        handleSelect(currentValue);
+                                    value={option.label} // Use label for filtering
+                                    onSelect={() => {
+                                        handleSelect(option.value);
                                     }}
                                 >
                                     <Check

@@ -78,22 +78,6 @@ export type BirdFormValues = z.infer<typeof birdFormSchema>;
 export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, allCages, allPermits }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onSave: (data: BirdFormValues & { newCageName?: string }) => void, initialData: Bird | null, allBirds: Bird[], allCages: Cage[], allPermits: Permit[] }) {
   const [isCreatingCage, setIsCreatingCage] = useState(false);
   const { items } = useItems();
-  const [debugLog, setDebugLog] = useState<string[]>([]);
-
-  const log = useCallback((message: string) => {
-    console.log(message);
-    setDebugLog(prev => [
-        `${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3 })}: ${message}`,
-        ...prev
-    ].slice(0, 15));
-  }, []);
-
-  useEffect(() => {
-    if (isOpen) {
-        setDebugLog([]);
-        log("Dialog opened. Debug log cleared.");
-    }
-  }, [isOpen, log]);
   
   const form = useForm<BirdFormValues>({
     resolver: zodResolver(birdFormSchema),
@@ -231,9 +215,13 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent
         className="sm:max-w-2xl"
-        onFocusOutside={(e) => { log(`Dialog onFocusOutside fired. Target: ${ (e.target as HTMLElement).tagName }. Action: Default not prevented.`); }}
-        onPointerDownOutside={(e) => { log(`Dialog onPointerDownOutside fired. Target: ${ (e.target as HTMLElement).tagName }. Action: Default not prevented.`); }}
-        onInteractOutside={(e) => { log(`Dialog onInteractOutside fired. Target: ${ (e.target as HTMLElement).tagName }. Action: Default not prevented.`); }}
+        onPointerDownOutside={(e) => {
+          const target = e.target as HTMLElement;
+          // Allow interaction with popovers
+          if (target.closest('[data-radix-popper-content-wrapper]')) {
+            e.preventDefault();
+          }
+        }}
       >
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit Bird' : 'Add a New Bird'}</DialogTitle>
@@ -241,14 +229,8 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
             {isEditMode ? 'Update the details for this bird.' : 'Enter the details of the new bird.'}
           </DialogDescription>
         </DialogHeader>
-         <div className="bg-muted p-2 rounded-md space-y-1">
-            <h4 className="text-sm font-semibold">Debug Log</h4>
-            <pre className="text-xs h-24 overflow-y-auto bg-background p-2 rounded-sm">
-                {debugLog.length > 0 ? debugLog.join('\n') : "Log is empty. Interact with a combobox."}
-            </pre>
-        </div>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[55vh] overflow-y-auto pr-6 pl-1">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-6 pl-1">
              <p className="text-base font-medium">Core Details</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
@@ -258,7 +240,6 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                   <FormItem>
                     <FormLabel>Species</FormLabel>
                     <GeneralCombobox
-                        log={log}
                         field={{...field, onChange: (value) => {
                              field.onChange(value);
                              form.setValue('subspecies', undefined);
@@ -277,7 +258,6 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                   <FormItem>
                     <FormLabel>Subspecies</FormLabel>
                     <GeneralCombobox
-                      log={log}
                       field={field}
                       options={subspeciesOptions.map((sub) => ({
                         value: sub,
@@ -415,7 +395,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Permit</FormLabel>
-                      <GeneralCombobox log={log} field={field} options={permitOptions} placeholder="Assign a permit" />
+                      <GeneralCombobox field={field} options={permitOptions} placeholder="Assign a permit" />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -444,7 +424,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>Cage</FormLabel>
-                        <GeneralCombobox log={log} field={field} options={allCages.map(c => ({value: c.id, label: c.name}))} placeholder="Select a cage" />
+                        <GeneralCombobox field={field} options={allCages.map(c => ({value: c.id, label: c.name}))} placeholder="Select a cage" />
                         <FormMessage />
                       </FormItem>
                     )}
@@ -480,7 +460,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Visual Mutations</FormLabel>
-                       <MultiSelectCombobox log={log} field={field} options={allMutationOptions} placeholder="Select visual mutations" />
+                       <MultiSelectCombobox field={field} options={allMutationOptions} placeholder="Select visual mutations" />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -491,7 +471,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Split Mutations</FormLabel>
-                       <MultiSelectCombobox log={log} field={field} options={allMutationOptions} placeholder="Select split mutations" />
+                       <MultiSelectCombobox field={field} options={allMutationOptions} placeholder="Select split mutations" />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -504,7 +484,6 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                     <FormItem>
                       <FormLabel>Father</FormLabel>
                       <GeneralCombobox
-                        log={log}
                         field={field}
                         options={relationshipOptions.father}
                         placeholder={watchedSpecies ? "Select father" : "Select species first"}
@@ -516,7 +495,6 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                     <FormItem>
                       <FormLabel>Mother</FormLabel>
                       <GeneralCombobox
-                        log={log}
                         field={field}
                         options={relationshipOptions.mother}
                         placeholder={watchedSpecies ? "Select mother" : "Select species first"}
@@ -528,7 +506,6 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                     <FormItem>
                       <FormLabel>Mate</FormLabel>
                        <GeneralCombobox
-                        log={log}
                         field={field}
                         options={relationshipOptions.mate}
                         placeholder={watchedSpecies ? "Select mate" : "Select species first"}
@@ -540,7 +517,6 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                     <FormItem>
                       <FormLabel>Offspring</FormLabel>
                       <MultiSelectCombobox
-                        log={log}
                         field={field}
                         options={relationshipOptions.offspring}
                         placeholder={watchedSpecies ? "Select offspring" : "Select species first"}

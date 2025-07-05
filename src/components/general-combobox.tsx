@@ -10,14 +10,11 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export function GeneralCombobox({ field, options, placeholder, disabled = false, log = () => {} }: { field: ControllerRenderProps<any, any>; options: { value: string; label:string }[]; placeholder: string; disabled?: boolean; log?: (message: string) => void; }) {
+export function GeneralCombobox({ field, options, placeholder, disabled = false }: { field: ControllerRenderProps<any, any>; options: { value: string; label:string }[]; placeholder: string; disabled?: boolean; }) {
   const [open, setOpen] = React.useState(false);
 
   return (
-    <Popover open={open} onOpenChange={(isOpen) => {
-        log(`GeneralCombobox Popover onOpenChange. New state: ${isOpen}`);
-        setOpen(isOpen);
-    }}>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild disabled={disabled}>
         <FormControl>
           <Button
@@ -25,7 +22,6 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false,
             role="combobox"
             aria-expanded={open}
             disabled={disabled}
-            onClick={() => log('GeneralCombobox Trigger onClick')}
             className={cn(
               "w-full justify-between",
               !field.value && "text-muted-foreground"
@@ -45,12 +41,9 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false,
       <PopoverContent
         className="w-[--radix-popover-trigger-width] p-0"
         align="start"
-        onOpenAutoFocus={(e) => {
-            log('GeneralCombobox PopoverContent onOpenAutoFocus fired. Action: Default not prevented.');
-        }}
       >
-        <Command onFocus={() => log('GeneralCombobox Command onFocus')} onBlur={() => log('GeneralCombobox Command onBlur')}>
-          <CommandInput placeholder="Search..." onFocus={() => log('GeneralCombobox CommandInput onFocus')} />
+        <Command>
+          <CommandInput placeholder="Search..." />
           <CommandList>
             <CommandEmpty>No item found.</CommandEmpty>
             <CommandGroup>
@@ -59,12 +52,10 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false,
                   key={option.value}
                   value={option.label}
                   onSelect={(currentLabel) => {
-                    log(`GeneralCombobox CommandItem onSelect fired for: ${currentLabel}`);
                     const selectedValue = options.find(o => o.label.toLowerCase() === currentLabel.toLowerCase())?.value;
                     field.onChange(selectedValue === field.value ? "" : selectedValue);
                     setOpen(false);
                   }}
-                  onClick={() => log(`GeneralCombobox CommandItem onClick fired for: ${option.label}`)}
                 >
                   <Check
                     className={cn(

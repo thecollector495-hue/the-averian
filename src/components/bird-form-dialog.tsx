@@ -215,8 +215,9 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent
         className="sm:max-w-2xl"
-        onInteractOutside={(e) => {
+        onPointerDownOutside={(e) => {
           const target = e.target as HTMLElement;
+          // Allow interaction with popovers
           if (target.closest('[data-radix-popper-content-wrapper]')) {
             e.preventDefault();
           }

@@ -42,7 +42,7 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
     }, [open]);
 
     return (
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover open={open} onOpenChange={setOpen} modal={true}>
             <PopoverTrigger asChild>
                 <Button
                     variant="outline"

@@ -1,17 +1,19 @@
-
 'use client';
 
 import * as React from 'react';
 import { ControllerRenderProps } from 'react-hook-form';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Check, ChevronsUpDown, X } from 'lucide-react';
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ChevronsUpDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export function MultiSelectCombobox({ field, options, placeholder }: { field: ControllerRenderProps<any, any>, options: { value: string; label: string }[], placeholder: string }) {
     const [open, setOpen] = React.useState(false);
+    const [search, setSearch] = React.useState("");
     
     const selectedValues = new Set(Array.isArray(field.value) ? field.value : []);
 
@@ -27,6 +29,18 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
 
     const getLabel = (value: string) => options.find(o => o.value === value)?.label || value;
     
+    const filteredOptions = React.useMemo(() => 
+        options.filter(option => 
+        option.label.toLowerCase().includes(search.toLowerCase())
+        ), 
+    [options, search]);
+    
+    React.useEffect(() => {
+        if (!open) {
+          setSearch("");
+        }
+    }, [open]);
+
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
@@ -34,7 +48,7 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}
-                    className="w-full justify-between h-auto"
+                    className="w-full justify-between h-auto min-h-10"
                 >
                     <div className="flex gap-1 flex-wrap">
                         {selectedValues.size > 0 ? (
@@ -64,33 +78,39 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                 className="w-[--radix-popover-trigger-width] p-0"
                 align="start"
             >
-                <Command>
-                    <CommandInput placeholder="Search..." />
-                    <CommandList>
-                        <CommandEmpty>No item found.</CommandEmpty>
-                        <CommandGroup>
-                            {options.map((option) => (
-                                <CommandItem
+                <div className="p-2">
+                    <Input 
+                        placeholder="Search..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full"
+                        autoFocus
+                    />
+                </div>
+                <ScrollArea className="h-[200px]">
+                    <div className="p-1">
+                        {filteredOptions.length > 0 ? (
+                            filteredOptions.map((option) => (
+                                <div
                                     key={option.value}
-                                    value={option.label}
-                                    onSelect={() => {
-                                        handleSelect(option.value);
-                                    }}
+                                    className="flex items-center gap-2 p-2 rounded-md hover:bg-accent cursor-pointer"
+                                    onClick={() => handleSelect(option.value)}
                                 >
-                                    <Check
-                                        className={cn(
-                                            "mr-2 h-4 w-4",
-                                            selectedValues.has(option.value)
-                                                ? "opacity-100"
-                                                : "opacity-0"
-                                        )}
+                                    <Checkbox
+                                        checked={selectedValues.has(option.value)}
+                                        readOnly
+                                        className="pointer-events-none"
                                     />
-                                    {option.label}
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
-                    </CommandList>
-                </Command>
+                                    <span className="flex-grow whitespace-normal">{option.label}</span>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="p-2 text-center text-sm text-muted-foreground">
+                                No item found.
+                            </div>
+                        )}
+                    </div>
+                </ScrollArea>
             </PopoverContent>
         </Popover>
     );

@@ -15,6 +15,7 @@ import { Bird, Cage, Pair, BreedingRecord, CollectionItem, getBirdIdentifier, Tr
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useItems } from '@/context/ItemsContext';
+import { CageFormValues } from '@/components/add-cage-dialog';
 
 const AddCageDialog = dynamic(() => import('@/components/add-cage-dialog').then(mod => mod.AddCageDialog), { ssr: false });
 const BirdFormDialog = dynamic(() => import('@/components/bird-form-dialog').then(mod => mod.BirdFormDialog), { ssr: false });
@@ -55,27 +56,43 @@ export default function BirdsPage() {
     setViewingBreedingRecord(record);
   }
 
-  const handleCreateCage = (cageName: string): string | null => {
-    const trimmedName = cageName.trim();
+  const handleSaveCage = (data: CageFormValues): string => {
+    const trimmedName = data.name.trim();
     if (!trimmedName) {
-        toast({ variant: "destructive", title: "Invalid Name", description: "Cage name cannot be empty." });
-        return null;
+      toast({ variant: 'destructive', title: 'Invalid Name', description: 'Cage name cannot be empty.' });
+      return '';
     }
-
     const existingCage = allCages.find(c => c.name.toLowerCase() === trimmedName.toLowerCase());
     if (existingCage) {
-        toast({ variant: "destructive", title: "Cage Exists", description: `A cage named "${trimmedName}" already exists.` });
-        return null;
+      toast({ variant: 'destructive', title: 'Cage Exists', description: `A cage named "${trimmedName}" already exists.` });
+      return '';
+    }
+
+    const newCage: Cage = {
+      id: `c${Date.now()}`,
+      name: trimmedName,
+      category: 'Cage',
+      birdIds: [],
+      cost: data.cost,
+    };
+
+    const itemsToAdd: (Cage | Transaction)[] = [newCage];
+
+    if (data.addToExpenses && data.cost && data.cost > 0) {
+      const newTransaction: Transaction = {
+        id: `t${Date.now()}`,
+        category: 'Transaction',
+        type: 'expense',
+        date: format(new Date(), 'yyyy-MM-dd'),
+        description: `Purchase of cage: ${newCage.name}`,
+        amount: data.cost,
+      };
+      itemsToAdd.push(newTransaction);
+      toast({ title: 'Expense Added', description: `Purchase of cage ${newCage.name} logged.` });
     }
     
-    const newCage: Cage = {
-        id: `c${Date.now()}`,
-        name: trimmedName,
-        category: 'Cage',
-        birdIds: []
-    };
-    addItem(newCage);
-    toast({ title: "Cage Created", description: `Cage "${trimmedName}" has been added.` });
+    addItems(itemsToAdd);
+    toast({ title: 'Cage Created', description: `Cage "${trimmedName}" has been added.` });
     return newCage.id;
   };
 
@@ -83,7 +100,7 @@ export default function BirdsPage() {
   const handleSaveBird = (formData: BirdFormValues & { newCageName?: string }) => {
     let finalCageId = formData.cageId;
     if (formData.newCageName && formData.newCageName.trim() !== "") {
-       const newCageId = handleCreateCage(formData.newCageName);
+       const newCageId = handleSaveCage({ name: formData.newCageName });
         if (!newCageId) {
             return; 
         }
@@ -201,7 +218,8 @@ export default function BirdsPage() {
       {isAddCageDialogOpen && <AddCageDialog
         isOpen={isAddCageDialogOpen}
         onOpenChange={setIsAddCageDialogOpen}
-        onSave={(data) => handleCreateCage(data.name)}
+        onSave={(data) => handleSaveCage(data)}
+        initialData={null}
        />}
       {isFormOpen && <BirdFormDialog
         isOpen={isFormOpen}

@@ -169,6 +169,7 @@ export type Cage = {
   name: string;
   category: 'Cage';
   birdIds: string[];
+  cost?: number;
 };
 
 export type Pair = {
@@ -279,8 +280,8 @@ export const initialPairs: Pair[] = [
 ];
 
 export const initialCages: Cage[] = [
-    { id: 'c1', category: 'Cage', name: 'Breeding Cage A', birdIds: ['1', '4'] },
-    { id: 'c2', category: 'Cage', name: 'Flight Cage 1', birdIds: ['2', '3'] },
+    { id: 'c1', category: 'Cage', name: 'Breeding Cage A', birdIds: ['1', '4'], cost: 120 },
+    { id: 'c2', category: 'Cage', name: 'Flight Cage 1', birdIds: ['2', '3'], cost: 250 },
 ];
 
 export const initialBreedingRecords: BreedingRecord[] = [

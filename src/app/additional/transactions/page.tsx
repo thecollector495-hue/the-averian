@@ -199,8 +199,8 @@ export default function TransactionsPage() {
                         <Card key={t.id} className="w-full">
                             <CardContent className="p-4 space-y-4">
                                 <div className="flex justify-between items-start gap-4">
-                                    <div>
-                                        <p className="font-semibold">{t.description}</p>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-semibold truncate">{t.description}</p>
                                         <p className="text-sm text-muted-foreground">{format(parseISO(t.date), 'PPP')}</p>
                                         {bird && (
                                             <Button variant="link" className="p-0 h-auto font-normal text-xs block text-muted-foreground" onClick={() => setViewingBird(bird)}>
@@ -209,7 +209,7 @@ export default function TransactionsPage() {
                                         )}
                                     </div>
                                     <div className="text-right flex-shrink-0">
-                                        <p className={`font-bold text-lg ${t.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
+                                        <p className={`font-bold text-lg whitespace-nowrap ${t.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
                                             {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
                                         </p>
                                         <Badge variant={t.type === 'income' ? 'default' : 'secondary'} className="capitalize mt-1">

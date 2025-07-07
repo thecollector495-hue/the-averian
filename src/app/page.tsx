@@ -351,10 +351,12 @@ export default function BirdsPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={handleAddClick}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Bird
-            </Button>
+            {filterCategory === 'Bird' && (
+              <Button onClick={handleAddClick}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Bird
+              </Button>
+            )}
             {filterCategory === 'Cage' && (
               <Button onClick={() => setIsAddCageDialogOpen(true)}>
                   <PlusCircle className="mr-2 h-4 w-4" />

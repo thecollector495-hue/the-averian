@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, ArrowDown, ArrowUp, Pencil, Search, Trash2 } from "lucide-react";
+import { PlusCircle, ArrowDown, ArrowUp, Pencil, Search, Trash2, ChevronDown } from "lucide-react";
 import { useCurrency } from '@/context/CurrencyContext';
 import { Transaction, getBirdIdentifier, Bird, Cage, Permit } from '@/lib/data';
 import { format, parseISO } from 'date-fns';
@@ -17,6 +17,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { BirdDetailsDialog } from '@/components/bird-details-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useItems } from '@/context/ItemsContext';
+import { cn } from '@/lib/utils';
 
 const AddTransactionDialog = dynamic(() => import('@/components/add-transaction-dialog').then(mod => mod.AddTransactionDialog), { ssr: false });
 
@@ -29,6 +30,8 @@ export default function TransactionsPage() {
   const { formatCurrency } = useCurrency();
   const [viewingBird, setViewingBird] = useState<Bird | null>(null);
   const { toast } = useToast();
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
 
   const allBirds = items.filter((item): item is Bird => item.category === 'Bird');
   const allCages = items.filter((item): item is Cage => item.category === 'Cage');
@@ -194,19 +197,15 @@ export default function TransactionsPage() {
           <div className="md:hidden space-y-4">
             {filteredTransactions.length > 0 ? (
                 filteredTransactions.map(t => {
+                    const isExpanded = expandedId === t.id;
                     const bird = t.relatedBirdId ? allBirds.find(b => b.id === t.relatedBirdId) : null;
                     return (
                         <Card key={t.id} className="w-full">
-                            <CardContent className="p-4 space-y-4">
-                                <div className="flex justify-between items-start gap-4">
+                            <CardContent className="p-4 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : t.id)}>
+                                <div className="flex justify-between items-start gap-2">
                                     <div className="flex-1 min-w-0">
                                         <p className="font-semibold truncate">{t.description}</p>
                                         <p className="text-sm text-muted-foreground">{format(parseISO(t.date), 'PPP')}</p>
-                                        {bird && (
-                                            <Button variant="link" className="p-0 h-auto font-normal text-xs block text-muted-foreground" onClick={() => setViewingBird(bird)}>
-                                                {getBirdIdentifier(bird)}
-                                            </Button>
-                                        )}
                                     </div>
                                     <div className="text-right flex-shrink-0">
                                         <p className={`font-bold text-lg whitespace-nowrap ${t.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
@@ -217,17 +216,31 @@ export default function TransactionsPage() {
                                             {t.type}
                                         </Badge>
                                     </div>
+                                    <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform flex-shrink-0", isExpanded && "rotate-180")} />
                                 </div>
-                                <div className="flex justify-end gap-2">
-                                     <Button variant="outline" size="sm" onClick={() => handleEditClick(t)}>
-                                        <Pencil className="h-4 w-4 mr-2" />
-                                        Edit
-                                    </Button>
-                                    <Button variant="outline" size="sm" onClick={() => setDeletingTransactionId(t.id)}>
-                                        <Trash2 className="h-4 w-4 mr-2 text-destructive" />
-                                        Delete
-                                    </Button>
-                                </div>
+
+                                {isExpanded && (
+                                    <div className="mt-4 pt-4 border-t space-y-4">
+                                        {bird && (
+                                            <div>
+                                                <span className="text-sm text-muted-foreground">Related to:</span>
+                                                <Button variant="link" className="p-0 h-auto font-normal text-sm block" onClick={(e) => { e.stopPropagation(); setViewingBird(bird); }}>
+                                                    {getBirdIdentifier(bird)}
+                                                </Button>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-end gap-2">
+                                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleEditClick(t); }}>
+                                                <Pencil className="h-4 w-4 mr-2" />
+                                                Edit
+                                            </Button>
+                                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setDeletingTransactionId(t.id); }}>
+                                                <Trash2 className="h-4 w-4 mr-2 text-destructive" />
+                                                Delete
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     )

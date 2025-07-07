@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Search, PlusCircle } from 'lucide-react';
+import { Search, PlusCircle, Trash2 } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -16,13 +16,14 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useItems } from '@/context/ItemsContext';
 import { CageFormValues } from '@/components/add-cage-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const AddCageDialog = dynamic(() => import('@/components/add-cage-dialog').then(mod => mod.AddCageDialog), { ssr: false });
 const BirdFormDialog = dynamic(() => import('@/components/bird-form-dialog').then(mod => mod.BirdFormDialog), { ssr: false });
 const BreedingRecordDetailsDialog = dynamic(() => import('@/components/breeding-record-details-dialog').then(mod => mod.BreedingRecordDetailsDialog), { ssr: false });
 
 export default function BirdsPage() {
-  const { items, addItem, addItems, updateItem, updateItems } = useItems();
+  const { items, addItem, addItems, updateItem, updateItems, deleteItem } = useItems();
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('Bird');
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -30,6 +31,7 @@ export default function BirdsPage() {
   const [viewingBird, setViewingBird] = useState<Bird | null>(null);
   const [viewingBreedingRecord, setViewingBreedingRecord] = useState<BreedingRecord | null>(null);
   const [isAddCageDialogOpen, setIsAddCageDialogOpen] = useState(false);
+  const [deletingBirdId, setDeletingBirdId] = useState<string | null>(null);
   const { toast } = useToast();
   
   const allBirds = items.filter((item): item is Bird => item.category === 'Bird');
@@ -37,6 +39,10 @@ export default function BirdsPage() {
   const allPairs = items.filter((item): item is Pair => item.category === 'Pair');
   const allBreedingRecords = items.filter((item): item is BreedingRecord => item.category === 'BreedingRecord');
   const allPermits = items.filter((item): item is Permit => item.category === 'Permit');
+
+  const birdToDelete = useMemo(() => 
+    deletingBirdId ? allBirds.find(b => b.id === deletingBirdId) : null
+  , [deletingBirdId, allBirds]);
 
   const handleAddClick = () => {
     setEditingBird(null);
@@ -100,7 +106,7 @@ export default function BirdsPage() {
   const handleSaveBird = (formData: BirdFormValues & { newCageName?: string }) => {
     let finalCageId = formData.cageId;
     if (formData.newCageName && formData.newCageName.trim() !== "") {
-       const newCageId = handleSaveCage({ name: formData.newCageName });
+       const newCageId = handleSaveCage({ name: formData.newCageName, cost: 0, addToExpenses: false });
         if (!newCageId) {
             return; 
         }
@@ -135,7 +141,6 @@ export default function BirdsPage() {
       } : undefined,
     };
     
-    const itemsToUpdate: CollectionItem[] = [];
     const itemsToAdd: CollectionItem[] = [];
 
     // Bird itself
@@ -199,6 +204,62 @@ export default function BirdsPage() {
       });
   };
 
+  const handleDeleteBird = () => {
+    if (!birdToDelete) return;
+
+    const birdId = birdToDelete.id;
+    let itemsToUpdate: Partial<Bird | Cage>[] = [];
+    let itemIdsToDelete = [birdId];
+
+    // Remove from cage
+    const cage = allCages.find(c => c.birdIds.includes(birdId));
+    if (cage) {
+        itemsToUpdate.push({ id: cage.id, birdIds: cage.birdIds.filter(id => id !== birdId) });
+    }
+
+    // Unlink mate
+    if (birdToDelete.mateId) {
+        const mate = allBirds.find(b => b.id === birdToDelete.mateId);
+        if (mate) itemsToUpdate.push({ id: mate.id, mateId: undefined });
+    }
+
+    // Unlink from parents
+    if (birdToDelete.fatherId) {
+        const father = allBirds.find(b => b.id === birdToDelete.fatherId);
+        if (father) itemsToUpdate.push({ id: father.id, offspringIds: father.offspringIds.filter(id => id !== birdId) });
+    }
+    if (birdToDelete.motherId) {
+        const mother = allBirds.find(b => b.id === birdToDelete.motherId);
+        if (mother) itemsToUpdate.push({ id: mother.id, offspringIds: mother.offspringIds.filter(id => id !== birdId) });
+    }
+
+    // Unlink from offspring
+    birdToDelete.offspringIds.forEach(offspringId => {
+        const offspring = allBirds.find(b => b.id === offspringId);
+        if (offspring) {
+            const updates: Partial<Bird> = { id: offspring.id };
+            if (offspring.fatherId === birdId) updates.fatherId = undefined;
+            if (offspring.motherId === birdId) updates.motherId = undefined;
+            itemsToUpdate.push(updates);
+        }
+    });
+
+    // Remove associated pairs
+    allPairs.forEach(pair => {
+        if (pair.maleId === birdId || pair.femaleId === birdId) {
+            itemIdsToDelete.push(pair.id);
+        }
+    });
+    
+    // Batch updates
+    itemsToUpdate.forEach(update => updateItem(update.id!, update));
+    // Batch deletes
+    itemIdsToDelete.forEach(id => deleteItem(id));
+
+    toast({ title: "Bird Deleted", description: `${getBirdIdentifier(birdToDelete)} has been removed.` });
+    setDeletingBirdId(null);
+  }
+
   const filteredItems = items.filter(item => {
     if (item.category !== filterCategory) return false;
 
@@ -247,6 +308,22 @@ export default function BirdsPage() {
         onClose={() => setViewingBreedingRecord(null)}
         onBirdClick={handleViewBirdClick}
       />}
+       <AlertDialog open={!!deletingBirdId} onOpenChange={(open) => !open && setDeletingBirdId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {birdToDelete ? getBirdIdentifier(birdToDelete) : 'this bird'}. 
+              This also removes the bird from any cage and deletes any breeding pairs it belongs to. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteBird}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="flex flex-col gap-4 mb-8">
         <h1 className="text-4xl md:text-5xl font-bold font-headline text-center">The Avarian</h1>
         <p className="text-lg text-muted-foreground text-center">Your modern aviary management solution.</p>
@@ -292,7 +369,7 @@ export default function BirdsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredItems.map((item) => {
             if (item.category === 'Bird') {
-              return <BirdCard key={item.id} bird={item} allBirds={allBirds} allCages={allCages} allPairs={allPairs} allBreedingRecords={allBreedingRecords} allPermits={allPermits} handleEditClick={handleEditClick} onBirdClick={handleViewBirdClick} onViewBreedingRecord={handleViewBreedingRecord} />
+              return <BirdCard key={item.id} bird={item} allBirds={allBirds} allCages={allCages} allPairs={allPairs} allBreedingRecords={allBreedingRecords} allPermits={allPermits} handleEditClick={handleEditClick} handleDeleteClick={setDeletingBirdId} onBirdClick={handleViewBirdClick} onViewBreedingRecord={handleViewBreedingRecord} />
             }
             if (item.category === 'Cage') {
                 return <CageCard key={item.id} cage={item} allBirds={allBirds} onBirdClick={handleViewBirdClick} />

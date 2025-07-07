@@ -201,8 +201,8 @@ export default function TransactionsPage() {
                     const bird = t.relatedBirdId ? allBirds.find(b => b.id === t.relatedBirdId) : null;
                     return (
                         <Card key={t.id} className="w-full">
-                            <CardContent className="p-4 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : t.id)}>
-                                <div className="flex justify-between items-start gap-2">
+                            <CardContent className="p-4" onClick={() => setExpandedId(isExpanded ? null : t.id)}>
+                                <div className="flex justify-between items-start gap-2 cursor-pointer">
                                     <div className="flex-1 min-w-0">
                                         <p className="font-semibold truncate">{t.description}</p>
                                         <p className="text-sm text-muted-foreground">{format(parseISO(t.date), 'PPP')}</p>
@@ -216,15 +216,15 @@ export default function TransactionsPage() {
                                             {t.type}
                                         </Badge>
                                     </div>
-                                    <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform flex-shrink-0", isExpanded && "rotate-180")} />
+                                    <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform flex-shrink-0 mt-1", isExpanded && "rotate-180")} />
                                 </div>
 
                                 {isExpanded && (
                                     <div className="mt-4 pt-4 border-t space-y-4">
                                         {bird && (
-                                            <div>
-                                                <span className="text-sm text-muted-foreground">Related to:</span>
-                                                <Button variant="link" className="p-0 h-auto font-normal text-sm block" onClick={(e) => { e.stopPropagation(); setViewingBird(bird); }}>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-muted-foreground shrink-0 mr-2">Related to:</span>
+                                                <Button variant="link" className="p-0 h-auto font-normal text-sm text-right truncate" onClick={(e) => { e.stopPropagation(); setViewingBird(bird); }}>
                                                     {getBirdIdentifier(bird)}
                                                 </Button>
                                             </div>
@@ -234,8 +234,8 @@ export default function TransactionsPage() {
                                                 <Pencil className="h-4 w-4 mr-2" />
                                                 Edit
                                             </Button>
-                                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setDeletingTransactionId(t.id); }}>
-                                                <Trash2 className="h-4 w-4 mr-2 text-destructive" />
+                                            <Button variant="destructive" size="sm" onClick={(e) => { e.stopPropagation(); setDeletingTransactionId(t.id); }}>
+                                                <Trash2 className="h-4 w-4 mr-2" />
                                                 Delete
                                             </Button>
                                         </div>

@@ -78,11 +78,11 @@ export default function BirdsPage() {
     setIsAddCageDialogOpen(true);
   };
   
-  const handleSaveCage = (data: CageFormValues & { id?: string }): string => {
+  const handleSaveCage = (data: CageFormValues & { id?: string }) => {
     const trimmedName = data.name.trim();
     if (!trimmedName) {
       toast({ variant: 'destructive', title: 'Invalid Name', description: 'Cage name cannot be empty.' });
-      return '';
+      return;
     }
 
     const isEditing = !!data.id;
@@ -90,7 +90,7 @@ export default function BirdsPage() {
     const existingCage = allCages.find(c => c.name.toLowerCase() === trimmedName.toLowerCase() && c.id !== data.id);
     if (existingCage) {
       toast({ variant: 'destructive', title: 'Cage Exists', description: `A cage named "${trimmedName}" already exists.` });
-      return '';
+      return;
     }
 
     if (isEditing) {
@@ -100,7 +100,6 @@ export default function BirdsPage() {
       };
       updateItem(data.id!, updatedCage);
       toast({ title: 'Cage Updated', description: `Cage "${trimmedName}" has been updated.` });
-      return data.id!;
     } else {
         const newCage: Cage = {
           id: `c${Date.now()}`,
@@ -127,23 +126,37 @@ export default function BirdsPage() {
         
         addItems(itemsToAdd);
         toast({ title: 'Cage Created', description: `Cage "${trimmedName}" has been added.` });
-        return newCage.id;
     }
   };
 
-
   const handleSaveBird = (formData: BirdFormValues & { newCageName?: string }) => {
-    let finalCageId = formData.cageId;
-    if (formData.newCageName && formData.newCageName.trim() !== "") {
-       const newCageId = handleSaveCage({ name: formData.newCageName, cost: 0, addToExpenses: false });
-        if (!newCageId) {
-            return; 
-        }
-        finalCageId = newCageId;
-    }
-
     const isEditing = !!editingBird;
     const birdId = editingBird?.id || `b${Date.now()}`;
+    
+    const itemsToAdd: CollectionItem[] = [];
+    const itemsToUpdate: Partial<CollectionItem>[] = [];
+    
+    let finalCageId = formData.cageId;
+
+    // Handle new cage creation directly
+    if (formData.newCageName && formData.newCageName.trim() !== "") {
+        const trimmedCageName = formData.newCageName.trim();
+        const existingCage = allCages.find(c => c.name.toLowerCase() === trimmedCageName.toLowerCase());
+        if (existingCage) {
+            toast({ variant: 'destructive', title: 'Cage Exists', description: `A cage named "${trimmedCageName}" already exists.` });
+            return; // Stop execution if cage name is a duplicate
+        }
+        const newCage: Cage = {
+          id: `c${Date.now()}`,
+          name: trimmedCageName,
+          category: 'Cage',
+          birdIds: [birdId], // Immediately add the current bird
+          cost: 0,
+        };
+        itemsToAdd.push(newCage);
+        finalCageId = newCage.id;
+    }
+
     const birdToSave: Bird = {
       species: formData.species,
       subspecies: formData.subspecies,
@@ -170,26 +183,23 @@ export default function BirdsPage() {
       } : undefined,
     };
     
-    const itemsToAdd: CollectionItem[] = [];
-
-    // Bird itself
     if (isEditing) {
         updateItem(birdId, birdToSave);
     } else {
         itemsToAdd.push(birdToSave);
     }
 
-    // Cage logic
+    // Un-cage from old cage if necessary
     const oldCage = allCages.find(cage => cage.birdIds.includes(birdId));
     if (oldCage && oldCage.id !== finalCageId) {
-        const updatedOldCage = { ...oldCage, birdIds: oldCage.birdIds.filter(id => id !== birdId) };
-        updateItem(oldCage.id, updatedOldCage);
+        updateItem(oldCage.id, { birdIds: oldCage.birdIds.filter(id => id !== birdId) });
     }
-    if (finalCageId) {
+
+    // Add to a selected existing cage
+    if (finalCageId && !formData.newCageName) {
         const newCage = allCages.find(cage => cage.id === finalCageId);
         if (newCage && !newCage.birdIds.includes(birdId)) {
-            const updatedNewCage = { ...newCage, birdIds: [...newCage.birdIds, birdId] };
-            updateItem(newCage.id, updatedNewCage);
+            updateItem(newCage.id, { birdIds: [...newCage.birdIds, birdId] });
         }
     }
 
@@ -226,7 +236,7 @@ export default function BirdsPage() {
     if (itemsToAdd.length > 0) {
         addItems(itemsToAdd);
     }
-
+    
      toast({
         title: isEditing ? "Bird Updated" : "Bird Added",
         description: `${getBirdIdentifier(birdToSave)} has been saved.`,

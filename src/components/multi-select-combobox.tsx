@@ -29,9 +29,11 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
     const getLabel = (value: string) => options.find(o => o.value === value)?.label || value;
     
     const filteredOptions = React.useMemo(() => 
-        options.filter(option => 
-        option.label.toLowerCase().includes(search.toLowerCase())
-        ), 
+        options
+          .filter(option => 
+            option.label.toLowerCase().includes(search.toLowerCase())
+          )
+          .sort((a, b) => a.label.localeCompare(b.label)),
     [options, search]);
     
     React.useEffect(() => {
@@ -100,7 +102,7 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                                         readOnly
                                         className="pointer-events-none"
                                     />
-                                    <span className="flex-grow whitespace-normal">{option.label}</span>
+                                    <span className="flex-grow whitespace-normal text-left">{option.label}</span>
                                 </div>
                             ))
                         ) : (

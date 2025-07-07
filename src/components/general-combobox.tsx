@@ -15,9 +15,11 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
   const [search, setSearch] = React.useState("");
 
   const filteredOptions = React.useMemo(() => 
-    options.filter(option => 
-      option.label.toLowerCase().includes(search.toLowerCase())
-    ), 
+    options
+      .filter(option => 
+        option.label.toLowerCase().includes(search.toLowerCase())
+      )
+      .sort((a, b) => a.label.localeCompare(b.label)),
   [options, search]);
 
   React.useEffect(() => {
@@ -85,7 +87,7 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
                         : "opacity-0"
                     )}
                   />
-                  <span className="whitespace-normal">{option.label}</span>
+                  <span className="whitespace-normal text-left">{option.label}</span>
                 </Button>
                 ))
             ) : (

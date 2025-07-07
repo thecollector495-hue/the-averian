@@ -5,19 +5,26 @@ import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, ShieldCheck } from "lucide-react";
-import { Permit } from '@/lib/data';
+import { PlusCircle, ShieldCheck, Trash2 } from "lucide-react";
+import { Permit, Bird } from '@/lib/data';
 import { format } from 'date-fns';
 import { PermitFormValues } from '@/components/add-permit-dialog';
 import { useItems } from '@/context/ItemsContext';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 const AddPermitDialog = dynamic(() => import('@/components/add-permit-dialog').then(mod => mod.AddPermitDialog), { ssr: false });
 
 export default function PermitsPage() {
-  const { items, addItem } = useItems();
+  const { items, addItem, deleteItem, updateItems } = useItems();
+  const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [deletingPermitId, setDeletingPermitId] = useState<string | null>(null);
 
   const permits = items.filter((item): item is Permit => item.category === 'Permit');
+  const allBirds = items.filter((item): item is Bird => item.category === 'Bird');
+  const permitToDelete = deletingPermitId ? permits.find(p => p.id === deletingPermitId) : null;
+
 
   const handleSavePermit = (data: PermitFormValues) => {
     const newPermit: Permit = {
@@ -28,6 +35,23 @@ export default function PermitsPage() {
       expiryDate: data.expiryDate ? format(data.expiryDate, 'yyyy-MM-dd') : undefined,
     };
     addItem(newPermit);
+    toast({ title: "Permit Added", description: "The new permit has been logged." });
+  };
+  
+  const handleDeletePermit = () => {
+    if (!deletingPermitId) return;
+
+    const birdsToUpdate = allBirds
+      .filter(bird => bird.permitId === deletingPermitId)
+      .map(bird => ({ ...bird, permitId: undefined }));
+
+    if (birdsToUpdate.length > 0) {
+      updateItems(birdsToUpdate);
+    }
+
+    deleteItem(deletingPermitId);
+    toast({ title: 'Permit Deleted', description: 'The permit has been removed.' });
+    setDeletingPermitId(null);
   };
   
   return (
@@ -37,6 +61,22 @@ export default function PermitsPage() {
         onOpenChange={setIsAddDialogOpen}
         onSave={handleSavePermit}
       />}
+      
+      <AlertDialog open={!!deletingPermitId} onOpenChange={(open) => !open && setDeletingPermitId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the permit '{permitToDelete?.permitNumber}'. Any birds associated with this permit will no longer be linked to it. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeletePermit}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Permits</h1>
         <Button onClick={() => setIsAddDialogOpen(true)}>
@@ -48,9 +88,15 @@ export default function PermitsPage() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {permits.map((p) => (
             <Card key={p.id}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><ShieldCheck className="text-primary"/>{p.permitNumber}</CardTitle>
-                <CardDescription>{p.issuingAuthority}</CardDescription>
+              <CardHeader className="flex flex-row items-start justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2"><ShieldCheck className="text-primary"/>{p.permitNumber}</CardTitle>
+                  <CardDescription>{p.issuingAuthority}</CardDescription>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => setDeletingPermitId(p.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                    <span className="sr-only">Delete Permit</span>
+                </Button>
               </CardHeader>
               <CardContent>
                 <div className="text-sm space-y-1">

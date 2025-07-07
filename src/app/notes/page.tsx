@@ -10,11 +10,12 @@ import { BirdDetailsDialog } from '@/components/bird-details-dialog';
 import { NoteCard } from '@/components/note-card';
 import { useItems } from '@/context/ItemsContext';
 import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const AddNoteDialog = dynamic(() => import('@/components/add-note-dialog').then(mod => mod.AddNoteDialog), { ssr: false });
 
 export default function NotesPage() {
-    const { items, addItem, updateItem } = useItems();
+    const { items, addItem, updateItem, deleteItem } = useItems();
     const { toast } = useToast();
 
     const allBirds = items.filter((item): item is Bird => item.category === 'Bird');
@@ -23,6 +24,9 @@ export default function NotesPage() {
 
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [viewingBird, setViewingBird] = useState<Bird | null>(null);
+    const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
+
+    const noteToDelete = deletingNoteId ? notes.find(n => n.id === deletingNoteId) : null;
 
     const handleSaveNote = (data: Omit<NoteReminder, 'id' | 'category' | 'completed'>) => {
         const newNote: NoteReminder = {
@@ -38,6 +42,13 @@ export default function NotesPage() {
     
     const handleUpdateNote = (updatedNote: NoteReminder) => {
         updateItem(updatedNote.id, updatedNote);
+    };
+
+    const handleDeleteNote = () => {
+        if (!deletingNoteId) return;
+        deleteItem(deletingNoteId);
+        toast({ title: "Note Deleted", description: "The note has been removed." });
+        setDeletingNoteId(null);
     };
     
     const handleViewBirdClick = (bird: Bird) => {
@@ -61,6 +72,21 @@ export default function NotesPage() {
                 onBirdClick={handleViewBirdClick}
             />
 
+            <AlertDialog open={!!deletingNoteId} onOpenChange={(open) => !open && setDeletingNoteId(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete the note "{noteToDelete?.title}". This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteNote}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-4xl font-bold">Notes & Reminders</h1>
                 <Button onClick={() => setIsAddDialogOpen(true)}>
@@ -72,7 +98,7 @@ export default function NotesPage() {
             {notes.length > 0 ? (
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {notes.map(note => (
-                        <NoteCard key={note.id} note={note} allBirds={allBirds} onUpdate={handleUpdateNote} onBirdClick={handleViewBirdClick} />
+                        <NoteCard key={note.id} note={note} allBirds={allBirds} onUpdate={handleUpdateNote} onDelete={() => setDeletingNoteId(note.id)} onBirdClick={handleViewBirdClick} />
                     ))}
                  </div>
             ) : (

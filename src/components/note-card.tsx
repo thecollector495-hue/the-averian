@@ -1,15 +1,16 @@
+
 'use client';
 
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Pencil, Checkbox as CheckboxIcon } from "lucide-react";
+import { Calendar, Pencil, Trash2 } from "lucide-react";
 import { Bird, NoteReminder, getBirdIdentifier } from '@/lib/data';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 
-export function NoteCard({ note, allBirds, onUpdate, onBirdClick }: { note: NoteReminder, allBirds: Bird[], onUpdate: (updatedNote: NoteReminder) => void, onBirdClick: (bird: Bird) => void }) {
+export function NoteCard({ note, allBirds, onUpdate, onBirdClick, onDelete }: { note: NoteReminder, allBirds: Bird[], onUpdate: (updatedNote: NoteReminder) => void, onBirdClick: (bird: Bird) => void, onDelete: () => void }) {
 
     const handleSubTaskToggle = (taskId: string, completed: boolean) => {
         const updatedSubTasks = note.subTasks.map(task => 
@@ -28,8 +29,8 @@ export function NoteCard({ note, allBirds, onUpdate, onBirdClick }: { note: Note
         <Card className={cn("flex flex-col h-full", note.completed && "bg-muted/50")}>
             <CardHeader>
                 <CardTitle className="flex justify-between items-start">
-                    <span className={cn(note.completed && "line-through text-muted-foreground")}>{note.title}</span>
-                    <Checkbox checked={note.completed} onCheckedChange={handleNoteCompletionToggle} className="h-5 w-5"/>
+                    <span className={cn("flex-grow", note.completed && "line-through text-muted-foreground")}>{note.title}</span>
+                    <Checkbox checked={note.completed} onCheckedChange={handleNoteCompletionToggle} className="h-5 w-5 ml-4 flex-shrink-0"/>
                 </CardTitle>
                  {note.isReminder && note.reminderDate && (
                     <CardDescription className="flex items-center gap-2 pt-1">
@@ -82,10 +83,14 @@ export function NoteCard({ note, allBirds, onUpdate, onBirdClick }: { note: Note
                 )}
 
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex justify-between items-center">
                  <Button variant="outline" size="sm" disabled>
                   <Pencil className="h-4 w-4 mr-2" />
                   Edit
+                </Button>
+                <Button variant="destructive" size="sm" onClick={onDelete}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
                 </Button>
             </CardFooter>
         </Card>

@@ -75,7 +75,7 @@ export function GeneralCombobox({ field, options, placeholder, disabled = false 
                         field.onChange(option.value === field.value ? "" : option.value);
                         setOpen(false);
                     }}
-                    className="w-full justify-start font-normal h-auto py-2"
+                    className="w-full justify-start text-left font-normal h-auto py-2"
                 >
                   <Check
                     className={cn(

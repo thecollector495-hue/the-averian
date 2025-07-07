@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChevronsUpDown, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -93,7 +92,7 @@ export function MultiSelectCombobox({ field, options, placeholder }: { field: Co
                             filteredOptions.map((option) => (
                                 <div
                                     key={option.value}
-                                    className="flex items-center gap-2 p-2 rounded-md hover:bg-accent cursor-pointer"
+                                    className="flex items-center justify-start gap-2 p-2 rounded-md hover:bg-accent cursor-pointer"
                                     onClick={() => handleSelect(option.value)}
                                 >
                                     <Checkbox

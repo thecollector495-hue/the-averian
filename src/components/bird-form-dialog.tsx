@@ -178,12 +178,13 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
   }, [watchedSpecies, customSpecies]);
 
   const getBirdIdentifierWithCage = useCallback((bird: Bird): string => {
+    const speciesInfo = allSpeciesOptions.find(s => s.value === bird.species);
+    const speciesName = speciesInfo ? speciesInfo.label : bird.species;
     const identifier = bird.ringNumber ? `(${bird.ringNumber})` : '(Unbanded)';
-    const speciesName = speciesData[bird.species as keyof typeof speciesData]?.name || bird.species;
     const cage = allCages.find(c => c.birdIds.includes(bird.id));
     const cageName = cage ? ` - ${cage.name}` : '';
     return `${speciesName} ${identifier}${cageName}`;
-  }, [allCages]);
+  }, [allCages, allSpeciesOptions]);
 
   const relationshipOptions = useMemo(() => {
     if (!watchedSpecies) {

@@ -254,8 +254,10 @@ export type CustomMutation = {
 export type CollectionItem = Bird | Cage | Pair | BreedingRecord | NoteReminder | Transaction | Permit | CustomSpecies | CustomMutation;
 
 export const getBirdIdentifier = (bird: Bird) => {
+    if (!bird) return 'N/A';
+    const allSpecies = [...Object.values(speciesData), ...initialItems.filter((i): i is CustomSpecies => i.category === 'CustomSpecies').map(cs => ({ name: cs.name, id: cs.id }))];
+    const speciesName = allSpecies.find(s => s.name === bird.species || (s as any).id === bird.species)?.name || bird.species;
     const identifier = bird.ringNumber ? `(${bird.ringNumber})` : '(Unbanded)';
-    const speciesName = speciesData[bird.species as keyof typeof speciesData]?.name || bird.species;
     return `${speciesName} ${identifier}`;
 };
 

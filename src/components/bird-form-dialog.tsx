@@ -215,12 +215,6 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent
         className="sm:max-w-2xl"
-        onInteractOutside={(e) => {
-            const target = e.target as HTMLElement;
-            if (target.closest('[data-radix-popper-content-wrapper]')) {
-                e.preventDefault();
-            }
-        }}
       >
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit Bird' : 'Add a New Bird'}</DialogTitle>
@@ -298,7 +292,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                       />
                     </div>
                     <FormControl>
-                      <Input placeholder="e.g., USAU-12345" {...field} disabled={unbanded} />
+                      <Input placeholder="e.g., USAU-12345" {...field} value={field.value ?? ''} disabled={unbanded} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -410,7 +404,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                       <FormItem>
                         <FormLabel>New Cage Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter name for the new cage" {...field} />
+                          <Input placeholder="Enter name for the new cage" {...field} value={field.value ?? ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -588,7 +582,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                             <FormField control={form.control} name="buyerInfo" render={({ field }) => (
                                 <FormItem className="md:col-span-2">
                                     <FormLabel>Buyer Info</FormLabel>
-                                    <FormControl><Input placeholder="Buyer's name or details" {...field} /></FormControl>
+                                    <FormControl><Input placeholder="Buyer's name or details" {...field} value={field.value ?? ''} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />

@@ -204,7 +204,7 @@ export default function TransactionsPage() {
                             <CardContent className="p-4" onClick={() => setExpandedId(isExpanded ? null : t.id)}>
                                 <div className="flex justify-between items-start gap-2 cursor-pointer">
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-semibold truncate">{t.description}</p>
+                                        <p className="font-semibold">{t.description}</p>
                                         <p className="text-sm text-muted-foreground">{format(parseISO(t.date), 'PPP')}</p>
                                     </div>
                                     <div className="text-right flex-shrink-0">
@@ -222,9 +222,9 @@ export default function TransactionsPage() {
                                 {isExpanded && (
                                     <div className="mt-4 pt-4 border-t space-y-4">
                                         {bird && (
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm text-muted-foreground shrink-0 mr-2">Related to:</span>
-                                                <Button variant="link" className="p-0 h-auto font-normal text-sm text-right truncate" onClick={(e) => { e.stopPropagation(); setViewingBird(bird); }}>
+                                            <div className="grid grid-cols-[auto_1fr] items-start gap-x-2">
+                                                <p className="text-sm text-muted-foreground pt-px">Related to:</p>
+                                                <Button variant="link" className="p-0 h-auto font-normal text-sm text-right justify-end whitespace-normal leading-snug" onClick={(e) => { e.stopPropagation(); setViewingBird(bird); }}>
                                                     {getBirdIdentifier(bird)}
                                                 </Button>
                                             </div>

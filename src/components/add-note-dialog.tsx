@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, useFieldArray, Controller, ControllerRenderProps } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from 'date-fns';
-import { Bird } from '@/lib/data';
+import { Bird, NoteReminder } from '@/lib/data';
 import { getBirdIdentifier } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { MultiSelectCombobox } from './multi-select-combobox';
@@ -49,21 +49,34 @@ const noteReminderSchema = z.object({
 }, { message: "Please select a recurrence pattern.", path: ["recurrencePattern"] });
 
 
-type NoteFormValues = z.infer<typeof noteReminderSchema>;
+export type NoteFormValues = z.infer<typeof noteReminderSchema>;
 
-export function AddNoteDialog({ isOpen, onOpenChange, onSave, allBirds }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onSave: (data: any) => void, allBirds: Bird[] }) {
+export function AddNoteDialog({ isOpen, onOpenChange, onSave, allBirds, initialData }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onSave: (data: NoteFormValues & { id?: string }) => void, allBirds: Bird[], initialData: NoteReminder | null }) {
     const form = useForm<NoteFormValues>({
         resolver: zodResolver(noteReminderSchema),
-        defaultValues: {
-            title: "",
-            content: "",
-            isReminder: false,
-            isRecurring: false,
-            recurrencePattern: 'none',
-            associatedBirdIds: [],
-            subTasks: [],
-        },
     });
+
+    useEffect(() => {
+        if (isOpen) {
+            if (initialData) {
+                form.reset({
+                    ...initialData,
+                    reminderDate: initialData.reminderDate ? new Date(initialData.reminderDate) : undefined,
+                    content: initialData.content ?? "",
+                });
+            } else {
+                 form.reset({
+                    title: "",
+                    content: "",
+                    isReminder: false,
+                    isRecurring: false,
+                    recurrencePattern: 'none',
+                    associatedBirdIds: [],
+                    subTasks: [],
+                });
+            }
+        }
+    }, [isOpen, initialData, form]);
 
     const { fields, append, remove } = useFieldArray({
         control: form.control,
@@ -76,9 +89,8 @@ export function AddNoteDialog({ isOpen, onOpenChange, onSave, allBirds }: { isOp
     const isRecurring = form.watch("isRecurring");
 
     function onSubmit(data: NoteFormValues) {
-        onSave({ ...data, reminderDate: data.reminderDate ? format(data.reminderDate, 'yyyy-MM-dd') : undefined });
+        onSave({ ...data, id: initialData?.id });
         onOpenChange(false);
-        form.reset();
     }
     
     const birdOptions = allBirds.map(b => ({ value: b.id, label: getBirdIdentifier(b) }));
@@ -94,7 +106,7 @@ export function AddNoteDialog({ isOpen, onOpenChange, onSave, allBirds }: { isOp
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle>Add Note or Reminder</DialogTitle>
+                    <DialogTitle>{initialData ? 'Edit Note' : 'Add Note or Reminder'}</DialogTitle>
                     <DialogDescription>Fill in the details below.</DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
@@ -198,7 +210,7 @@ export function AddNoteDialog({ isOpen, onOpenChange, onSave, allBirds }: { isOp
                         )}
                         <DialogFooter className="pt-4">
                             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                            <Button type="submit">Save</Button>
+                            <Button type="submit">{initialData ? 'Save Changes' : 'Save'}</Button>
                         </DialogFooter>
                     </form>
                 </Form>

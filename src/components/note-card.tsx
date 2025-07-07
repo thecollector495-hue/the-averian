@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 
-export function NoteCard({ note, allBirds, onUpdate, onBirdClick, onDelete }: { note: NoteReminder, allBirds: Bird[], onUpdate: (updatedNote: NoteReminder) => void, onBirdClick: (bird: Bird) => void, onDelete: () => void }) {
+export function NoteCard({ note, allBirds, onUpdate, onBirdClick, onDelete, onEdit }: { note: NoteReminder, allBirds: Bird[], onUpdate: (updatedNote: NoteReminder) => void, onBirdClick: (bird: Bird) => void, onDelete: () => void, onEdit: (note: NoteReminder) => void }) {
 
     const handleSubTaskToggle = (taskId: string, completed: boolean) => {
         const updatedSubTasks = note.subTasks.map(task => 
@@ -84,7 +84,7 @@ export function NoteCard({ note, allBirds, onUpdate, onBirdClick, onDelete }: { 
 
             </CardContent>
             <CardFooter className="flex justify-between items-center">
-                 <Button variant="outline" size="sm" disabled>
+                 <Button variant="outline" size="sm" onClick={() => onEdit(note)}>
                   <Pencil className="h-4 w-4 mr-2" />
                   Edit
                 </Button>

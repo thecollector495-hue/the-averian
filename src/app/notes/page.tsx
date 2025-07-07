@@ -11,6 +11,8 @@ import { NoteCard } from '@/components/note-card';
 import { useItems } from '@/context/ItemsContext';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { NoteFormValues } from '@/components/add-note-dialog';
+import { format } from 'date-fns';
 
 const AddNoteDialog = dynamic(() => import('@/components/add-note-dialog').then(mod => mod.AddNoteDialog), { ssr: false });
 
@@ -23,21 +25,40 @@ export default function NotesPage() {
     const notes = items.filter((item): item is NoteReminder => item.category === 'NoteReminder');
 
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+    const [editingNote, setEditingNote] = useState<NoteReminder | null>(null);
     const [viewingBird, setViewingBird] = useState<Bird | null>(null);
     const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
 
     const noteToDelete = deletingNoteId ? notes.find(n => n.id === deletingNoteId) : null;
 
-    const handleSaveNote = (data: Omit<NoteReminder, 'id' | 'category' | 'completed'>) => {
-        const newNote: NoteReminder = {
+    const handleEditNote = (note: NoteReminder) => {
+        setEditingNote(note);
+        setIsAddDialogOpen(true);
+    };
+
+    const handleSaveNote = (data: NoteFormValues & { id?: string }) => {
+        const noteDataForStorage = {
             ...data,
-            id: `nr${Date.now()}`,
-            category: 'NoteReminder',
-            subTasks: data.subTasks.map(t => ({ ...t, id: `st${Date.now()}${Math.random()}` })),
-            completed: false,
+            reminderDate: data.reminderDate ? format(data.reminderDate, 'yyyy-MM-dd') : undefined,
+            subTasks: data.subTasks.map(t => ({ ...t, id: t.id || `st${Date.now()}${Math.random()}` })),
         };
-        addItem(newNote);
-        toast({ title: "Note Added", description: "Your note has been saved." });
+
+        if (data.id) {
+            const originalNote = notes.find(n => n.id === data.id)!;
+            const updatedNote: NoteReminder = { ...originalNote, ...noteDataForStorage };
+            updateItem(data.id, updatedNote);
+            toast({ title: "Note Updated", description: "Your note has been saved." });
+        } else {
+            const newNote: NoteReminder = {
+                ...noteDataForStorage,
+                id: `nr${Date.now()}`,
+                category: 'NoteReminder',
+                completed: false,
+            };
+            addItem(newNote);
+            toast({ title: "Note Added", description: "Your note has been saved." });
+        }
+        setEditingNote(null);
     };
     
     const handleUpdateNote = (updatedNote: NoteReminder) => {
@@ -55,6 +76,11 @@ export default function NotesPage() {
       setViewingBird(bird);
     };
 
+    const handleAddNoteClick = () => {
+        setEditingNote(null);
+        setIsAddDialogOpen(true);
+    };
+
     return (
         <div className="container mx-auto p-4 sm:p-6 md:p-8">
             {isAddDialogOpen && <AddNoteDialog 
@@ -62,6 +88,7 @@ export default function NotesPage() {
                 onOpenChange={setIsAddDialogOpen}
                 onSave={handleSaveNote}
                 allBirds={allBirds}
+                initialData={editingNote}
             />}
             <BirdDetailsDialog 
                 bird={viewingBird}
@@ -88,8 +115,8 @@ export default function NotesPage() {
             </AlertDialog>
 
             <div className="flex justify-between items-center mb-8">
-                <h1 className="text-4xl font-bold">Notes & Reminders</h1>
-                <Button onClick={() => setIsAddDialogOpen(true)}>
+                <h1 className="text-4xl font-bold">Notes &amp; Reminders</h1>
+                <Button onClick={handleAddNoteClick}>
                     <PlusCircle className="mr-2 h-4 w-4"/>
                     Add Note
                 </Button>
@@ -98,7 +125,7 @@ export default function NotesPage() {
             {notes.length > 0 ? (
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {notes.map(note => (
-                        <NoteCard key={note.id} note={note} allBirds={allBirds} onUpdate={handleUpdateNote} onDelete={() => setDeletingNoteId(note.id)} onBirdClick={handleViewBirdClick} />
+                        <NoteCard key={note.id} note={note} allBirds={allBirds} onUpdate={handleUpdateNote} onDelete={() => setDeletingNoteId(note.id)} onBirdClick={handleViewBirdClick} onEdit={handleEditNote} />
                     ))}
                  </div>
             ) : (

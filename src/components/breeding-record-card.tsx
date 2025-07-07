@@ -41,7 +41,7 @@ export function BreedingRecordCard({ record, allBirds, allPairs, onBirdClick }: 
                 </div>
             </CardContent>
             <CardFooter className="flex-col items-start gap-2 pt-0">
-                <div className="w-full pt-2 flex justify-between items-center gap-2">
+                <div className="w-full pt-2 flex flex-wrap justify-between items-center gap-2">
                     <div className="flex gap-2">
                         <Button size="sm" variant={expandedSection === 'eggs' ? 'default' : 'secondary'} onClick={() => toggleSection('eggs')}>
                             <Egg className="h-4 w-4 mr-2" /> Eggs ({record.eggs.length})

@@ -3,7 +3,7 @@
 
 import { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Search, PlusCircle, Trash2 } from 'lucide-react';
+import { Search, PlusCircle, Pencil, Trash2 } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,9 @@ export default function BirdsPage() {
   const [viewingBird, setViewingBird] = useState<Bird | null>(null);
   const [viewingBreedingRecord, setViewingBreedingRecord] = useState<BreedingRecord | null>(null);
   const [isAddCageDialogOpen, setIsAddCageDialogOpen] = useState(false);
+  const [editingCage, setEditingCage] = useState<Cage | null>(null);
   const [deletingBirdId, setDeletingBirdId] = useState<string | null>(null);
+  const [deletingCageId, setDeletingCageId] = useState<string | null>(null);
   const { toast } = useToast();
   
   const allBirds = items.filter((item): item is Bird => item.category === 'Bird');
@@ -43,6 +45,10 @@ export default function BirdsPage() {
   const birdToDelete = useMemo(() => 
     deletingBirdId ? allBirds.find(b => b.id === deletingBirdId) : null
   , [deletingBirdId, allBirds]);
+
+  const cageToDelete = useMemo(() =>
+    deletingCageId ? allCages.find(c => c.id === deletingCageId) : null
+  , [deletingCageId, allCages]);
 
   const handleAddClick = () => {
     setEditingBird(null);
@@ -62,44 +68,67 @@ export default function BirdsPage() {
     setViewingBreedingRecord(record);
   }
 
-  const handleSaveCage = (data: CageFormValues): string => {
+  const handleEditCageClick = (cage: Cage) => {
+    setEditingCage(cage);
+    setIsAddCageDialogOpen(true);
+  };
+
+  const handleAddCageClick = () => {
+    setEditingCage(null);
+    setIsAddCageDialogOpen(true);
+  };
+  
+  const handleSaveCage = (data: CageFormValues & { id?: string }): string => {
     const trimmedName = data.name.trim();
     if (!trimmedName) {
       toast({ variant: 'destructive', title: 'Invalid Name', description: 'Cage name cannot be empty.' });
       return '';
     }
-    const existingCage = allCages.find(c => c.name.toLowerCase() === trimmedName.toLowerCase());
+
+    const isEditing = !!data.id;
+
+    const existingCage = allCages.find(c => c.name.toLowerCase() === trimmedName.toLowerCase() && c.id !== data.id);
     if (existingCage) {
       toast({ variant: 'destructive', title: 'Cage Exists', description: `A cage named "${trimmedName}" already exists.` });
       return '';
     }
 
-    const newCage: Cage = {
-      id: `c${Date.now()}`,
-      name: trimmedName,
-      category: 'Cage',
-      birdIds: [],
-      cost: data.cost,
-    };
-
-    const itemsToAdd: (Cage | Transaction)[] = [newCage];
-
-    if (data.addToExpenses && data.cost && data.cost > 0) {
-      const newTransaction: Transaction = {
-        id: `t${Date.now()}`,
-        category: 'Transaction',
-        type: 'expense',
-        date: format(new Date(), 'yyyy-MM-dd'),
-        description: `Purchase of cage: ${newCage.name}`,
-        amount: data.cost,
+    if (isEditing) {
+      const updatedCage = {
+        name: trimmedName,
+        cost: data.cost,
       };
-      itemsToAdd.push(newTransaction);
-      toast({ title: 'Expense Added', description: `Purchase of cage ${newCage.name} logged.` });
+      updateItem(data.id!, updatedCage);
+      toast({ title: 'Cage Updated', description: `Cage "${trimmedName}" has been updated.` });
+      return data.id!;
+    } else {
+        const newCage: Cage = {
+          id: `c${Date.now()}`,
+          name: trimmedName,
+          category: 'Cage',
+          birdIds: [],
+          cost: data.cost,
+        };
+
+        const itemsToAdd: (Cage | Transaction)[] = [newCage];
+
+        if (data.addToExpenses && data.cost && data.cost > 0) {
+          const newTransaction: Transaction = {
+            id: `t${Date.now()}`,
+            category: 'Transaction',
+            type: 'expense',
+            date: format(new Date(), 'yyyy-MM-dd'),
+            description: `Purchase of cage: ${newCage.name}`,
+            amount: data.cost,
+          };
+          itemsToAdd.push(newTransaction);
+          toast({ title: 'Expense Added', description: `Purchase of cage ${newCage.name} logged.` });
+        }
+        
+        addItems(itemsToAdd);
+        toast({ title: 'Cage Created', description: `Cage "${trimmedName}" has been added.` });
+        return newCage.id;
     }
-    
-    addItems(itemsToAdd);
-    toast({ title: 'Cage Created', description: `Cage "${trimmedName}" has been added.` });
-    return newCage.id;
   };
 
 
@@ -259,6 +288,13 @@ export default function BirdsPage() {
     toast({ title: "Bird Deleted", description: `${getBirdIdentifier(birdToDelete)} has been removed.` });
     setDeletingBirdId(null);
   }
+  
+  const handleDeleteCage = () => {
+    if (!deletingCageId) return;
+    deleteItem(deletingCageId);
+    toast({ title: 'Cage Deleted', description: 'The cage has been removed.' });
+    setDeletingCageId(null);
+  };
 
   const filteredItems = items.filter(item => {
     if (item.category !== filterCategory) return false;
@@ -280,7 +316,7 @@ export default function BirdsPage() {
         isOpen={isAddCageDialogOpen}
         onOpenChange={setIsAddCageDialogOpen}
         onSave={(data) => handleSaveCage(data)}
-        initialData={null}
+        initialData={editingCage}
        />}
       {isFormOpen && <BirdFormDialog
         isOpen={isFormOpen}
@@ -323,6 +359,22 @@ export default function BirdsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+       <AlertDialog open={!!deletingCageId} onOpenChange={(open) => !open && setDeletingCageId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the cage '{cageToDelete?.name}'.
+              {cageToDelete && cageToDelete.birdIds.length > 0 && ` The ${cageToDelete.birdIds.length} bird(s) in this cage will be uncaged.`}
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteCage}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="flex flex-col gap-4 mb-8">
         <h1 className="text-4xl md:text-5xl font-bold font-headline text-center">The Avarian</h1>
@@ -358,7 +410,7 @@ export default function BirdsPage() {
               </Button>
             )}
             {filterCategory === 'Cage' && (
-              <Button onClick={() => setIsAddCageDialogOpen(true)}>
+              <Button onClick={handleAddCageClick}>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add Cage
               </Button>
@@ -374,7 +426,7 @@ export default function BirdsPage() {
               return <BirdCard key={item.id} bird={item} allBirds={allBirds} allCages={allCages} allPairs={allPairs} allBreedingRecords={allBreedingRecords} allPermits={allPermits} handleEditClick={handleEditClick} handleDeleteClick={setDeletingBirdId} onBirdClick={handleViewBirdClick} onViewBreedingRecord={handleViewBreedingRecord} />
             }
             if (item.category === 'Cage') {
-                return <CageCard key={item.id} cage={item} allBirds={allBirds} onBirdClick={handleViewBirdClick} />
+                return <CageCard key={item.id} cage={item} allBirds={allBirds} onBirdClick={handleViewBirdClick} onEditClick={handleEditCageClick} onDeleteClick={setDeletingCageId} />
             }
             if (item.category === 'Pair') {
                 return <PairCard key={item.id} pair={item} allBirds={allBirds} onBirdClick={handleViewBirdClick} />

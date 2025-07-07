@@ -215,6 +215,12 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent
         className="sm:max-w-2xl"
+        onInteractOutside={(e) => {
+            const target = e.target as HTMLElement;
+            if (target.closest('[data-radix-popper-content-wrapper]')) {
+                e.preventDefault();
+            }
+        }}
       >
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit Bird' : 'Add a New Bird'}</DialogTitle>
@@ -525,7 +531,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                         <FormItem>
                             <FormLabel>Paid Price</FormLabel>
                             <FormControl>
-                                <Input type="number" placeholder="e.g., 100" {...field} onChange={event => field.onChange(event.target.valueAsNumber)} />
+                                <Input type="number" placeholder="e.g., 100" {...field} value={field.value ?? ''} onChange={event => field.onChange(event.target.value === '' ? undefined : event.target.valueAsNumber)} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -534,7 +540,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                         <FormItem>
                             <FormLabel>Estimated Value</FormLabel>
                             <FormControl>
-                                <Input type="number" placeholder="e.g., 150" {...field} onChange={event => field.onChange(event.target.valueAsNumber)} />
+                                <Input type="number" placeholder="e.g., 150" {...field} value={field.value ?? ''} onChange={event => field.onChange(event.target.value === '' ? undefined : event.target.valueAsNumber)} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -572,7 +578,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                             <FormField control={form.control} name="salePrice" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Sale Price</FormLabel>
-                                    <FormControl><Input type="number" placeholder="e.g., 200" {...field} onChange={event => field.onChange(event.target.valueAsNumber)}/></FormControl>
+                                    <FormControl><Input type="number" placeholder="e.g., 200" {...field} value={field.value ?? ''} onChange={event => field.onChange(event.target.value === '' ? undefined : event.target.valueAsNumber)}/></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />

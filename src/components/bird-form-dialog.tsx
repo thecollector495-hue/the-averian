@@ -157,6 +157,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
   const unbanded = form.watch("unbanded");
   const paidPrice = form.watch("paidPrice");
   const status = form.watch("status");
+  const watchedSex = form.watch("sex");
 
   const subspeciesOptions = useMemo(() => {
     if (!watchedSpecies) return [];
@@ -176,16 +177,32 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
     return [];
   }, [watchedSpecies, customSpecies]);
 
+  const getBirdIdentifierWithCage = useCallback((bird: Bird): string => {
+    const identifier = bird.ringNumber ? `(${bird.ringNumber})` : '(Unbanded)';
+    const speciesName = speciesData[bird.species as keyof typeof speciesData]?.name || bird.species;
+    const cage = allCages.find(c => c.birdIds.includes(bird.id));
+    const cageName = cage ? ` - ${cage.name}` : '';
+    return `${speciesName} ${identifier}${cageName}`;
+  }, [allCages]);
+
+  const relationshipOptions = useMemo(() => {
+    if (!watchedSpecies) {
+      return { father: [], mother: [], mate: [], offspring: [] };
+    }
+    const potentialRelatives = allBirds.filter(bird => bird.id !== initialData?.id && bird.species === watchedSpecies);
+    
+    const potentialMates = potentialRelatives.filter(b => 
+      watchedSex !== 'unsexed' && b.sex !== 'unsexed' && b.sex !== watchedSex
+    );
+
+    return {
+      father: potentialRelatives.filter(b => b.sex === 'male').map(b => ({ value: b.id, label: getBirdIdentifierWithCage(b) })),
+      mother: potentialRelatives.filter(b => b.sex === 'female').map(b => ({ value: b.id, label: getBirdIdentifierWithCage(b) })),
+      mate: potentialMates.map(b => ({ value: b.id, label: getBirdIdentifierWithCage(b) })),
+      offspring: potentialRelatives.map(b => ({ value: b.id, label: getBirdIdentifierWithCage(b) })),
+    };
+  }, [watchedSpecies, allBirds, initialData, getBirdIdentifierWithCage, watchedSex]);
   
-  const potentialRelatives = allBirds
-    .filter(bird => bird.id !== initialData?.id && bird.species === watchedSpecies);
-  
-  const relationshipOptions = {
-    father: potentialRelatives.filter(b => b.sex === 'male').map(b => ({ value: b.id, label: getBirdIdentifier(b) })),
-    mother: potentialRelatives.filter(b => b.sex === 'female').map(b => ({ value: b.id, label: getBirdIdentifier(b) })),
-    mate: potentialRelatives.map(b => ({ value: b.id, label: getBirdIdentifier(b) })),
-    offspring: potentialRelatives.map(b => ({ value: b.id, label: getBirdIdentifier(b) })),
-  };
 
   const permitOptions = allPermits.map(p => ({ value: p.id, label: `${p.permitNumber} (${p.issuingAuthority})`}));
 
@@ -502,6 +519,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                         field={field}
                         options={relationshipOptions.mate}
                         placeholder={watchedSpecies ? "Select mate" : "Select species first"}
+                        disabled={watchedSex === 'unsexed'}
                       />
                       <FormMessage />
                     </FormItem>

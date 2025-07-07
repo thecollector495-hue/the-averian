@@ -134,7 +134,6 @@ export default function BirdsPage() {
     const birdId = editingBird?.id || `b${Date.now()}`;
     
     const itemsToAdd: CollectionItem[] = [];
-    const itemsToUpdate: Partial<CollectionItem>[] = [];
     
     let finalCageId = formData.cageId;
 
@@ -183,6 +182,42 @@ export default function BirdsPage() {
       } : undefined,
     };
     
+     // --- PAIRING LOGIC ---
+    const initialMateId = editingBird?.mateId;
+    const newMateId = formData.mateId;
+
+    if (initialMateId !== newMateId) {
+      if (initialMateId) {
+        const oldMate = allBirds.find(b => b.id === initialMateId);
+        if (oldMate) {
+          updateItem(oldMate.id, { mateId: undefined });
+        }
+        const pairToDelete = allPairs.find(p =>
+          (p.maleId === birdId && p.femaleId === initialMateId) ||
+          (p.maleId === initialMateId && p.femaleId === birdId)
+        );
+        if (pairToDelete) {
+          deleteItem(pairToDelete.id);
+        }
+      }
+
+      if (newMateId) {
+        const newMate = allBirds.find(b => b.id === newMateId);
+        if (newMate) {
+          updateItem(newMate.id, { mateId: birdId });
+
+          const newPair: Pair = {
+            id: `pair${Date.now()}`,
+            category: 'Pair',
+            maleId: birdToSave.sex === 'male' ? birdId : newMateId,
+            femaleId: birdToSave.sex === 'female' ? birdId : newMateId,
+          };
+          itemsToAdd.push(newPair);
+          toast({ title: "Pair Created", description: `${getBirdIdentifier(birdToSave)} and ${getBirdIdentifier(newMate)} are now a pair.` });
+        }
+      }
+    }
+
     if (isEditing) {
         updateItem(birdId, birdToSave);
     } else {
@@ -393,7 +428,7 @@ export default function BirdsPage() {
           <div className="relative w-full flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
-              placeholder={filterCategory === 'Bird' ? "Search for birds..." : `Cannot search in ${filterCategory}s`}
+              placeholder={filterCategory === 'Bird' ? "Search for birds..." : `Cannot search in ${filterCategory.toLowerCase()}s`}
               className="pl-10"
               value={search}
               onChange={(e) => setSearch(e.target.value)}

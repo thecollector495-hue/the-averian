@@ -80,41 +80,40 @@ export default function AIAssistantPage() {
       setInput('');
     }
 
-    try {
-      const context = JSON.stringify(items.filter(i => ['Bird', 'NoteReminder', 'Cage', 'CustomMutation', 'CustomSpecies', 'Transaction', 'Pair'].includes(i.category)));
-      const assistantResponse = await aviaryAssistant({ query: currentInput, context });
-      
-      const newAssistantMessage: Message = { id: `assistant-${Date.now()}`, role: 'assistant', text: assistantResponse.response };
-      setMessages(prev => [...prev, newAssistantMessage]);
+    const context = JSON.stringify(items.filter(i => ['Bird', 'NoteReminder', 'Cage', 'CustomMutation', 'CustomSpecies', 'Transaction', 'Pair'].includes(i.category)));
+    const assistantResponse = await aviaryAssistant({ query: currentInput, context });
+    
+    setIsLoading(false);
 
-      const hasDataActions = assistantResponse.actions && assistantResponse.actions.some(a => a.action !== 'answer');
+    if (assistantResponse.error) {
+        console.error('AI assistant failed:', assistantResponse.error);
 
-      if (hasDataActions) {
-        setPendingActions(assistantResponse.actions);
-      }
-      
-    } catch (error: any) {
-      console.error('AI assistant failed:', error);
+        const errorMessageText = assistantResponse.error.includes('503') 
+            ? "The AI model is currently overloaded. Please try again in a moment."
+            : "Couldn't connect right now. Please try again.";
+        
+        const newErrorMessage: Message = {
+            id: `assistant-err-${Date.now()}`,
+            role: 'assistant',
+            text: errorMessageText,
+            isError: true,
+            onRetry: () => handleSend(currentInput),
+        };
+        setMessages(prev => [...prev, newErrorMessage]);
+        toast({
+            variant: "destructive",
+            title: "AI Request Failed",
+            description: assistantResponse.error,
+        });
+    } else {
+        const newAssistantMessage: Message = { id: `assistant-${Date.now()}`, role: 'assistant', text: assistantResponse.response };
+        setMessages(prev => [...prev, newAssistantMessage]);
 
-      const errorMessageText = error.message?.includes('503') 
-        ? "The AI model is currently overloaded. Please try again in a moment."
-        : "Couldn't connect right now. Please try again.";
-      
-      const newErrorMessage: Message = {
-        id: `assistant-err-${Date.now()}`,
-        role: 'assistant',
-        text: errorMessageText,
-        isError: true,
-        onRetry: () => handleSend(currentInput),
-      };
-      setMessages(prev => [...prev, newErrorMessage]);
-       toast({
-          variant: "destructive",
-          title: "AI Request Failed",
-          description: error.message || "An unknown error occurred.",
-        })
-    } finally {
-      setIsLoading(false);
+        const hasDataActions = assistantResponse.actions && assistantResponse.actions.some(a => a.action !== 'answer');
+
+        if (hasDataActions) {
+            setPendingActions(assistantResponse.actions);
+        }
     }
   };
   
@@ -449,5 +448,3 @@ export default function AIAssistantPage() {
     </div>
   );
 }
-
-    

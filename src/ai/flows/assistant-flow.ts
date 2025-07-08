@@ -95,6 +95,7 @@ const ActionSchema = z.object({
 const AviaryAssistantOutputSchema = z.object({
   actions: z.array(ActionSchema).describe("A list of actions for the assistant to take based on the user's query."),
   response: z.string().describe("The assistant's friendly text response to the user, summarizing the actions taken."),
+  error: z.string().optional(),
 });
 export type AviaryAssistantOutput = z.infer<typeof AviaryAssistantOutputSchema>;
 
@@ -162,7 +163,16 @@ const assistantFlow = ai.defineFlow(
     outputSchema: AviaryAssistantOutputSchema,
   },
   async (input) => {
-    const {output} = await prompt(input);
-    return output!;
+    try {
+      const {output} = await prompt(input);
+      return output!;
+    } catch (e: any) {
+        console.error("Error in assistant flow", e);
+        return {
+            actions: [],
+            response: "An error occurred while processing your request.",
+            error: e.message || 'An unknown error occurred in the AI flow.',
+        }
+    }
   }
 );

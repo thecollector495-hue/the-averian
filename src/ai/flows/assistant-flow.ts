@@ -26,6 +26,7 @@ const AddBirdDataSchema = z.object({
     visualMutations: z.array(z.string()).optional(),
     splitMutations: z.array(z.string()).optional(),
     status: z.enum(['Available', 'Sold', 'Deceased', 'Hand-rearing']).default('Available'),
+    cageName: z.string().optional().describe("The name of the cage to put the bird in. Can be an existing cage or a new one."),
 }).describe("The data required to add a new bird.");
 
 const UpdateBirdDataSchema = z.object({
@@ -44,10 +45,18 @@ const AddCageDataSchema = z.object({
     names: z.array(z.string()).describe("An array of names for the new cages to be created."),
 }).describe("The data required to add one or more new cages.");
 
+const AddMutationDataSchema = z.object({
+    names: z.array(z.string()).describe("An array of names for the new mutations to be created."),
+}).describe("The data required to add one or more new mutations.");
+
+const ActionSchema = z.object({
+    action: z.enum(['addBird', 'updateBird', 'addNote', 'addCage', 'addMutation', 'answer']).describe("The action the assistant should take."),
+    data: z.union([AddBirdDataSchema, UpdateBirdDataSchema, AddNoteDataSchema, AddCageDataSchema, AddMutationDataSchema, z.null()]).describe("The data associated with the action. This should be null for 'answer' actions."),
+});
+
 const AviaryAssistantOutputSchema = z.object({
-  action: z.enum(['addBird', 'updateBird', 'addNote', 'addCage', 'answer']).describe("The action the assistant should take."),
-  data: z.union([AddBirdDataSchema, UpdateBirdDataSchema, AddNoteDataSchema, AddCageDataSchema, z.null()]).describe("The data associated with the action."),
-  response: z.string().describe("The assistant's text response to the user."),
+  actions: z.array(ActionSchema).describe("A list of actions for the assistant to take based on the user's query."),
+  response: z.string().describe("The assistant's friendly text response to the user, summarizing the actions taken."),
 });
 export type AviaryAssistantOutput = z.infer<typeof AviaryAssistantOutputSchema>;
 
@@ -61,14 +70,16 @@ const prompt = ai.definePrompt({
   output: {schema: AviaryAssistantOutputSchema},
   prompt: `You are an expert aviary assistant. Your goal is to help the user manage their birds and notes. You must understand queries in both English and Afrikaans, and you should respond in the same language as the user's query. You will be given a user's query and a JSON object containing the current state of their aviary (birds and notes).
 
-Analyze the query and determine if the user wants to add or update an item.
-- If they want to add a bird, use the 'addBird' action.
+Analyze the query and determine a list of actions the user wants to perform. You can perform multiple actions for a single query. For example, if the user asks to add two birds, you should return two 'addBird' actions in the 'actions' array.
+
+- If they want to add a bird, use the 'addBird' action. If they mention a cage, include it in the 'cageName' field.
 - If they want to update a bird, use the 'updateBird' action. You MUST find the bird's ID from the context.
 - If they want to add a note or reminder, use the 'addNote' action.
 - If they want to add one or more cages, use the 'addCage' action. If the user asks to add multiple cages, such as "cages 100 to 102", populate the 'names' array with each individual cage name: ["100", "101", "102"].
+- If they want to add one or more mutations, use the 'addMutation' action.
 - If they are just asking a question or having a conversation, use the 'answer' action and provide a helpful text response. The data field should be null for 'answer' actions.
 
-Always provide a friendly confirmation message in the 'response' field that summarizes the action taken or answers the user's question.
+Always provide a friendly confirmation message in the 'response' field that summarizes all actions taken or answers the user's question.
 
 User query:
 "{{{query}}}"

@@ -9,7 +9,7 @@ import { Loader2, Sparkles, Send, Bot, User, Mic, Volume2, VolumeX } from 'lucid
 import { aviaryAssistant } from '@/ai/flows/assistant-flow';
 import { textToSpeech } from '@/ai/flows/tts-flow';
 import { useItems } from '@/context/ItemsContext';
-import { Bird, NoteReminder, Cage, getBirdIdentifier } from '@/lib/data';
+import { Bird, NoteReminder, Cage, getBirdIdentifier, CustomMutation } from '@/lib/data';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -68,7 +68,7 @@ export function AIAssistantDialog({ isOpen, onOpenChange }: { isOpen: boolean; o
     }
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = true;
+    recognition.continuous = false; // Stop after a pause
     recognition.interimResults = true;
 
     recognition.onresult = (event) => {
@@ -148,66 +148,104 @@ export function AIAssistantDialog({ isOpen, onOpenChange }: { isOpen: boolean; o
     setIsLoading(true);
 
     try {
-      const context = JSON.stringify(items.filter(i => i.category === 'Bird' || i.category === 'NoteReminder'));
+      const context = JSON.stringify(items.filter(i => i.category === 'Bird' || i.category === 'NoteReminder' || i.category === 'Cage'));
       const assistantResponse = await aviaryAssistant({ query: input, context });
       
-      if (assistantResponse.data && assistantResponse.action !== 'answer') {
-        switch(assistantResponse.action) {
-          case 'addBird': {
-            const birdData = assistantResponse.data as any;
-            const newBird: Bird = {
-              species: "",
-              sex: "unsexed",
-              visualMutations: [],
-              splitMutations: [],
-              offspringIds: [],
-              status: "Available",
-              ...birdData,
-              id: `b${Date.now()}`,
-              category: 'Bird',
-            };
-            addItem(newBird);
-            toast({ title: "AI Action: Bird Added", description: `Successfully added ${getBirdIdentifier(newBird)}.` });
-            break;
-          }
-          case 'updateBird': {
-            const updateData = assistantResponse.data as any;
-            updateItem(updateData.id, updateData.updates);
-            toast({ title: "AI Action: Bird Updated", description: `Successfully updated bird ID ${updateData.id}.` });
-            break;
-          }
-          case 'addNote': {
-            const noteData = assistantResponse.data as any;
-            const newNote: NoteReminder = {
-               title: "",
-               isReminder: false,
-               isRecurring: false,
-               recurrencePattern: 'none',
-               associatedBirdIds: [],
-               subTasks: [],
-               completed: false,
-               ...noteData,
-               id: `nr${Date.now()}`,
-               category: 'NoteReminder',
-               reminderDate: noteData.reminderDate ? format(new Date(noteData.reminderDate), 'yyyy-MM-dd') : undefined,
-            };
-            addItem(newNote);
-            toast({ title: "AI Action: Note Added", description: `Successfully added note: "${newNote.title}"` });
-            break;
-          }
-          case 'addCage': {
-            const cageData = assistantResponse.data as any;
-            if (cageData.names && cageData.names.length > 0) {
-              const newCages: Cage[] = cageData.names.map((name: string) => ({
-                id: `c${Date.now()}${Math.random()}`,
-                category: 'Cage',
-                name: name,
-                birdIds: [],
-              }));
-              addItems(newCages);
-              toast({ title: "AI Action: Cages Added", description: `Successfully added ${newCages.length} cage(s).` });
+      const allCages = items.filter((item): item is Cage => item.category === 'Cage');
+      
+      if (assistantResponse.actions && assistantResponse.actions.length > 0) {
+        for (const action of assistantResponse.actions) {
+          if (!action.data && action.action !== 'answer') continue;
+
+          switch(action.action) {
+            case 'addBird': {
+              const birdData = action.data as any;
+              const newBirdId = `b${Date.now()}${Math.random()}`;
+              const newBird: Bird = {
+                species: "",
+                sex: "unsexed",
+                visualMutations: [],
+                splitMutations: [],
+                offspringIds: [],
+                status: "Available",
+                ...birdData,
+                id: newBirdId,
+                category: 'Bird',
+              };
+
+              const itemsToAdd: (Bird | Cage)[] = [newBird];
+              
+              if (birdData.cageName) {
+                const existingCage = allCages.find(c => c.name.toLowerCase() === birdData.cageName.toLowerCase());
+                if (existingCage) {
+                    updateItem(existingCage.id, { birdIds: [...existingCage.birdIds, newBirdId] });
+                } else {
+                    const newCage: Cage = {
+                        id: `c${Date.now()}${Math.random()}`,
+                        name: birdData.cageName,
+                        category: 'Cage',
+                        birdIds: [newBirdId]
+                    };
+                    itemsToAdd.push(newCage);
+                }
+              }
+              
+              addItems(itemsToAdd);
+              toast({ title: "AI Action: Bird Added", description: `Successfully added ${getBirdIdentifier(newBird)}.` });
+              break;
             }
-            break;
+            case 'updateBird': {
+              const updateData = action.data as any;
+              updateItem(updateData.id, updateData.updates);
+              toast({ title: "AI Action: Bird Updated", description: `Successfully updated bird ID ${updateData.id}.` });
+              break;
+            }
+            case 'addNote': {
+              const noteData = action.data as any;
+              const newNote: NoteReminder = {
+                 title: "",
+                 isReminder: false,
+                 isRecurring: false,
+                 recurrencePattern: 'none',
+                 associatedBirdIds: [],
+                 subTasks: [],
+                 completed: false,
+                 ...noteData,
+                 id: `nr${Date.now()}`,
+                 category: 'NoteReminder',
+                 reminderDate: noteData.reminderDate ? format(new Date(noteData.reminderDate), 'yyyy-MM-dd') : undefined,
+              };
+              addItem(newNote);
+              toast({ title: "AI Action: Note Added", description: `Successfully added note: "${newNote.title}"` });
+              break;
+            }
+            case 'addCage': {
+              const cageData = action.data as any;
+              if (cageData.names && cageData.names.length > 0) {
+                const newCages: Cage[] = cageData.names.map((name: string) => ({
+                  id: `c${Date.now()}${Math.random()}`,
+                  category: 'Cage',
+                  name: name,
+                  birdIds: [],
+                }));
+                addItems(newCages);
+                toast({ title: "AI Action: Cages Added", description: `Successfully added ${newCages.length} cage(s).` });
+              }
+              break;
+            }
+            case 'addMutation': {
+              const mutationData = action.data as any;
+              if (mutationData.names && mutationData.names.length > 0) {
+                  const newMutations: CustomMutation[] = mutationData.names.map((name: string) => ({
+                      id: `cm_${Date.now()}${Math.random()}`,
+                      category: 'CustomMutation',
+                      name: name,
+                  }));
+                  addItems(newMutations);
+                  toast({ title: "AI Action: Mutations Added", description: `Successfully added ${newMutations.length} mutation(s).` });
+              }
+              break;
+            }
           }
         }
       }

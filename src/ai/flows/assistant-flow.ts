@@ -101,7 +101,7 @@ export type AviaryAssistantOutput = z.infer<typeof AviaryAssistantOutputSchema>;
 
 export async function aviaryAssistant(input: AviaryAssistantInput): Promise<AviaryAssistantOutput> {
   try {
-    const {output} = await assistantFlow(input);
+    const output = await assistantFlow(input);
     if (!output) {
         throw new Error("Received an empty response from the AI model.");
     }

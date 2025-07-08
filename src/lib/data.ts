@@ -1,6 +1,4 @@
 
-'use client';
-
 export const speciesData = {
     'Cockatoo': {
         name: 'Cockatoo',

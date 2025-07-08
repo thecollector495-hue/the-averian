@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview An AI flow for an aviary management assistant.
@@ -54,7 +55,7 @@ const prompt = ai.definePrompt({
   name: 'aviaryAssistantPrompt',
   input: {schema: AviaryAssistantInputSchema},
   output: {schema: AviaryAssistantOutputSchema},
-  prompt: `You are an expert aviary assistant. Your goal is to help the user manage their birds and notes. You will be given a user's query and a JSON object containing the current state of their aviary (birds and notes).
+  prompt: `You are an expert aviary assistant. Your goal is to help the user manage their birds and notes. You must understand queries in both English and Afrikaans, and you should respond in the same language as the user's query. You will be given a user's query and a JSON object containing the current state of their aviary (birds and notes).
 
 Analyze the query and determine if the user wants to add or update an item.
 - If they want to add a bird, use the 'addBird' action.

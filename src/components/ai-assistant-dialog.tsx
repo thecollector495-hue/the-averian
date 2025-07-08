@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -5,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Sparkles, Send, Bot, User } from 'lucide-react';
+import { Loader2, Sparkles, Send, Bot, User, Mic } from 'lucide-react';
 import { aviaryAssistant } from '@/ai/flows/assistant-flow';
 import { textToSpeech } from '@/ai/flows/tts-flow';
 import { useItems } from '@/context/ItemsContext';
@@ -24,11 +25,48 @@ export function AIAssistantDialog({ isOpen, onOpenChange }: { isOpen: boolean; o
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [audioSrc, setAudioSrc] = useState<string | null>(null);
   const { toast } = useToast();
   const { items, addItem, updateItem } = useItems();
   const audioRef = useRef<HTMLAudioElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      console.warn("Speech recognition not supported in this browser.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-ZA'; 
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setInput(transcript);
+      setIsRecording(false);
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error", event.error);
+      toast({ variant: "destructive", title: "Microphone Error", description: `Could not start voice recognition: ${event.error}` });
+      setIsRecording(false);
+    };
+    
+    recognition.onend = () => {
+        if (isRecording) {
+            setIsRecording(false);
+        }
+    };
+
+    recognitionRef.current = recognition;
+  }, [toast, isRecording]);
 
   useEffect(() => {
     if (audioSrc && audioRef.current) {
@@ -37,11 +75,30 @@ export function AIAssistantDialog({ isOpen, onOpenChange }: { isOpen: boolean; o
   }, [audioSrc]);
 
   useEffect(() => {
-    // Scroll to bottom when messages change
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
     }
   }, [messages]);
+
+  const handleMicClick = () => {
+    if (!recognitionRef.current) {
+        toast({ variant: 'destructive', title: 'Unsupported', description: 'Your browser does not support speech recognition.' });
+        return;
+    }
+
+    if (isRecording) {
+      recognitionRef.current.stop();
+    } else {
+      try {
+        recognitionRef.current.start();
+        setIsRecording(true);
+      } catch (e) {
+        console.error("Could not start recognition", e);
+        toast({ variant: "destructive", title: "Microphone Error", description: "Could not start voice recognition. Please check permissions." });
+      }
+    }
+  };
+
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -55,7 +112,6 @@ export function AIAssistantDialog({ isOpen, onOpenChange }: { isOpen: boolean; o
       const context = JSON.stringify(items.filter(i => i.category === 'Bird' || i.category === 'NoteReminder'));
       const assistantResponse = await aviaryAssistant({ query: input, context });
       
-      // Handle the action returned by the AI
       if (assistantResponse.data && assistantResponse.action !== 'answer') {
         switch(assistantResponse.action) {
           case 'addBird': {
@@ -99,7 +155,6 @@ export function AIAssistantDialog({ isOpen, onOpenChange }: { isOpen: boolean; o
       const newAssistantMessage: Message = { id: `assistant-${Date.now()}`, role: 'assistant', text: assistantResponse.response };
       setMessages(prev => [...prev, newAssistantMessage]);
       
-      // Generate and play audio
       const ttsResponse = await textToSpeech(assistantResponse.response);
       setAudioSrc(ttsResponse.audio);
 
@@ -141,7 +196,7 @@ export function AIAssistantDialog({ isOpen, onOpenChange }: { isOpen: boolean; o
         
         <ScrollArea className="flex-1 pr-4 -mr-4" ref={scrollAreaRef as any}>
             <div className="space-y-4">
-            {messages.map((message, index) => (
+            {messages.map((message) => (
                 <div key={message.id} className={cn("flex items-start gap-3", message.role === 'user' && "justify-end")}>
                      {message.role === 'assistant' && (
                         <div className="bg-primary text-primary-foreground rounded-full p-2">
@@ -172,6 +227,10 @@ export function AIAssistantDialog({ isOpen, onOpenChange }: { isOpen: boolean; o
         </ScrollArea>
 
         <div className="mt-auto pt-4 flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={handleMicClick} disabled={isLoading}>
+                <Mic className={cn("h-5 w-5", isRecording && "text-destructive animate-pulse")} />
+                <span className="sr-only">Use Microphone</span>
+            </Button>
             <Input 
                 placeholder="e.g., Add a male cockatiel"
                 value={input}

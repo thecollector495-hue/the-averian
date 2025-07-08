@@ -15,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useCurrency } from '@/context/CurrencyContext';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 type Message = {
   id: string;
@@ -347,13 +347,19 @@ export default function AIAssistantPage() {
         </div>
         
         <div className="shrink-0 p-4 border-b">
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Experimental Feature</AlertTitle>
-              <AlertDescription>
-                Please double-check the AI's proposed actions before confirming, as it can make mistakes. It's designed to simplify complex tasks, not replace manual oversight.
-              </AlertDescription>
-            </Alert>
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="experimental-notice" className="border-b-0 rounded-lg bg-muted overflow-hidden">
+                <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className="h-5 w-5 text-amber-500" />
+                    <span className="font-semibold text-base">Experimental Feature</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pt-0 pb-4 text-sm text-muted-foreground px-4">
+                  Please double-check the AI's proposed actions before confirming, as it can make mistakes. This is an experimental feature designed to simplify tasks, not replace your expertise. It can also provide basic genetic outcome predictions, which should be treated as estimates.
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
         </div>
         
         <ScrollArea className="flex-1 p-4">

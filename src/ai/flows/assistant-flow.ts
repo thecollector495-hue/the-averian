@@ -41,17 +41,31 @@ const AddNoteDataSchema = z.object({
     reminderDate: z.string().optional().describe("The reminder date in YYYY-MM-DD format."),
 }).describe("The data required to add a new note or reminder.");
 
+const UpdateNoteDataSchema = z.object({
+    id: z.string().describe("The ID of the note to update."),
+    updates: AddNoteDataSchema.partial().describe("The fields to update on the note's record.")
+}).describe("The data required to update an existing note.");
+
 const AddCageDataSchema = z.object({
     names: z.array(z.string()).describe("An array of names for the new cages to be created."),
 }).describe("The data required to add one or more new cages.");
+
+const UpdateCageDataSchema = z.object({
+    id: z.string().describe("The ID of the cage to update."),
+    updates: z.object({ name: z.string() }).describe("The fields to update on the cage's record. Currently only 'name' is supported.")
+}).describe("The data required to update an existing cage.");
 
 const AddMutationDataSchema = z.object({
     names: z.array(z.string()).describe("An array of names for the new mutations to be created."),
 }).describe("The data required to add one or more new mutations.");
 
+const DeleteDataSchema = z.object({
+    ids: z.array(z.string()).describe("An array of IDs for the items to be deleted."),
+}).describe("The data required to delete one or more items.");
+
 const ActionSchema = z.object({
-    action: z.enum(['addBird', 'updateBird', 'addNote', 'addCage', 'addMutation', 'answer']).describe("The action the assistant should take."),
-    data: z.union([AddBirdDataSchema, UpdateBirdDataSchema, AddNoteDataSchema, AddCageDataSchema, AddMutationDataSchema, z.null()]).describe("The data associated with the action. This should be null for 'answer' actions."),
+    action: z.enum(['addBird', 'updateBird', 'addNote', 'updateNote', 'addCage', 'updateCage', 'addMutation', 'deleteBird', 'deleteCage', 'deleteNote', 'answer']).describe("The action the assistant should take."),
+    data: z.union([AddBirdDataSchema, UpdateBirdDataSchema, AddNoteDataSchema, UpdateNoteDataSchema, AddCageDataSchema, UpdateCageDataSchema, AddMutationDataSchema, DeleteDataSchema, z.null()]).describe("The data associated with the action. This should be null for 'answer' actions."),
 });
 
 const AviaryAssistantOutputSchema = z.object({
@@ -75,7 +89,10 @@ Analyze the query and determine a list of actions the user wants to perform. You
 - If they want to add a bird, use the 'addBird' action. If they mention a cage, include it in the 'cageName' field.
 - If they want to update a bird, use the 'updateBird' action. You MUST find the bird's ID from the context.
 - If they want to add a note or reminder, use the 'addNote' action.
+- If they want to update a note, use the 'updateNote' action. You MUST find the note's ID.
 - If they want to add one or more cages, use the 'addCage' action. If the user asks to add multiple cages, such as "cages 100 to 102", populate the 'names' array with each individual cage name: ["100", "101", "102"].
+- If they want to update a cage's name, use 'updateCage'. You MUST find the cage's ID.
+- To remove items, use 'deleteBird', 'deleteCage', or 'deleteNote'. Find the ID(s) of the item(s) to remove. For deletions, your text response should confirm what you are about to do, as the user will need to confirm this action in the UI. For example "I am ready to delete 15 cages. Please confirm."
 - If they want to add one or more mutations, use the 'addMutation' action.
 - If they are just asking a question or having a conversation, use the 'answer' action and provide a helpful text response. The data field should be null for 'answer' actions.
 

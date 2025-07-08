@@ -23,7 +23,7 @@ const BirdFormDialog = dynamic(() => import('@/components/bird-form-dialog').the
 const BreedingRecordDetailsDialog = dynamic(() => import('@/components/breeding-record-details-dialog').then(mod => mod.BreedingRecordDetailsDialog), { ssr: false });
 
 export default function BirdsPage() {
-  const { items, addItem, addItems, updateItem, updateItems, deleteItem } = useItems();
+  const { items, addItem, addItems, updateItem, updateItems, deleteItem, deleteBirdItem } = useItems();
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('Bird');
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -343,56 +343,7 @@ export default function BirdsPage() {
 
   const handleDeleteBird = () => {
     if (!birdToDelete) return;
-
-    const birdId = birdToDelete.id;
-    let itemsToUpdate: Partial<Bird | Cage>[] = [];
-    let itemIdsToDelete = [birdId];
-
-    // Remove from cage
-    const cage = allCages.find(c => c.birdIds.includes(birdId));
-    if (cage) {
-        itemsToUpdate.push({ id: cage.id, birdIds: cage.birdIds.filter(id => id !== birdId) });
-    }
-
-    // Unlink mate
-    if (birdToDelete.mateId) {
-        const mate = allBirds.find(b => b.id === birdToDelete.mateId);
-        if (mate) itemsToUpdate.push({ id: mate.id, mateId: undefined });
-    }
-
-    // Unlink from parents
-    if (birdToDelete.fatherId) {
-        const father = allBirds.find(b => b.id === birdToDelete.fatherId);
-        if (father) itemsToUpdate.push({ id: father.id, offspringIds: father.offspringIds.filter(id => id !== birdId) });
-    }
-    if (birdToDelete.motherId) {
-        const mother = allBirds.find(b => b.id === birdToDelete.motherId);
-        if (mother) itemsToUpdate.push({ id: mother.id, offspringIds: mother.offspringIds.filter(id => id !== birdId) });
-    }
-
-    // Unlink from offspring
-    birdToDelete.offspringIds.forEach(offspringId => {
-        const offspring = allBirds.find(b => b.id === offspringId);
-        if (offspring) {
-            const updates: Partial<Bird> = { id: offspring.id };
-            if (offspring.fatherId === birdId) updates.fatherId = undefined;
-            if (offspring.motherId === birdId) updates.motherId = undefined;
-            itemsToUpdate.push(updates);
-        }
-    });
-
-    // Remove associated pairs
-    allPairs.forEach(pair => {
-        if (pair.maleId === birdId || pair.femaleId === birdId) {
-            itemIdsToDelete.push(pair.id);
-        }
-    });
-    
-    // Batch updates
-    if (itemsToUpdate.length > 0) updateItems(itemsToUpdate as CollectionItem[]);
-    // Batch deletes
-    itemIdsToDelete.forEach(id => deleteItem(id));
-
+    deleteBirdItem(birdToDelete.id);
     toast({ title: "Bird Deleted", description: `${getBirdIdentifier(birdToDelete)} has been removed.` });
     setDeletingBirdId(null);
   }

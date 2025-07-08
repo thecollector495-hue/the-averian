@@ -188,12 +188,22 @@ export default function AIAssistantPage() {
       
     } catch (error) {
       console.error('AI assistant failed:', error);
+      
+      let userMessage = "Sorry, I encountered an error and could not complete your request. Please try again.";
+      let toastDescription = 'The AI assistant could not complete the request.';
+
+      if (error instanceof Error && error.message.includes('503 Service Unavailable')) {
+        userMessage = "I'm sorry, the AI service is experiencing high traffic right now. Please try your request again in a few moments.";
+        toastDescription = "The AI service is temporarily unavailable. Please try again later.";
+      }
+
       toast({
         variant: 'destructive',
         title: 'Assistant Failed',
-        description: 'The AI assistant could not complete the request. Please try again.',
+        description: toastDescription,
       });
-       const errorMessage: Message = { id: `assistant-err-${Date.now()}`, role: 'assistant', text: "Sorry, I encountered an error. Please try again." };
+
+       const errorMessage: Message = { id: `assistant-err-${Date.now()}`, role: 'assistant', text: userMessage };
        setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);

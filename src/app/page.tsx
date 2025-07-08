@@ -14,6 +14,7 @@ import { format } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useCurrency } from '@/context/CurrencyContext';
 
 type Message = {
   id: string;
@@ -35,6 +36,7 @@ export default function AIAssistantPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { items, addItems, updateItem, updateItems, deleteItem, deleteBirdItem } = useItems();
+  const { formatCurrency } = useCurrency();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [pendingActions, setPendingActions] = useState<any[] | null>(null);
@@ -259,12 +261,27 @@ export default function AIAssistantPage() {
       switch (type) {
         case 'addBird': return `Add Bird: ${data.species || 'Unknown'}`;
         case 'updateBird': return `Update Bird (ID: ${data.id})`;
-        case 'addNote': return `Add Note: "${data.title}"`;
+        case 'addNote': {
+            let summary = `Add Note: "${data.title}"`;
+            if (data.content) {
+                const truncatedContent = data.content.length > 50 ? `${data.content.substring(0, 50)}...` : data.content;
+                summary += ` - "${truncatedContent}"`;
+            }
+            return summary;
+        }
         case 'updateNote': return `Update Note (ID: ${data.id})`;
-        case 'addCage': return `Add ${data.names?.length || 1} cage(s): ${data.names?.join(', ')}`;
+        case 'addCage': {
+          const names = data.names || [];
+          const truncatedNames = names.length > 5 ? `${names.slice(0, 5).join(', ')}, ...` : names.join(', ');
+          let summary = `Add ${names.length || 1} cage(s): ${truncatedNames}`;
+          if (data.cost) {
+              summary += ` at a cost of ${formatCurrency(data.cost)} each`;
+          }
+          return summary;
+        }
         case 'updateCage': return `Update Cage (ID: ${data.id})`;
         case 'addMutation': return `Add ${data.names?.length || 1} mutation(s): ${data.names?.join(', ')}`;
-        case 'addTransaction': return `Add ${data.type} transaction for ${data.amount}`;
+        case 'addTransaction': return `Add ${data.type} transaction for ${formatCurrency(data.amount)}`;
         case 'deleteBird': return `Delete ${data.ids?.length || 0} bird(s)`;
         case 'deleteCage': return `Delete ${data.ids?.length || 0} cage(s)`;
         case 'deleteNote': return `Delete ${data.ids?.length || 0} note(s)`;

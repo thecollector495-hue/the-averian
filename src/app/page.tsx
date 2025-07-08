@@ -4,7 +4,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Sparkles, Send, Bot, User } from 'lucide-react';
+import { Loader2, Sparkles, Send, Bot, User, RefreshCw } from 'lucide-react';
 import { aviaryAssistant } from '@/ai/flows/assistant-flow';
 import { useItems } from '@/context/ItemsContext';
 import { Bird, NoteReminder, Cage, getBirdIdentifier, CustomMutation, CollectionItem, CustomSpecies } from '@/lib/data';
@@ -18,6 +18,8 @@ type Message = {
   id: string;
   role: 'user' | 'assistant';
   text: string;
+  isError?: boolean;
+  onRetry?: () => void;
 };
 
 export default function AIAssistantPage() {
@@ -54,14 +56,18 @@ export default function AIAssistantPage() {
     }
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
+  const handleSend = async (queryOverride?: string) => {
+    const currentInput = queryOverride || input;
+    if (!currentInput.trim()) return;
 
-    const newUserMessage: Message = { id: `user-${Date.now()}`, role: 'user', text: input };
-    setMessages(prev => [...prev, newUserMessage]);
-    const currentInput = input;
-    setInput('');
     setIsLoading(true);
+    setMessages(prev => prev.filter(m => !m.isError));
+
+    if (!queryOverride) {
+      const newUserMessage: Message = { id: `user-${Date.now()}`, role: 'user', text: currentInput };
+      setMessages(prev => [...prev, newUserMessage]);
+      setInput('');
+    }
 
     try {
       const context = JSON.stringify(items.filter(i => ['Bird', 'NoteReminder', 'Cage', 'CustomMutation', 'CustomSpecies'].includes(i.category)));
@@ -189,22 +195,14 @@ export default function AIAssistantPage() {
     } catch (error) {
       console.error('AI assistant failed:', error);
       
-      let userMessage = "Sorry, I encountered an error and could not complete your request. Please try again.";
-      let toastDescription = 'The AI assistant could not complete the request.';
-
-      if (error instanceof Error && error.message.includes('503 Service Unavailable')) {
-        userMessage = "I'm sorry, the AI service is experiencing high traffic right now. Please try your request again in a few moments.";
-        toastDescription = "The AI service is temporarily unavailable. Please try again later.";
-      }
-
-      toast({
-        variant: 'destructive',
-        title: 'Assistant Failed',
-        description: toastDescription,
-      });
-
-       const errorMessage: Message = { id: `assistant-err-${Date.now()}`, role: 'assistant', text: userMessage };
-       setMessages(prev => [...prev, errorMessage]);
+      const newErrorMessage: Message = {
+        id: `assistant-err-${Date.now()}`,
+        role: 'assistant',
+        text: "Couldn't connect right now. Please try again.",
+        isError: true,
+        onRetry: () => handleSend(currentInput),
+      };
+      setMessages(prev => [...prev, newErrorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -270,8 +268,20 @@ export default function AIAssistantPage() {
                             <Bot className="h-5 w-5"/>
                         </div>
                      )}
-                     <div className={cn("rounded-lg px-4 py-3 max-w-[85%] shadow-sm", message.role === 'user' ? "bg-muted" : "bg-card")}>
-                        <p className="text-sm whitespace-pre-wrap">{message.text}</p>
+                     <div className={cn("rounded-lg px-4 py-3 max-w-[85%] shadow-sm", message.role === 'user' ? "bg-muted" : "bg-card", message.isError && "bg-destructive/10 border border-destructive/20")}>
+                        {message.isError ? (
+                          <div className="flex flex-col items-start gap-2">
+                            <p className="text-sm whitespace-pre-wrap text-destructive">{message.text}</p>
+                            {message.onRetry && (
+                              <Button variant="outline" size="sm" onClick={message.onRetry}>
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                Retry
+                              </Button>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-sm whitespace-pre-wrap">{message.text}</p>
+                        )}
                      </div>
                      {message.role === 'user' && (
                         <div className="bg-muted rounded-full p-2">
@@ -310,7 +320,7 @@ export default function AIAssistantPage() {
                     disabled={isLoading}
                     className="flex-1 resize-none max-h-48 text-base"
                 />
-                <Button onClick={handleSend} disabled={isLoading || !input.trim()} size="lg">
+                <Button onClick={() => handleSend()} disabled={isLoading || !input.trim()} size="lg">
                     {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                     <span className="sr-only">Send</span>
                 </Button>

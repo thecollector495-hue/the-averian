@@ -33,7 +33,7 @@ export default function DashboardPage() {
 
     return (
         <div className="container mx-auto p-4 sm:p-6 md:p-8">
-            {isAiDialogOpen && <AIAssistantDialog isOpen={isAiDialogOpen} onOpenChange={setIsAiDialogOpen} />}
+            <AIAssistantDialog isOpen={isAiDialogOpen} onOpenChange={setIsAiDialogOpen} />
 
             <div className="mb-8">
                 <h1 className="text-4xl font-bold">Dashboard</h1>
@@ -47,7 +47,7 @@ export default function DashboardPage() {
                         <CardTitle className="flex items-center gap-2">
                            <Sparkles className="text-primary"/> AI Aviary Assistant
                         </CardTitle>
-                        <CardDescription>Need help identifying a bird? Let AI assist you.</CardDescription>
+                        <CardDescription>Use AI to manage your birds and notes with voice commands.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Button className="w-full" onClick={() => setIsAiDialogOpen(true)}>

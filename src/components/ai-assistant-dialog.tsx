@@ -1,191 +1,190 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { identifyBird, BirdIdentificationOutput } from '@/ai/flows/identify-bird-flow';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Sparkles, Upload } from 'lucide-react';
-import Image from 'next/image';
-import { Badge } from './ui/badge';
+import { Loader2, Sparkles, Send, Bot, User } from 'lucide-react';
+import { aviaryAssistant } from '@/ai/flows/assistant-flow';
+import { textToSpeech } from '@/ai/flows/tts-flow';
+import { useItems } from '@/context/ItemsContext';
+import { Bird, NoteReminder } from '@/lib/data';
+import { ScrollArea } from './ui/scroll-area';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+
+type Message = {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
+};
 
 export function AIAssistantDialog({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChange: (open: boolean) => void }) {
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [description, setDescription] = useState('');
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<BirdIdentificationOutput | null>(null);
+  const [audioSrc, setAudioSrc] = useState<string | null>(null);
   const { toast } = useToast();
+  const { items, addItem, updateItem } = useItems();
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setPhotoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+  useEffect(() => {
+    if (audioSrc && audioRef.current) {
+      audioRef.current.play().catch(e => console.error("Audio play failed", e));
     }
-  };
+  }, [audioSrc]);
 
-  const handleAnalyze = async () => {
-    if (!photoFile) {
-      toast({
-        variant: 'destructive',
-        title: 'No Photo Selected',
-        description: 'Please upload a photo of the bird to analyze.',
-      });
-      return;
+  useEffect(() => {
+    // Scroll to bottom when messages change
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
     }
+  }, [messages]);
 
+  const handleSend = async () => {
+    if (!input.trim()) return;
+
+    const newUserMessage: Message = { id: `user-${Date.now()}`, role: 'user', text: input };
+    setMessages(prev => [...prev, newUserMessage]);
+    setInput('');
     setIsLoading(true);
-    setResult(null);
 
-    const reader = new FileReader();
-    reader.readAsDataURL(photoFile);
-    reader.onload = async () => {
-      try {
-        const photoDataUri = reader.result as string;
-        const response = await identifyBird({ photoDataUri, userDescription: description });
-        setResult(response);
-      } catch (error) {
-        console.error('AI analysis failed:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Analysis Failed',
-          description: 'The AI assistant could not complete the request. Please try again.',
-        });
-      } finally {
-        setIsLoading(false);
+    try {
+      const context = JSON.stringify(items.filter(i => i.category === 'Bird' || i.category === 'NoteReminder'));
+      const assistantResponse = await aviaryAssistant({ query: input, context });
+      
+      // Handle the action returned by the AI
+      if (assistantResponse.data && assistantResponse.action !== 'answer') {
+        switch(assistantResponse.action) {
+          case 'addBird': {
+            const birdData = assistantResponse.data as any;
+            const newBird: Bird = {
+              ...birdData,
+              id: `b${Date.now()}`,
+              category: 'Bird',
+              offspringIds: [],
+            };
+            addItem(newBird);
+            toast({ title: "AI Action: Bird Added", description: `Successfully added ${newBird.species}.` });
+            break;
+          }
+          case 'updateBird': {
+            const updateData = assistantResponse.data as any;
+            updateItem(updateData.id, updateData.updates);
+            toast({ title: "AI Action: Bird Updated", description: `Successfully updated bird ID ${updateData.id}.` });
+            break;
+          }
+          case 'addNote': {
+            const noteData = assistantResponse.data as any;
+            const newNote: NoteReminder = {
+               ...noteData,
+               id: `nr${Date.now()}`,
+               category: 'NoteReminder',
+               reminderDate: noteData.reminderDate ? format(new Date(noteData.reminderDate), 'yyyy-MM-dd') : undefined,
+               isRecurring: false,
+               recurrencePattern: 'none',
+               associatedBirdIds: [],
+               subTasks: [],
+               completed: false,
+            };
+            addItem(newNote);
+            toast({ title: "AI Action: Note Added", description: `Successfully added note: "${newNote.title}"` });
+            break;
+          }
+        }
       }
-    };
-    reader.onerror = (error) => {
-      console.error('File reading failed:', error);
+
+      const newAssistantMessage: Message = { id: `assistant-${Date.now()}`, role: 'assistant', text: assistantResponse.response };
+      setMessages(prev => [...prev, newAssistantMessage]);
+      
+      // Generate and play audio
+      const ttsResponse = await textToSpeech(assistantResponse.response);
+      setAudioSrc(ttsResponse.audio);
+
+    } catch (error) {
+      console.error('AI assistant failed:', error);
       toast({
         variant: 'destructive',
-        title: 'File Error',
-        description: 'Could not read the selected photo.',
+        title: 'Assistant Failed',
+        description: 'The AI assistant could not complete the request. Please try again.',
       });
+       const errorMessage: Message = { id: `assistant-err-${Date.now()}`, role: 'assistant', text: "Sorry, I encountered an error. Please try again." };
+       setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    };
+    }
   };
-
+  
   const resetDialog = () => {
-      setPhotoFile(null);
-      setPhotoPreview(null);
-      setDescription('');
-      setResult(null);
-      setIsLoading(false);
-  }
+    setMessages([]);
+    setInput('');
+    setIsLoading(false);
+    setAudioSrc(null);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
         if (!open) resetDialog();
         onOpenChange(open);
     }}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-lg flex flex-col h-[70vh] max-h-[700px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="text-primary" /> AI Aviary Assistant
           </DialogTitle>
           <DialogDescription>
-            Upload a photo to identify a bird's species, mutations, and more.
+            Ask me to add birds, create notes, or update records.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid md:grid-cols-2 gap-6 py-4 max-h-[70vh] overflow-y-auto pr-4">
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="bird-photo">Bird Photo</Label>
-              <div className="mt-2 flex justify-center rounded-lg border border-dashed border-input px-6 py-10">
-                <div className="text-center">
-                  {photoPreview ? (
-                    <Image src={photoPreview} alt="Bird preview" width={200} height={200} className="mx-auto h-40 w-40 object-cover rounded-md" />
-                  ) : (
-                    <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
-                  )}
-                   <div className="mt-4 flex text-sm justify-center">
-                    <Label htmlFor="bird-photo-input" className="relative cursor-pointer rounded-md bg-background font-semibold text-primary focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 hover:text-primary/80">
-                      <span>{photoFile ? 'Change photo' : 'Upload a file'}</span>
-                      <input id="bird-photo-input" name="bird-photo" type="file" className="sr-only" onChange={handleFileChange} accept="image/*" />
-                    </Label>
-                  </div>
-                   <p className="text-xs leading-5 text-muted-foreground">{photoFile ? photoFile.name : 'PNG, JPG, GIF up to 10MB'}</p>
-                </div>
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="description">Optional Notes</Label>
-              <Textarea id="description" placeholder="e.g., 'Unusual feather pattern on the wing', 'Seems lethargic'" value={description} onChange={(e) => setDescription(e.target.value)} className="mt-2" />
-            </div>
-            <Button onClick={handleAnalyze} disabled={isLoading || !photoFile} className="w-full">
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analyzing...
-                </>
-              ) : (
-                'Analyze Photo'
-              )}
-            </Button>
-          </div>
-          <div className="space-y-4">
-            <h3 className="font-semibold">Analysis Results</h3>
-            {isLoading && (
-                 <div className="space-y-4 p-4 border rounded-lg">
-                    <div className="h-6 bg-muted rounded w-3/4 animate-pulse"></div>
-                    <div className="space-y-2">
-                        <div className="h-4 bg-muted rounded w-full animate-pulse"></div>
-                        <div className="h-4 bg-muted rounded w-5/6 animate-pulse"></div>
-                         <div className="h-4 bg-muted rounded w-full animate-pulse"></div>
-                    </div>
-                </div>
-            )}
-            {result && (
-              <div className="p-4 border rounded-lg space-y-4">
-                {!result.isBird ? (
-                  <div>
-                    <h4 className="font-semibold text-destructive">Not a Bird</h4>
-                    <p className="text-sm text-muted-foreground">{result.physicalDescription}</p>
-                  </div>
-                ) : (
-                  <>
-                    <div>
-                      <h4 className="font-semibold">{result.commonName}</h4>
-                      <p className="text-sm italic text-muted-foreground">{result.latinName}</p>
-                      <p className="text-xs text-muted-foreground mt-1">Confidence: {Math.round(result.confidence * 100)}%</p>
-                    </div>
-                    <div>
-                      <h5 className="font-medium text-sm mb-1">Description</h5>
-                      <p className="text-sm text-muted-foreground">{result.physicalDescription}</p>
-                    </div>
-                    {result.potentialMutations && result.potentialMutations.length > 0 && (
-                      <div>
-                        <h5 className="font-medium text-sm mb-1">Potential Mutations</h5>
-                        <div className="flex flex-wrap gap-2">
-                          {result.potentialMutations.map((m) => (
-                            <Badge key={m} variant="secondary">{m}</Badge>
-                          ))}
+        
+        <ScrollArea className="flex-1 pr-4 -mr-4" ref={scrollAreaRef as any}>
+            <div className="space-y-4">
+            {messages.map((message, index) => (
+                <div key={message.id} className={cn("flex items-start gap-3", message.role === 'user' && "justify-end")}>
+                     {message.role === 'assistant' && (
+                        <div className="bg-primary text-primary-foreground rounded-full p-2">
+                            <Bot className="h-5 w-5"/>
                         </div>
-                      </div>
-                    )}
-                    <div>
-                      <h5 className="font-medium text-sm mb-1">Fun Fact</h5>
-                      <p className="text-sm text-muted-foreground italic">"{result.interestingFact}"</p>
+                     )}
+                     <div className={cn("rounded-lg px-4 py-2 max-w-[80%]", message.role === 'user' ? "bg-muted" : "bg-secondary")}>
+                        <p className="text-sm">{message.text}</p>
+                     </div>
+                     {message.role === 'user' && (
+                        <div className="bg-muted rounded-full p-2">
+                           <User className="h-5 w-5"/>
+                        </div>
+                     )}
+                </div>
+            ))}
+             {isLoading && (
+                <div className="flex items-start gap-3">
+                    <div className="bg-primary text-primary-foreground rounded-full p-2">
+                        <Bot className="h-5 w-5"/>
                     </div>
-                  </>
-                )}
-              </div>
+                    <div className="rounded-lg px-4 py-2 bg-secondary flex items-center">
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                </div>
             )}
-            {!isLoading && !result && (
-              <div className="p-4 border rounded-lg text-center text-sm text-muted-foreground">
-                AI analysis will appear here.
-              </div>
-            )}
-          </div>
+            </div>
+        </ScrollArea>
+
+        <div className="mt-auto pt-4 flex items-center gap-2">
+            <Input 
+                placeholder="e.g., Add a male cockatiel"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !isLoading && handleSend()}
+                disabled={isLoading}
+            />
+            <Button onClick={handleSend} disabled={isLoading || !input.trim()}>
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                <span className="sr-only">Send</span>
+            </Button>
         </div>
+         {audioSrc && <audio ref={audioRef} src={audioSrc} hidden />}
       </DialogContent>
     </Dialog>
   );

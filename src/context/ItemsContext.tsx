@@ -9,7 +9,7 @@ interface ItemsContextType {
   addItem: (item: CollectionItem) => void;
   addItems: (items: CollectionItem[]) => void;
   updateItem: (itemId: string, updates: Partial<CollectionItem>) => void;
-  updateItems: (items: CollectionItem[]) => void;
+  updateItems: (items: Partial<CollectionItem>[]) => void;
   deleteItem: (itemId: string) => void;
 }
 
@@ -60,11 +60,15 @@ export const ItemsProvider = ({ children }: { children: ReactNode }) => {
     );
   };
   
-  const updateItems = (updatedItems: CollectionItem[]) => {
+  const updateItems = (itemsToUpdate: Partial<CollectionItem>[]) => {
      setItems(prevItems => {
-        const updatedIds = new Set(updatedItems.map(u => u.id));
-        const untouchedItems = prevItems.filter(p => !updatedIds.has(p.id));
-        return [...updatedItems, ...untouchedItems];
+        const updateMap = new Map(itemsToUpdate.map(item => [item.id, item]));
+        return prevItems.map(item => {
+            if (updateMap.has(item.id)) {
+                return { ...item, ...updateMap.get(item.id) };
+            }
+            return item;
+        });
      });
   };
 

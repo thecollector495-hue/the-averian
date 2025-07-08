@@ -3,14 +3,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bird, Settings, ClipboardList, StickyNote, LayoutGrid } from 'lucide-react';
+import { Bird, ClipboardList, StickyNote, LayoutGrid, LayoutDashboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { href: '/', label: 'Birds', icon: Bird },
+  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/birds', label: 'Birds', icon: Bird },
   { href: '/breeding', label: 'Breeding', icon: ClipboardList },
   { href: '/notes', label: 'Notes', icon: StickyNote },
-  { href: '/additional', label: 'Additional', icon: LayoutGrid },
+  { href: '/additional', label: 'More', icon: LayoutGrid },
 ];
 
 export function BottomNavigation() {

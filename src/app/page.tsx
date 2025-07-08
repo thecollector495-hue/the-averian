@@ -1,565 +1,104 @@
-
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Search, PlusCircle, Pencil, Trash2 } from 'lucide-react';
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { BirdDetailsDialog } from '@/components/bird-details-dialog';
-import { BirdCard } from '@/components/bird-card';
-import { CageCard } from '@/components/cage-card';
-import { PairCard } from '@/components/pair-card';
-import { Bird, Cage, Pair, BreedingRecord, CollectionItem, getBirdIdentifier, Transaction, Permit, BirdFormValues } from '@/lib/data';
-import { format } from 'date-fns';
-import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { Bird, Users2, Bell, Sparkles } from 'lucide-react';
 import { useItems } from '@/context/ItemsContext';
-import { CageFormValues } from '@/components/add-cage-dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Pair, NoteReminder } from '@/lib/data';
+import { format, isFuture, parseISO } from 'date-fns';
 
-const AddCageDialog = dynamic(() => import('@/components/add-cage-dialog').then(mod => mod.AddCageDialog), { ssr: false });
-const BirdFormDialog = dynamic(() => import('@/components/bird-form-dialog').then(mod => mod.BirdFormDialog), { ssr: false });
-const BreedingRecordDetailsDialog = dynamic(() => import('@/components/breeding-record-details-dialog').then(mod => mod.BreedingRecordDetailsDialog), { ssr: false });
+const AIAssistantDialog = dynamic(() => import('@/components/ai-assistant-dialog').then(mod => mod.AIAssistantDialog), { ssr: false });
 
-export default function BirdsPage() {
-  const { items, addItem, addItems, updateItem, updateItems, deleteItem } = useItems();
-  const [search, setSearch] = useState('');
-  const [filterCategory, setFilterCategory] = useState('Bird');
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingBird, setEditingBird] = useState<Bird | null>(null);
-  const [viewingBird, setViewingBird] = useState<Bird | null>(null);
-  const [viewingBreedingRecord, setViewingBreedingRecord] = useState<BreedingRecord | null>(null);
-  const [isAddCageDialogOpen, setIsAddCageDialogOpen] = useState(false);
-  const [editingCage, setEditingCage] = useState<Cage | null>(null);
-  const [deletingBirdId, setDeletingBirdId] = useState<string | null>(null);
-  const [deletingCageId, setDeletingCageId] = useState<string | null>(null);
-  const { toast } = useToast();
-  
-  const allBirds = items.filter((item): item is Bird => item.category === 'Bird');
-  const allCages = items.filter((item): item is Cage => item.category === 'Cage');
-  const allPairs = items.filter((item): item is Pair => item.category === 'Pair');
-  const allBreedingRecords = items.filter((item): item is BreedingRecord => item.category === 'BreedingRecord');
-  const allPermits = items.filter((item): item is Permit => item.category === 'Permit');
+export default function DashboardPage() {
+    const { items } = useItems();
+    const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
 
-  const birdToDelete = useMemo(() => 
-    deletingBirdId ? allBirds.find(b => b.id === deletingBirdId) : null
-  , [deletingBirdId, allBirds]);
-
-  const cageToDelete = useMemo(() =>
-    deletingCageId ? allCages.find(c => c.id === deletingCageId) : null
-  , [deletingCageId, allCages]);
-
-  const handleAddClick = () => {
-    setEditingBird(null);
-    setIsFormOpen(true);
-  };
-
-  const handleEditClick = (bird: Bird) => {
-    setEditingBird(bird);
-    setIsFormOpen(true);
-  };
-
-  const handleViewBirdClick = (bird: Bird) => {
-    setViewingBird(bird);
-  };
-
-  const handleViewBreedingRecord = (record: BreedingRecord) => {
-    setViewingBreedingRecord(record);
-  }
-
-  const handleEditCageClick = (cage: Cage) => {
-    setEditingCage(cage);
-    setIsAddCageDialogOpen(true);
-  };
-
-  const handleAddCageClick = () => {
-    setEditingCage(null);
-    setIsAddCageDialogOpen(true);
-  };
-  
-  const handleSaveCage = (data: CageFormValues & { id?: string }) => {
-    const trimmedName = data.name.trim();
-    if (!trimmedName) {
-      toast({ variant: 'destructive', title: 'Invalid Name', description: 'Cage name cannot be empty.' });
-      return;
-    }
-
-    const isEditing = !!data.id;
-
-    const existingCage = allCages.find(c => c.name.toLowerCase() === trimmedName.toLowerCase() && c.id !== data.id);
-    if (existingCage) {
-      toast({ variant: 'destructive', title: 'Cage Exists', description: `A cage named "${trimmedName}" already exists.` });
-      return;
-    }
-
-    if (isEditing) {
-      const updatedCage = {
-        name: trimmedName,
-        cost: data.cost,
-      };
-      updateItem(data.id!, updatedCage);
-      toast({ title: 'Cage Updated', description: `Cage "${trimmedName}" has been updated.` });
-    } else {
-        const newCage: Cage = {
-          id: `c${Date.now()}`,
-          name: trimmedName,
-          category: 'Cage',
-          birdIds: [],
-          cost: data.cost,
-        };
-
-        const itemsToAdd: (Cage | Transaction)[] = [newCage];
-
-        if (data.addToExpenses && data.cost && data.cost > 0) {
-          const newTransaction: Transaction = {
-            id: `t${Date.now()}`,
-            category: 'Transaction',
-            type: 'expense',
-            date: format(new Date(), 'yyyy-MM-dd'),
-            description: `Purchase of cage: ${newCage.name}`,
-            amount: data.cost,
-          };
-          itemsToAdd.push(newTransaction);
-          toast({ title: 'Expense Added', description: `Purchase of cage ${newCage.name} logged.` });
-        }
-        
-        addItems(itemsToAdd);
-        toast({ title: 'Cage Created', description: `Cage "${trimmedName}" has been added.` });
-    }
-  };
-
-  const handleSaveBird = (formData: BirdFormValues & { newCageName?: string }) => {
-    const isEditing = !!editingBird;
-    const birdId = editingBird?.id || `b${Date.now()}`;
+    const birdCount = items.filter(item => item.category === 'Bird').length;
+    const pairCount = items.filter((item): item is Pair => item.category === 'Pair').length;
     
-    const itemsToAdd: CollectionItem[] = [];
-    
-    let finalCageId = formData.cageId;
+    const upcomingReminders = items
+        .filter((item): item is NoteReminder => 
+            item.category === 'NoteReminder' && 
+            !item.completed && 
+            item.isReminder && 
+            item.reminderDate && 
+            isFuture(parseISO(item.reminderDate))
+        )
+        .sort((a, b) => parseISO(a.reminderDate!).getTime() - parseISO(b.reminderDate!).getTime())
+        .slice(0, 3);
 
-    // Handle new cage creation directly
-    if (formData.newCageName && formData.newCageName.trim() !== "") {
-        const trimmedCageName = formData.newCageName.trim();
-        const existingCage = allCages.find(c => c.name.toLowerCase() === trimmedCageName.toLowerCase());
-        if (existingCage) {
-            toast({ variant: 'destructive', title: 'Cage Exists', description: `A cage named "${trimmedCageName}" already exists.` });
-            return; // Stop execution if cage name is a duplicate
-        }
-        const newCage: Cage = {
-          id: `c${Date.now()}`,
-          name: trimmedCageName,
-          category: 'Cage',
-          birdIds: [birdId], // Immediately add the current bird
-          cost: 0,
-        };
-        itemsToAdd.push(newCage);
-        finalCageId = newCage.id;
-    }
 
-    const birdToSave: Bird = {
-      species: formData.species,
-      subspecies: formData.subspecies,
-      sex: formData.sex,
-      ringNumber: formData.ringNumber,
-      unbanded: formData.unbanded,
-      birthDate: formData.birthDate ? format(formData.birthDate, 'yyyy-MM-dd') : undefined,
-      visualMutations: formData.visualMutations,
-      splitMutations: formData.splitMutations,
-      fatherId: formData.fatherId,
-      motherId: formData.motherId,
-      mateId: formData.mateId,
-      offspringIds: formData.offspringIds,
-      paidPrice: formData.paidPrice,
-      estimatedValue: formData.estimatedValue,
-      id: birdId,
-      category: 'Bird',
-      status: formData.status,
-      permitId: formData.permitId,
-      saleDetails: formData.status === 'Sold' && formData.saleDate && formData.salePrice && formData.buyerInfo ? {
-        date: format(formData.saleDate, 'yyyy-MM-dd'),
-        price: formData.salePrice,
-        buyer: formData.buyerInfo
-      } : undefined,
-    };
-    
-     // --- PAIRING LOGIC ---
-    const initialMateId = editingBird?.mateId;
-    const newMateId = formData.mateId;
+    return (
+        <div className="container mx-auto p-4 sm:p-6 md:p-8">
+            {isAiDialogOpen && <AIAssistantDialog isOpen={isAiDialogOpen} onOpenChange={setIsAiDialogOpen} />}
 
-    if (initialMateId !== newMateId) {
-      if (initialMateId) {
-        const oldMate = allBirds.find(b => b.id === initialMateId);
-        if (oldMate) {
-          updateItem(oldMate.id, { mateId: undefined });
-        }
-        const pairToDelete = allPairs.find(p =>
-          (p.maleId === birdId && p.femaleId === initialMateId) ||
-          (p.maleId === initialMateId && p.femaleId === birdId)
-        );
-        if (pairToDelete) {
-          deleteItem(pairToDelete.id);
-        }
-      }
+            <div className="mb-8">
+                <h1 className="text-4xl font-bold">Dashboard</h1>
+                <p className="text-muted-foreground">A quick overview of your aviary.</p>
+            </div>
 
-      if (newMateId) {
-        const newMate = allBirds.find(b => b.id === newMateId);
-        if (newMate) {
-          updateItem(newMate.id, { mateId: birdId });
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {/* AI Assistant Card */}
+                <Card className="md:col-span-2 lg:col-span-1 bg-primary/5 border-primary/20 hover:bg-primary/10 transition-colors">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                           <Sparkles className="text-primary"/> AI Aviary Assistant
+                        </CardTitle>
+                        <CardDescription>Need help identifying a bird? Let AI assist you.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button className="w-full" onClick={() => setIsAiDialogOpen(true)}>
+                           Launch Assistant
+                        </Button>
+                    </CardContent>
+                </Card>
 
-          const newPair: Pair = {
-            id: `pair${Date.now()}`,
-            category: 'Pair',
-            maleId: birdToSave.sex === 'male' ? birdId : newMateId,
-            femaleId: birdToSave.sex === 'female' ? birdId : newMateId,
-          };
-          itemsToAdd.push(newPair);
-          toast({ title: "Pair Created", description: `${getBirdIdentifier(birdToSave)} and ${getBirdIdentifier(newMate)} are now a pair.` });
-        }
-      }
-    }
-
-    // --- PARENTING LOGIC ---
-    const initialFatherId = editingBird?.fatherId;
-    const newFatherId = formData.fatherId;
-    if (initialFatherId !== newFatherId) {
-      // Detach from old father
-      if (initialFatherId) {
-        const oldFather = allBirds.find(b => b.id === initialFatherId);
-        if (oldFather) {
-          updateItem(oldFather.id, {
-            offspringIds: oldFather.offspringIds.filter(id => id !== birdId),
-          });
-        }
-      }
-      // Attach to new father
-      if (newFatherId) {
-        const newFather = allBirds.find(b => b.id === newFatherId);
-        if (newFather) {
-          updateItem(newFather.id, {
-            offspringIds: [...new Set([...newFather.offspringIds, birdId])],
-          });
-        }
-      }
-    }
-
-    const initialMotherId = editingBird?.motherId;
-    const newMotherId = formData.motherId;
-    if (initialMotherId !== newMotherId) {
-      // Detach from old mother
-      if (initialMotherId) {
-        const oldMother = allBirds.find(b => b.id === initialMotherId);
-        if (oldMother) {
-          updateItem(oldMother.id, {
-            offspringIds: oldMother.offspringIds.filter(id => id !== birdId),
-          });
-        }
-      }
-      // Attach to new mother
-      if (newMotherId) {
-        const newMother = allBirds.find(b => b.id === newMotherId);
-        if (newMother) {
-          updateItem(newMother.id, {
-            offspringIds: [...new Set([...newMother.offspringIds, birdId])],
-          });
-        }
-      }
-    }
-
-    // --- OFFSPRING LOGIC (Reverse linking) ---
-    const initialOffspringIds = editingBird?.offspringIds || [];
-    const newOffspringIds = formData.offspringIds || [];
-    
-    const addedOffspring = newOffspringIds.filter(id => !initialOffspringIds.includes(id));
-    const removedOffspring = initialOffspringIds.filter(id => !newOffspringIds.includes(id));
-
-    addedOffspring.forEach(offspringId => {
-        const offspring = allBirds.find(b => b.id === offspringId);
-        if (offspring) {
-            if (birdToSave.sex === 'male') {
-                updateItem(offspringId, { fatherId: birdId });
-            } else if (birdToSave.sex === 'female') {
-                updateItem(offspringId, { motherId: birdId });
-            }
-        }
-    });
-
-    removedOffspring.forEach(offspringId => {
-        const offspring = allBirds.find(b => b.id === offspringId);
-        if (offspring) {
-            if (birdToSave.sex === 'male' && offspring.fatherId === birdId) {
-                updateItem(offspringId, { fatherId: undefined });
-            } else if (birdToSave.sex === 'female' && offspring.motherId === birdId) {
-                updateItem(offspringId, { motherId: undefined });
-            }
-        }
-    });
-
-    if (isEditing) {
-        updateItem(birdId, birdToSave);
-    } else {
-        itemsToAdd.push(birdToSave);
-    }
-
-    // Un-cage from old cage if necessary
-    const oldCage = allCages.find(cage => cage.birdIds.includes(birdId));
-    if (oldCage && oldCage.id !== finalCageId) {
-        updateItem(oldCage.id, { birdIds: oldCage.birdIds.filter(id => id !== birdId) });
-    }
-
-    // Add to a selected existing cage
-    if (finalCageId && !formData.newCageName) {
-        const newCage = allCages.find(cage => cage.id === finalCageId);
-        if (newCage && !newCage.birdIds.includes(birdId)) {
-            updateItem(newCage.id, { birdIds: [...newCage.birdIds, birdId] });
-        }
-    }
-
-    // Transaction logic
-    if (formData.addToExpenses && formData.paidPrice && formData.paidPrice > 0 && !isEditing) {
-        const newTransaction: Transaction = {
-          id: `t${Date.now()}`,
-          category: 'Transaction',
-          type: 'expense',
-          date: format(new Date(), 'yyyy-MM-dd'),
-          description: `Purchase of ${getBirdIdentifier(birdToSave)}`,
-          amount: formData.paidPrice,
-          relatedBirdId: birdId,
-        };
-        itemsToAdd.push(newTransaction);
-        toast({ title: "Expense Added", description: `Purchase of ${getBirdIdentifier(birdToSave)} logged.` });
-    }
-      
-    const wasJustSold = editingBird?.status !== 'Sold' && formData.status === 'Sold';
-    if (formData.createSaleTransaction && wasJustSold && birdToSave.saleDetails) {
-         const newTransaction: Transaction = {
-            id: `t${Date.now()}`,
-            category: 'Transaction',
-            type: 'income',
-            date: birdToSave.saleDetails.date,
-            description: `Sale of ${getBirdIdentifier(birdToSave)}`,
-            amount: birdToSave.saleDetails.price,
-            relatedBirdId: birdId,
-        };
-        itemsToAdd.push(newTransaction);
-        toast({ title: "Income Added", description: `Sale of ${getBirdIdentifier(birdToSave)} logged.` });
-    }
-
-    if (itemsToAdd.length > 0) {
-        addItems(itemsToAdd);
-    }
-    
-     toast({
-        title: isEditing ? "Bird Updated" : "Bird Added",
-        description: `${getBirdIdentifier(birdToSave)} has been saved.`,
-      });
-  };
-
-  const handleDeleteBird = () => {
-    if (!birdToDelete) return;
-
-    const birdId = birdToDelete.id;
-    let itemsToUpdate: Partial<Bird | Cage>[] = [];
-    let itemIdsToDelete = [birdId];
-
-    // Remove from cage
-    const cage = allCages.find(c => c.birdIds.includes(birdId));
-    if (cage) {
-        itemsToUpdate.push({ id: cage.id, birdIds: cage.birdIds.filter(id => id !== birdId) });
-    }
-
-    // Unlink mate
-    if (birdToDelete.mateId) {
-        const mate = allBirds.find(b => b.id === birdToDelete.mateId);
-        if (mate) itemsToUpdate.push({ id: mate.id, mateId: undefined });
-    }
-
-    // Unlink from parents
-    if (birdToDelete.fatherId) {
-        const father = allBirds.find(b => b.id === birdToDelete.fatherId);
-        if (father) itemsToUpdate.push({ id: father.id, offspringIds: father.offspringIds.filter(id => id !== birdId) });
-    }
-    if (birdToDelete.motherId) {
-        const mother = allBirds.find(b => b.id === birdToDelete.motherId);
-        if (mother) itemsToUpdate.push({ id: mother.id, offspringIds: mother.offspringIds.filter(id => id !== birdId) });
-    }
-
-    // Unlink from offspring
-    birdToDelete.offspringIds.forEach(offspringId => {
-        const offspring = allBirds.find(b => b.id === offspringId);
-        if (offspring) {
-            const updates: Partial<Bird> = { id: offspring.id };
-            if (offspring.fatherId === birdId) updates.fatherId = undefined;
-            if (offspring.motherId === birdId) updates.motherId = undefined;
-            itemsToUpdate.push(updates);
-        }
-    });
-
-    // Remove associated pairs
-    allPairs.forEach(pair => {
-        if (pair.maleId === birdId || pair.femaleId === birdId) {
-            itemIdsToDelete.push(pair.id);
-        }
-    });
-    
-    // Batch updates
-    itemsToUpdate.forEach(update => updateItem(update.id!, update));
-    // Batch deletes
-    itemIdsToDelete.forEach(id => deleteItem(id));
-
-    toast({ title: "Bird Deleted", description: `${getBirdIdentifier(birdToDelete)} has been removed.` });
-    setDeletingBirdId(null);
-  }
-  
-  const handleDeleteCage = () => {
-    if (!deletingCageId) return;
-    deleteItem(deletingCageId);
-    toast({ title: 'Cage Deleted', description: 'The cage has been removed.' });
-    setDeletingCageId(null);
-  };
-
-  const filteredItems = items.filter(item => {
-    if (item.category !== filterCategory) return false;
-
-    if (filterCategory !== 'Bird' || !search) {
-        return true;
-    }
-
-    const bird = item as Bird;
-    const birdIdentifier = `${bird.species} ${bird.subspecies || ''} ${bird.ringNumber || ''} ${bird.birthDate || ''} ${(bird.visualMutations || []).join(' ')} ${(bird.splitMutations || []).join(' ')}`.toLowerCase();
-    return birdIdentifier.includes(search.toLowerCase());
-  });
-
-  const categories = ['Bird', 'Cage', 'Pair'];
-
-  return (
-    <div className="container mx-auto p-4 sm:p-6 md:p-8">
-      {isAddCageDialogOpen && <AddCageDialog
-        isOpen={isAddCageDialogOpen}
-        onOpenChange={setIsAddCageDialogOpen}
-        onSave={(data) => handleSaveCage(data)}
-        initialData={editingCage}
-       />}
-      {isFormOpen && <BirdFormDialog
-        isOpen={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        onSave={handleSaveBird}
-        initialData={editingBird}
-        allBirds={allBirds}
-        allCages={allCages}
-        allPermits={allPermits}
-      />}
-      <BirdDetailsDialog
-        bird={viewingBird}
-        allBirds={allBirds}
-        allCages={allCages}
-        allPermits={allPermits}
-        onClose={() => setViewingBird(null)}
-        onBirdClick={(bird) => {
-            setViewingBird(bird);
-        }}
-      />
-      {viewingBreedingRecord && <BreedingRecordDetailsDialog
-        record={viewingBreedingRecord}
-        allBirds={allBirds}
-        allPairs={allPairs}
-        onClose={() => setViewingBreedingRecord(null)}
-        onBirdClick={handleViewBirdClick}
-      />}
-       <AlertDialog open={!!deletingBirdId} onOpenChange={(open) => !open && setDeletingBirdId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete {birdToDelete ? getBirdIdentifier(birdToDelete) : 'this bird'}. 
-              This also removes the bird from any cage and deletes any breeding pairs it belongs to. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteBird}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-       <AlertDialog open={!!deletingCageId} onOpenChange={(open) => !open && setDeletingCageId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the cage '{cageToDelete?.name}'.
-              {cageToDelete && cageToDelete.birdIds.length > 0 && ` The ${cageToDelete.birdIds.length} bird(s) in this cage will be uncaged.`}
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteCage}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <div className="flex flex-col gap-4 mb-8">
-        <h1 className="text-4xl md:text-5xl font-bold font-headline text-center">The Avarian</h1>
-        <p className="text-lg text-muted-foreground text-center">Your modern aviary management solution.</p>
-        <div className="max-w-4xl mx-auto w-full flex flex-col sm:flex-row items-center gap-4">
-          <div className="relative w-full flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              placeholder={filterCategory === 'Bird' ? "Search for birds..." : `Cannot search in ${filterCategory.toLowerCase()}s`}
-              className="pl-10"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              disabled={filterCategory !== 'Bird'}
-            />
-          </div>
-          <div className="flex w-full sm:w-auto items-center gap-2">
-            <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="w-full sm:w-[120px]">
-                <SelectValue placeholder="Filter" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map(category => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {filterCategory === 'Bird' && (
-              <Button onClick={handleAddClick}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Bird
-              </Button>
-            )}
-            {filterCategory === 'Cage' && (
-              <Button onClick={handleAddCageClick}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Cage
-              </Button>
-            )}
-          </div>
+                {/* Summary Cards */}
+                <Card>
+                    <CardHeader>
+                         <CardTitle className="flex items-center gap-2"><Bird/> Total Birds</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-4xl font-bold">{birdCount}</p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                         <CardTitle className="flex items-center gap-2"><Users2 /> Breeding Pairs</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-4xl font-bold">{pairCount}</p>
+                    </CardContent>
+                </Card>
+                
+                {/* Upcoming Reminders Card */}
+                <Card className="md:col-span-2">
+                     <CardHeader>
+                         <CardTitle className="flex items-center gap-2"><Bell/> Upcoming Reminders</CardTitle>
+                         <CardDescription>Your next few tasks and reminders.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {upcomingReminders.length > 0 ? (
+                            <ul className="space-y-2">
+                                {upcomingReminders.map(note => (
+                                    <li key={note.id} className="text-sm flex justify-between items-center p-2 rounded-md bg-muted/50">
+                                        <span>{note.title}</span>
+                                        <span className="font-medium">{note.reminderDate ? format(parseISO(note.reminderDate), 'MMM dd') : ''}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="text-sm text-muted-foreground text-center py-4">No upcoming reminders.</p>
+                        )}
+                        <Button asChild variant="outline" className="w-full mt-4">
+                            <Link href="/notes">View All Notes</Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
-      </div>
-      
-      {filteredItems.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredItems.map((item) => {
-            if (item.category === 'Bird') {
-              return <BirdCard key={item.id} bird={item} allBirds={allBirds} allCages={allCages} allPairs={allPairs} allBreedingRecords={allBreedingRecords} allPermits={allPermits} handleEditClick={handleEditClick} handleDeleteClick={setDeletingBirdId} onBirdClick={handleViewBirdClick} onViewBreedingRecord={handleViewBreedingRecord} />
-            }
-            if (item.category === 'Cage') {
-                return <CageCard key={item.id} cage={item} allBirds={allBirds} onBirdClick={handleViewBirdClick} onEditClick={handleEditCageClick} onDeleteClick={setDeletingCageId} />
-            }
-            if (item.category === 'Pair') {
-                return <PairCard key={item.id} pair={item} allBirds={allBirds} onBirdClick={handleViewBirdClick} />
-            }
-            return null;
-          })}
-        </div>
-      ) : (
-        <div className="text-center py-16">
-          <p className="text-muted-foreground">No {filterCategory.toLowerCase()}s found. Try adjusting your search or filters.</p>
-        </div>
-      )}
-    </div>
-  );
+    );
 }

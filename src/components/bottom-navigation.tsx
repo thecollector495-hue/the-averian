@@ -7,8 +7,8 @@ import { Bird, ClipboardList, StickyNote, LayoutGrid, Sparkles } from 'lucide-re
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { href: '/', label: 'Assistant', icon: Sparkles },
-  { href: '/birds', label: 'Birds', icon: Bird },
+  { href: '/', label: 'Birds', icon: Bird },
+  { href: '/birds', label: 'Assistant', icon: Sparkles },
   { href: '/breeding', label: 'Breeding', icon: ClipboardList },
   { href: '/notes', label: 'Notes', icon: StickyNote },
   { href: '/additional', label: 'More', icon: LayoutGrid },
@@ -45,3 +45,5 @@ export function BottomNavigation() {
     </header>
   );
 }
+
+    

@@ -1,503 +1,426 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
-import dynamic from 'next/dynamic';
-import { Search, PlusCircle, Pencil, Trash2 } from 'lucide-react';
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { BirdDetailsDialog } from '@/components/bird-details-dialog';
-import { BirdCard } from '@/components/bird-card';
-import { CageCard } from '@/components/cage-card';
-import { PairCard } from '@/components/pair-card';
-import { Bird, Cage, Pair, BreedingRecord, CollectionItem, getBirdIdentifier, Transaction, Permit, BirdFormValues } from '@/lib/data';
-import { format } from 'date-fns';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { Loader2, Sparkles, Send, Bot, User, RefreshCw, AlertTriangle } from 'lucide-react';
+import { aviaryAssistant } from '@/ai/flows/assistant-flow';
 import { useItems } from '@/context/ItemsContext';
-import { CageFormValues } from '@/components/add-cage-dialog';
+import { Bird, NoteReminder, Cage, getBirdIdentifier, CustomMutation, CollectionItem, CustomSpecies, Transaction } from '@/lib/data';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useCurrency } from '@/context/CurrencyContext';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-const AddCageDialog = dynamic(() => import('@/components/add-cage-dialog').then(mod => mod.AddCageDialog), { ssr: false });
-const BirdFormDialog = dynamic(() => import('@/components/bird-form-dialog').then(mod => mod.BirdFormDialog), { ssr: false });
-const BreedingRecordDetailsDialog = dynamic(() => import('@/components/breeding-record-details-dialog').then(mod => mod.BreedingRecordDetailsDialog), { ssr: false });
+type Message = {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
+  isError?: boolean;
+  onRetry?: () => void;
+};
 
-export default function BirdsPage() {
-  const { items, addItem, addItems, updateItem, updateItems, deleteItem, deleteBirdItem } = useItems();
-  const [search, setSearch] = useState('');
-  const [filterCategory, setFilterCategory] = useState('Bird');
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingBird, setEditingBird] = useState<Bird | null>(null);
-  const [viewingBird, setViewingBird] = useState<Bird | null>(null);
-  const [viewingBreedingRecord, setViewingBreedingRecord] = useState<BreedingRecord | null>(null);
-  const [isAddCageDialogOpen, setIsAddCageDialogOpen] = useState(false);
-  const [editingCage, setEditingCage] = useState<Cage | null>(null);
-  const [deletingBirdId, setDeletingBirdId] = useState<string | null>(null);
-  const [deletingCageId, setDeletingCageId] = useState<string | null>(null);
+export default function AIAssistantPage() {
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: 'assistant-init',
+      role: 'assistant',
+      text: "Hello! How can I help you manage your aviary today?"
+    }
+  ]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  
-  const allBirds = items.filter((item): item is Bird => item.category === 'Bird');
-  const allCages = items.filter((item): item is Cage => item.category === 'Cage');
-  const allPairs = items.filter((item): item is Pair => item.category === 'Pair');
-  const allBreedingRecords = items.filter((item): item is BreedingRecord => item.category === 'BreedingRecord');
-  const allPermits = items.filter((item): item is Permit => item.category === 'Permit');
+  const { items, addItems, updateItem, updateItems, deleteItem, deleteBirdItem } = useItems();
+  const { formatCurrency } = useCurrency();
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [pendingActions, setPendingActions] = useState<any[] | null>(null);
+  const [selectedActionIndices, setSelectedActionIndices] = useState<Set<number>>(new Set());
 
-  const birdToDelete = useMemo(() => 
-    deletingBirdId ? allBirds.find(b => b.id === deletingBirdId) : null
-  , [deletingBirdId, allBirds]);
+  useEffect(() => {
+    if (pendingActions) {
+      setSelectedActionIndices(new Set(pendingActions.map((_, i) => i)));
+    }
+  }, [pendingActions]);
 
-  const cageToDelete = useMemo(() =>
-    deletingCageId ? allCages.find(c => c.id === deletingCageId) : null
-  , [deletingCageId, allCages]);
+  const handleInputResize = useCallback(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      const scrollHeight = textareaRef.current.scrollHeight;
+      textareaRef.current.style.height = `${scrollHeight}px`;
+    }
+  }, []);
 
-  const handleAddClick = () => {
-    setEditingBird(null);
-    setIsFormOpen(true);
-  };
+  useEffect(() => {
+    handleInputResize();
+  }, [input, handleInputResize]);
 
-  const handleEditClick = (bird: Bird) => {
-    setEditingBird(bird);
-    setIsFormOpen(true);
-  };
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  }, [messages]);
 
-  const handleViewBirdClick = (bird: Bird) => {
-    setViewingBird(bird);
-  };
+  const handleSend = async (queryOverride?: string) => {
+    const currentInput = queryOverride || input;
+    if (!currentInput.trim()) return;
 
-  const handleViewBreedingRecord = (record: BreedingRecord) => {
-    setViewingBreedingRecord(record);
-  }
+    setIsLoading(true);
+    setMessages(prev => prev.filter(m => !m.isError));
 
-  const handleEditCageClick = (cage: Cage) => {
-    setEditingCage(cage);
-    setIsAddCageDialogOpen(true);
-  };
-
-  const handleAddCageClick = () => {
-    setEditingCage(null);
-    setIsAddCageDialogOpen(true);
-  };
-  
-  const handleSaveCage = (data: CageFormValues & { id?: string }) => {
-    const trimmedName = data.name.trim();
-    if (!trimmedName) {
-      toast({ variant: 'destructive', title: 'Invalid Name', description: 'Cage name cannot be empty.' });
-      return;
+    if (!queryOverride) {
+      const newUserMessage: Message = { id: `user-${Date.now()}`, role: 'user', text: currentInput };
+      setMessages(prev => [...prev, newUserMessage]);
+      setInput('');
     }
 
-    const isEditing = !!data.id;
-
-    const existingCage = allCages.find(c => c.name.toLowerCase() === trimmedName.toLowerCase() && c.id !== data.id);
-    if (existingCage) {
-      toast({ variant: 'destructive', title: 'Cage Exists', description: `A cage named "${trimmedName}" already exists.` });
-      return;
-    }
-
-    if (isEditing) {
-      const updatedCage = {
-        name: trimmedName,
-        cost: data.cost,
-      };
-      updateItem(data.id!, updatedCage);
-      toast({ title: 'Cage Updated', description: `Cage "${trimmedName}" has been updated.` });
-    } else {
-        const newCage: Cage = {
-          id: `c${Date.now()}`,
-          name: trimmedName,
-          category: 'Cage',
-          birdIds: [],
-          cost: data.cost,
-        };
-
-        const itemsToAdd: (Cage | Transaction)[] = [newCage];
-
-        if (data.addToExpenses && data.cost && data.cost > 0) {
-          const newTransaction: Transaction = {
-            id: `t${Date.now()}`,
-            category: 'Transaction',
-            type: 'expense',
-            date: format(new Date(), 'yyyy-MM-dd'),
-            description: `Purchase of cage: ${newCage.name}`,
-            amount: data.cost,
-          };
-          itemsToAdd.push(newTransaction);
-          toast({ title: 'Expense Added', description: `Purchase of cage ${newCage.name} logged.` });
-        }
-        
-        addItems(itemsToAdd);
-        toast({ title: 'Cage Created', description: `Cage "${trimmedName}" has been added.` });
-    }
-  };
-
-  const handleSaveBird = (formData: BirdFormValues & { newCageName?: string }) => {
-    const isEditing = !!editingBird;
-    const birdId = editingBird?.id || `b${Date.now()}`;
-    
-    let itemsToAdd: CollectionItem[] = [];
-    let itemsToUpdate: Partial<Bird | Cage>[] = [];
-    
-    let finalCageId = formData.cageId;
-
-    // Handle new cage creation directly
-    if (formData.newCageName && formData.newCageName.trim() !== "") {
-        const trimmedCageName = formData.newCageName.trim();
-        const existingCage = allCages.find(c => c.name.toLowerCase() === trimmedCageName.toLowerCase());
-        if (existingCage) {
-            toast({ variant: 'destructive', title: 'Cage Exists', description: `A cage named "${trimmedCageName}" already exists.` });
-            return; // Stop execution if cage name is a duplicate
-        }
-        const newCage: Cage = {
-          id: `c${Date.now()}`,
-          name: trimmedCageName,
-          category: 'Cage',
-          birdIds: [birdId], // Immediately add the current bird
-          cost: 0,
-        };
-        itemsToAdd.push(newCage);
-        finalCageId = newCage.id;
-    }
-
-    const birdToSave: Bird = {
-      species: formData.species,
-      subspecies: formData.subspecies,
-      sex: formData.sex,
-      ringNumber: formData.ringNumber,
-      unbanded: formData.unbanded,
-      birthDate: formData.birthDate ? format(formData.birthDate, 'yyyy-MM-dd') : undefined,
-      visualMutations: formData.visualMutations,
-      splitMutations: formData.splitMutations,
-      fatherId: formData.fatherId,
-      motherId: formData.motherId,
-      mateId: formData.mateId,
-      offspringIds: formData.offspringIds,
-      paidPrice: formData.paidPrice,
-      estimatedValue: formData.estimatedValue,
-      id: birdId,
-      category: 'Bird',
-      status: formData.status,
-      permitId: formData.permitId,
-      saleDetails: formData.status === 'Sold' && formData.saleDate && formData.salePrice && formData.buyerInfo ? {
-        date: format(formData.saleDate, 'yyyy-MM-dd'),
-        price: formData.salePrice,
-        buyer: formData.buyerInfo
-      } : undefined,
-    };
-    
-     // --- PAIRING LOGIC ---
-    const initialMateId = editingBird?.mateId;
-    const newMateId = formData.mateId;
-
-    if (initialMateId !== newMateId) {
-      if (initialMateId) {
-        const oldMate = allBirds.find(b => b.id === initialMateId);
-        if (oldMate) {
-          itemsToUpdate.push({ id: oldMate.id, mateId: undefined });
-        }
-        const pairToDelete = allPairs.find(p =>
-          (p.maleId === birdId && p.femaleId === initialMateId) ||
-          (p.maleId === initialMateId && p.femaleId === birdId)
-        );
-        if (pairToDelete) {
-          deleteItem(pairToDelete.id);
-        }
-      }
-
-      if (newMateId) {
-        const newMate = allBirds.find(b => b.id === newMateId);
-        if (newMate) {
-          itemsToUpdate.push({ id: newMate.id, mateId: birdId });
-
-          const newPair: Pair = {
-            id: `pair${Date.now()}`,
-            category: 'Pair',
-            maleId: birdToSave.sex === 'male' ? birdId : newMateId,
-            femaleId: birdToSave.sex === 'female' ? birdId : newMateId,
-          };
-          itemsToAdd.push(newPair);
-          toast({ title: "Pair Created", description: `${getBirdIdentifier(birdToSave)} and ${getBirdIdentifier(newMate)} are now a pair.` });
-        }
-      }
-    }
-
-    // --- PARENTING LOGIC ---
-    const initialFatherId = editingBird?.fatherId;
-    const newFatherId = formData.fatherId;
-    if (initialFatherId !== newFatherId) {
-      if (initialFatherId) {
-        const oldFather = allBirds.find(b => b.id === initialFatherId);
-        if (oldFather) {
-          itemsToUpdate.push({ id: oldFather.id, offspringIds: oldFather.offspringIds.filter(id => id !== birdId) });
-        }
-      }
-      if (newFatherId) {
-        const newFather = allBirds.find(b => b.id === newFatherId);
-        if (newFather) {
-            itemsToUpdate.push({ id: newFather.id, offspringIds: [...new Set([...newFather.offspringIds, birdId])] });
-        }
-      }
-    }
-
-    const initialMotherId = editingBird?.motherId;
-    const newMotherId = formData.motherId;
-    if (initialMotherId !== newMotherId) {
-      if (initialMotherId) {
-        const oldMother = allBirds.find(b => b.id === initialMotherId);
-        if (oldMother) {
-          itemsToUpdate.push({ id: oldMother.id, offspringIds: oldMother.offspringIds.filter(id => id !== birdId) });
-        }
-      }
-      if (newMotherId) {
-        const newMother = allBirds.find(b => b.id === newMotherId);
-        if (newMother) {
-          itemsToUpdate.push({ id: newMother.id, offspringIds: [...new Set([...newMother.offspringIds, birdId])] });
-        }
-      }
-    }
-
-    // --- OFFSPRING LOGIC (Reverse linking) ---
-    const initialOffspringIds = editingBird?.offspringIds || [];
-    const newOffspringIds = formData.offspringIds || [];
-    
-    const addedOffspring = newOffspringIds.filter(id => !initialOffspringIds.includes(id));
-    const removedOffspring = initialOffspringIds.filter(id => !newOffspringIds.includes(id));
-
-    addedOffspring.forEach(offspringId => {
-        const offspring = allBirds.find(b => b.id === offspringId);
-        if (offspring) {
-            const update: Partial<Bird> = { id: offspringId };
-            if (birdToSave.sex === 'male') update.fatherId = birdId;
-            else if (birdToSave.sex === 'female') update.motherId = birdId;
-            itemsToUpdate.push(update);
-        }
-    });
-
-    removedOffspring.forEach(offspringId => {
-        const offspring = allBirds.find(b => b.id === offspringId);
-        if (offspring) {
-            const update: Partial<Bird> = { id: offspringId };
-            if (birdToSave.sex === 'male' && offspring.fatherId === birdId) update.fatherId = undefined;
-            if (birdToSave.sex === 'female' && offspring.motherId === birdId) update.motherId = undefined;
-            itemsToUpdate.push(update);
-        }
-    });
-
-    if (isEditing) {
-        itemsToUpdate.push(birdToSave);
-    } else {
-        itemsToAdd.push(birdToSave);
-    }
-
-    // Un-cage from old cage if necessary
-    const oldCage = allCages.find(cage => cage.birdIds.includes(birdId));
-    if (oldCage && oldCage.id !== finalCageId) {
-        itemsToUpdate.push({ id: oldCage.id, birdIds: oldCage.birdIds.filter(id => id !== birdId) });
-    }
-
-    // Add to a selected existing cage
-    if (finalCageId && !formData.newCageName) {
-        const newCage = allCages.find(cage => cage.id === finalCageId);
-        if (newCage && !newCage.birdIds.includes(birdId)) {
-            itemsToUpdate.push({ id: newCage.id, birdIds: [...newCage.birdIds, birdId] });
-        }
-    }
-
-    // Transaction logic
-    if (formData.addToExpenses && formData.paidPrice && formData.paidPrice > 0 && !isEditing) {
-        const newTransaction: Transaction = {
-          id: `t${Date.now()}`,
-          category: 'Transaction',
-          type: 'expense',
-          date: format(new Date(), 'yyyy-MM-dd'),
-          description: `Purchase of ${getBirdIdentifier(birdToSave)}`,
-          amount: formData.paidPrice,
-          relatedBirdId: birdId,
-        };
-        itemsToAdd.push(newTransaction);
-        toast({ title: "Expense Added", description: `Purchase of ${getBirdIdentifier(birdToSave)} logged.` });
-    }
+    try {
+      const context = JSON.stringify(items.filter(i => ['Bird', 'NoteReminder', 'Cage', 'CustomMutation', 'CustomSpecies'].includes(i.category)));
+      const assistantResponse = await aviaryAssistant({ query: currentInput, context });
       
-    const wasJustSold = editingBird?.status !== 'Sold' && formData.status === 'Sold';
-    if (formData.createSaleTransaction && wasJustSold && birdToSave.saleDetails) {
-         const newTransaction: Transaction = {
-            id: `t${Date.now()}`,
-            category: 'Transaction',
-            type: 'income',
-            date: birdToSave.saleDetails.date,
-            description: `Sale of ${getBirdIdentifier(birdToSave)}`,
-            amount: birdToSave.saleDetails.price,
-            relatedBirdId: birdId,
-        };
-        itemsToAdd.push(newTransaction);
-        toast({ title: "Income Added", description: `Sale of ${getBirdIdentifier(birdToSave)} logged.` });
-    }
-    
-    // Batch updates and additions
-    if (itemsToUpdate.length > 0) updateItems(itemsToUpdate as CollectionItem[]);
-    if (itemsToAdd.length > 0) addItems(itemsToAdd);
-    
-     toast({
-        title: isEditing ? "Bird Updated" : "Bird Added",
-        description: `${getBirdIdentifier(birdToSave)} has been saved.`,
-      });
-  };
+      const newAssistantMessage: Message = { id: `assistant-${Date.now()}`, role: 'assistant', text: assistantResponse.response };
+      setMessages(prev => [...prev, newAssistantMessage]);
 
-  const handleDeleteBird = () => {
-    if (!birdToDelete) return;
-    deleteBirdItem(birdToDelete.id);
-    toast({ title: "Bird Deleted", description: `${getBirdIdentifier(birdToDelete)} has been removed.` });
-    setDeletingBirdId(null);
-  }
+      const hasDataActions = assistantResponse.actions && assistantResponse.actions.some(a => a.action !== 'answer');
+
+      if (hasDataActions) {
+        setPendingActions(assistantResponse.actions);
+      }
+      
+    } catch (error: any) {
+      console.error('AI assistant failed:', error);
+
+      const errorMessageText = error.message?.includes('503') 
+        ? "The AI model is currently overloaded. Please try again in a moment."
+        : "Couldn't connect right now. Please try again.";
+      
+      const newErrorMessage: Message = {
+        id: `assistant-err-${Date.now()}`,
+        role: 'assistant',
+        text: errorMessageText,
+        isError: true,
+        onRetry: () => handleSend(currentInput),
+      };
+      setMessages(prev => [...prev, newErrorMessage]);
+       toast({
+          variant: "destructive",
+          title: "AI Request Failed",
+          description: error.message || "An unknown error occurred.",
+        })
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
-  const handleDeleteCage = () => {
-    if (!deletingCageId) return;
-    deleteItem(deletingCageId);
-    toast({ title: 'Cage Deleted', description: 'The cage has been removed.' });
-    setDeletingCageId(null);
-  };
+  const handleConfirmActions = () => {
+    if (!pendingActions) return;
 
-  const filteredItems = items.filter(item => {
-    if (item.category !== filterCategory) return false;
+    const actionsToExecute = pendingActions.filter((_, index) => selectedActionIndices.has(index));
 
-    if (filterCategory !== 'Bird' || !search) {
-        return true;
+    const allCages = items.filter((item): item is Cage => item.category === 'Cage');
+    let itemsToAdd: CollectionItem[] = [];
+    let itemsToUpdate: Partial<CollectionItem>[] = [];
+    let idsToDelete: { type: 'Bird' | 'Cage' | 'Note', id: string }[] = [];
+    let summary: string[] = [];
+
+    for (const action of actionsToExecute) {
+      if (!action.data && !['answer', 'deleteBird', 'deleteCage', 'deleteNote'].includes(action.action)) continue;
+
+      switch(action.action) {
+        case 'addBird': {
+          const birdData = action.data as any;
+          const newBirdId = `b${Date.now()}${Math.random()}`;
+          const newBird: Bird = {
+            species: "",
+            sex: "unsexed",
+            visualMutations: [],
+            splitMutations: [],
+            offspringIds: [],
+            status: "Available",
+            ...birdData,
+            id: newBirdId,
+            category: 'Bird',
+          };
+          itemsToAdd.push(newBird);
+          if (birdData.cageName) {
+            const existingCage = allCages.find(c => c.name.toLowerCase() === birdData.cageName.toLowerCase());
+            if (existingCage) {
+                itemsToUpdate.push({ id: existingCage.id, birdIds: [...existingCage.birdIds, newBirdId] });
+            } else {
+                const newCage: Cage = { id: `c${Date.now()}${Math.random()}`, name: birdData.cageName, category: 'Cage', birdIds: [newBirdId] };
+                itemsToAdd.push(newCage);
+            }
+          }
+          summary.push(`Added bird: ${getBirdIdentifier(newBird)}`);
+          break;
+        }
+        case 'updateBird': {
+            const updateData = action.data as any;
+            const updatesPayload = { ...updateData.updates };
+
+            if (updatesPayload.status === 'Sold' && updatesPayload.salePrice) {
+                updatesPayload.saleDetails = {
+                    date: format(new Date(updatesPayload.saleDate || new Date()), 'yyyy-MM-dd'),
+                    price: updatesPayload.salePrice,
+                    buyer: updatesPayload.buyerInfo || 'Unknown',
+                };
+                delete updatesPayload.salePrice;
+                delete updatesPayload.saleDate;
+                delete updatesPayload.buyerInfo;
+            }
+            itemsToUpdate.push({ id: updateData.id, ...updatesPayload });
+            summary.push(`Updated bird ID ${updateData.id}`);
+            break;
+        }
+        case 'addNote': {
+          const noteData = action.data as any;
+          const newNote: NoteReminder = {
+             title: "", isReminder: false, isRecurring: false, recurrencePattern: 'none', associatedBirdIds: [], subTasks: [], completed: false,
+             ...noteData, id: `nr${Date.now()}`, category: 'NoteReminder',
+             reminderDate: noteData.reminderDate ? format(new Date(noteData.reminderDate), 'yyyy-MM-dd') : undefined,
+          };
+          itemsToAdd.push(newNote);
+          summary.push(`Added note: "${newNote.title}"`);
+          break;
+        }
+        case 'updateNote':
+        case 'updateCage': {
+            const updateData = action.data as any;
+            updateItem(updateData.id, updateData.updates);
+            summary.push(`Updated ${action.action.includes('Note') ? 'note' : 'cage'}`);
+            break;
+        }
+        case 'addCage': {
+          const cageData = action.data as any;
+          if (cageData.names && cageData.names.length > 0) {
+            const newCages: Cage[] = cageData.names.map((name: string) => ({ id: `c${Date.now()}${Math.random()}`, category: 'Cage', name: name, birdIds: [], cost: cageData.cost }));
+            itemsToAdd.push(...newCages);
+            if (cageData.cost && cageData.cost > 0) {
+              const newTransactions: Transaction[] = newCages.map(cage => ({ id: `t${Date.now()}${Math.random()}`, category: 'Transaction', type: 'expense', date: format(new Date(), 'yyyy-MM-dd'), description: `Purchase of cage: ${cage.name}`, amount: cage.cost! }));
+              itemsToAdd.push(...newTransactions);
+            }
+            summary.push(`Added ${newCages.length} cage(s)`);
+          }
+          break;
+        }
+        case 'addMutation': {
+          const mutationData = action.data as any;
+          if (mutationData.names && mutationData.names.length > 0) {
+              const newMutations: CustomMutation[] = mutationData.names.map((name: string) => ({ id: `cm_${Date.now()}${Math.random()}`, category: 'CustomMutation', name: name }));
+              itemsToAdd.push(...newMutations);
+              summary.push(`Added ${newMutations.length} mutation(s)`);
+          }
+          break;
+        }
+        case 'addTransaction': {
+            const transData = action.data as any;
+            const newTransaction: Transaction = {
+                id: `t${Date.now()}${Math.random()}`,
+                category: 'Transaction',
+                ...transData,
+                date: format(new Date(transData.date || new Date()), 'yyyy-MM-dd'),
+            };
+            itemsToAdd.push(newTransaction);
+            summary.push(`Added ${newTransaction.type} transaction`);
+            break;
+        }
+        case 'deleteBird':
+            (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'Bird', id }));
+            break;
+        case 'deleteCage':
+            (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'Cage', id }));
+            break;
+        case 'deleteNote':
+            (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'Note', id }));
+            break;
+      }
+    }
+    if (itemsToAdd.length > 0) addItems(itemsToAdd);
+    if (itemsToUpdate.length > 0) updateItems(itemsToUpdate as CollectionItem[]);
+    if (idsToDelete.length > 0) {
+        summary.push(`Deleted ${idsToDelete.length} item(s)`);
+        idsToDelete.forEach(item => {
+            if (item.type === 'Bird') deleteBirdItem(item.id);
+            else deleteItem(item.id);
+        });
     }
 
-    const bird = item as Bird;
-    const birdIdentifier = `${bird.species} ${bird.subspecies || ''} ${bird.ringNumber || ''} ${bird.birthDate || ''} ${(bird.visualMutations || []).join(' ')} ${(bird.splitMutations || []).join(' ')}`.toLowerCase();
-    return birdIdentifier.includes(search.toLowerCase());
-  });
+    toast({ title: 'AI Actions Completed', description: summary.length > 0 ? summary.join(', ') + '.' : "No actions were taken." });
+    setPendingActions(null);
+  };
 
-  const categories = ['Bird', 'Cage', 'Pair'];
+  const generateActionSummary = (actions: any[] | null): string[] => {
+    if (!actions) return [];
+    return actions.filter(a => a.action !== 'answer').map(action => {
+      const { action: type, data } = action;
+      switch (type) {
+        case 'addBird': return `Add Bird: ${data.species || 'Unknown'}`;
+        case 'updateBird': return `Update Bird (ID: ${data.id})`;
+        case 'addNote': {
+            let summary = `Add Note: "${data.title}"`;
+            if (data.content) {
+                const truncatedContent = data.content.length > 50 ? `${data.content.substring(0, 50)}...` : data.content;
+                summary += ` - "${truncatedContent}"`;
+            }
+            return summary;
+        }
+        case 'updateNote': return `Update Note (ID: ${data.id})`;
+        case 'addCage': {
+          const names = data.names || [];
+          const truncatedNames = names.length > 5 ? `${names.slice(0, 5).join(', ')}, ...` : names.join(', ');
+          let summary = `Add ${names.length || 1} cage(s): ${truncatedNames}`;
+          if (data.cost) {
+              summary += ` at a cost of ${formatCurrency(data.cost)} each`;
+          }
+          return summary;
+        }
+        case 'updateCage': return `Update Cage (ID: ${data.id})`;
+        case 'addMutation': return `Add ${data.names?.length || 1} mutation(s): ${data.names?.join(', ')}`;
+        case 'addTransaction': return `Add ${data.type} transaction for ${formatCurrency(data.amount)}`;
+        case 'deleteBird': return `Delete ${data.ids?.length || 0} bird(s)`;
+        case 'deleteCage': return `Delete ${data.ids?.length || 0} cage(s)`;
+        case 'deleteNote': return `Delete ${data.ids?.length || 0} note(s)`;
+        default: return `Perform action: ${type}`;
+      }
+    });
+  };
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 md:p-8">
-      {isAddCageDialogOpen && <AddCageDialog
-        isOpen={isAddCageDialogOpen}
-        onOpenChange={setIsAddCageDialogOpen}
-        onSave={(data) => handleSaveCage(data)}
-        initialData={editingCage}
-       />}
-      {isFormOpen && <BirdFormDialog
-        isOpen={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        onSave={handleSaveBird}
-        initialData={editingBird}
-        allBirds={allBirds}
-        allCages={allCages}
-        allPermits={allPermits}
-      />}
-      <BirdDetailsDialog
-        bird={viewingBird}
-        allBirds={allBirds}
-        allCages={allCages}
-        allPermits={allPermits}
-        onClose={() => setViewingBird(null)}
-        onBirdClick={(bird) => {
-            setViewingBird(bird);
-        }}
-      />
-      {viewingBreedingRecord && <BreedingRecordDetailsDialog
-        record={viewingBreedingRecord}
-        allBirds={allBirds}
-        allPairs={allPairs}
-        onClose={() => setViewingBreedingRecord(null)}
-        onBirdClick={handleViewBirdClick}
-      />}
-       <AlertDialog open={!!deletingBirdId} onOpenChange={(open) => !open && setDeletingBirdId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete {birdToDelete ? getBirdIdentifier(birdToDelete) : 'this bird'}. 
-              This also removes the bird from any cage and deletes any breeding pairs it belongs to. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteBird}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-       <AlertDialog open={!!deletingCageId} onOpenChange={(open) => !open && setDeletingCageId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the cage '{cageToDelete?.name}'.
-              {cageToDelete && cageToDelete.birdIds.length > 0 && ` The ${cageToDelete.birdIds.length} bird(s) in this cage will be uncaged.`}
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteCage}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+    <div className="flex flex-col h-[calc(100vh_-_4rem)]">
+        {pendingActions && (
+            <AlertDialog open={!!pendingActions} onOpenChange={(open) => !open && setPendingActions(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm AI Actions</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          The assistant proposes the following actions. Select the ones you want to perform.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="mt-2 text-sm bg-muted p-3 rounded-md max-h-60 overflow-y-auto space-y-4">
+                        {generateActionSummary(pendingActions).map((summary, index) => (
+                            <div key={index} className="flex items-start space-x-3">
+                                <Checkbox
+                                    id={`action-${index}`}
+                                    checked={selectedActionIndices.has(index)}
+                                    onCheckedChange={(checked) => {
+                                        setSelectedActionIndices(current => {
+                                            const newSet = new Set(current);
+                                            if (checked) {
+                                                newSet.add(index);
+                                            } else {
+                                                newSet.delete(index);
+                                            }
+                                            return newSet;
+                                        });
+                                    }}
+                                />
+                                <label
+                                    htmlFor={`action-${index}`}
+                                    className="font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                    {summary}
+                                </label>
+                            </div>
+                        ))}
+                    </div>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setPendingActions(null)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleConfirmActions} disabled={selectedActionIndices.size === 0}>
+                            Confirm ({selectedActionIndices.size})
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        )}
+        <div className="shrink-0 text-center p-4 border-b">
+            <h1 className="text-2xl font-bold flex items-center justify-center gap-2"><Sparkles className="text-primary"/> AI Aviary Assistant</h1>
+        </div>
+        
+        <div className="shrink-0 p-4 border-b">
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Experimental Feature</AlertTitle>
+              <AlertDescription>
+                Please double-check the AI's proposed actions before confirming, as it can make mistakes. It's designed to simplify complex tasks, not replace manual oversight.
+              </AlertDescription>
+            </Alert>
+        </div>
+        
+        <ScrollArea className="flex-1 p-4">
+            <div className="space-y-6 max-w-3xl mx-auto">
+            {messages.map((message) => (
+                <div key={message.id} className={cn("flex items-start gap-3", message.role === 'user' && "justify-end")}>
+                     {message.role === 'assistant' && (
+                        <div className="bg-primary text-primary-foreground rounded-full p-2">
+                            <Bot className="h-5 w-5"/>
+                        </div>
+                     )}
+                     <div className={cn("rounded-lg px-4 py-3 max-w-[85%] shadow-sm", message.role === 'user' ? "bg-muted" : "bg-card", message.isError && "bg-destructive/10 border border-destructive/20")}>
+                        {message.isError ? (
+                          <div className="flex flex-col items-start gap-2">
+                            <p className="text-sm whitespace-pre-wrap text-destructive">{message.text}</p>
+                            {message.onRetry && (
+                              <Button variant="outline" size="sm" onClick={message.onRetry}>
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                Retry
+                              </Button>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-sm whitespace-pre-wrap">{message.text}</p>
+                        )}
+                     </div>
+                     {message.role === 'user' && (
+                        <div className="bg-muted rounded-full p-2">
+                           <User className="h-5 w-5"/>
+                        </div>
+                     )}
+                </div>
+            ))}
+             {isLoading && (
+                <div className="flex items-start gap-3">
+                    <div className="bg-primary text-primary-foreground rounded-full p-2">
+                        <Bot className="h-5 w-5"/>
+                    </div>
+                    <div className="rounded-lg px-4 py-2 bg-card flex items-center shadow-sm">
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                </div>
+            )}
+            </div>
+        </ScrollArea>
 
-      <div className="flex flex-col gap-4 mb-8">
-        <h1 className="text-4xl md:text-5xl font-bold font-headline text-center">My Aviary</h1>
-        <p className="text-lg text-muted-foreground text-center">Your bird collection at a glance.</p>
-        <div className="max-w-4xl mx-auto w-full flex flex-col sm:flex-row items-center gap-4">
-          <div className="relative w-full flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              placeholder={filterCategory === 'Bird' ? "Search for birds..." : `Cannot search in ${filterCategory.toLowerCase()}s`}
-              className="pl-10"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              disabled={filterCategory !== 'Bird'}
-            />
-          </div>
-          <div className="flex w-full sm:w-auto items-center gap-2">
-            <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="w-full sm:w-[120px]">
-                <SelectValue placeholder="Filter" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map(category => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {filterCategory === 'Bird' && (
-              <Button onClick={handleAddClick}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Bird
-              </Button>
-            )}
-            {filterCategory === 'Cage' && (
-              <Button onClick={handleAddCageClick}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Cage
-              </Button>
-            )}
-          </div>
+        <div className="shrink-0 border-t p-4 bg-background">
+            <div className="max-w-3xl mx-auto flex items-end gap-2">
+                <Textarea
+                    ref={textareaRef}
+                    rows={1}
+                    placeholder="e.g., Add a male cockatiel to a new cage named 'Flight 1'"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            if (!isLoading) handleSend();
+                        }
+                    }}
+                    disabled={isLoading}
+                    className="flex-1 resize-none max-h-48 text-base"
+                />
+                <Button onClick={() => handleSend()} disabled={isLoading || !input.trim()} size="lg">
+                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                    <span className="sr-only">Send</span>
+                </Button>
+            </div>
         </div>
-      </div>
-      
-      {filteredItems.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredItems.map((item) => {
-            if (item.category === 'Bird') {
-              return <BirdCard key={item.id} bird={item} allBirds={allBirds} allCages={allCages} allPairs={allPairs} allBreedingRecords={allBreedingRecords} allPermits={allPermits} handleEditClick={handleEditClick} handleDeleteClick={setDeletingBirdId} onBirdClick={handleViewBirdClick} onViewBreedingRecord={handleViewBreedingRecord} />
-            }
-            if (item.category === 'Cage') {
-                return <CageCard key={item.id} cage={item} allBirds={allBirds} onBirdClick={handleViewBirdClick} onEditClick={handleEditCageClick} onDeleteClick={setDeletingCageId} />
-            }
-            if (item.category === 'Pair') {
-                return <PairCard key={item.id} pair={item} allBirds={allBirds} onBirdClick={handleViewBirdClick} />
-            }
-            return null;
-          })}
-        </div>
-      ) : (
-        <div className="text-center py-16">
-          <p className="text-muted-foreground">No {filterCategory.toLowerCase()}s found. Try adjusting your search or filters.</p>
-        </div>
-      )}
     </div>
   );
 }
+
+    

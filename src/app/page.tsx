@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 
 type Message = {
   id: string;
@@ -37,6 +38,13 @@ export default function AIAssistantPage() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [pendingActions, setPendingActions] = useState<any[] | null>(null);
+  const [selectedActionIndices, setSelectedActionIndices] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    if (pendingActions) {
+      setSelectedActionIndices(new Set(pendingActions.map((_, i) => i)));
+    }
+  }, [pendingActions]);
 
   const handleInputResize = useCallback(() => {
     if (textareaRef.current) {
@@ -82,17 +90,26 @@ export default function AIAssistantPage() {
         setPendingActions(assistantResponse.actions);
       }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('AI assistant failed:', error);
+
+      const errorMessageText = error.message?.includes('503') 
+        ? "The AI model is currently overloaded. Please try again in a moment."
+        : "Couldn't connect right now. Please try again.";
       
       const newErrorMessage: Message = {
         id: `assistant-err-${Date.now()}`,
         role: 'assistant',
-        text: "Couldn't connect right now. Please try again.",
+        text: errorMessageText,
         isError: true,
         onRetry: () => handleSend(currentInput),
       };
       setMessages(prev => [...prev, newErrorMessage]);
+       toast({
+          variant: "destructive",
+          title: "AI Request Failed",
+          description: error.message || "An unknown error occurred.",
+        })
     } finally {
       setIsLoading(false);
     }
@@ -101,13 +118,15 @@ export default function AIAssistantPage() {
   const handleConfirmActions = () => {
     if (!pendingActions) return;
 
+    const actionsToExecute = pendingActions.filter((_, index) => selectedActionIndices.has(index));
+
     const allCages = items.filter((item): item is Cage => item.category === 'Cage');
     let itemsToAdd: CollectionItem[] = [];
     let itemsToUpdate: Partial<CollectionItem>[] = [];
     let idsToDelete: { type: 'Bird' | 'Cage' | 'Note', id: string }[] = [];
     let summary: string[] = [];
 
-    for (const action of pendingActions) {
+    for (const action of actionsToExecute) {
       if (!action.data && !['answer', 'deleteBird', 'deleteCage', 'deleteNote'].includes(action.action)) continue;
 
       switch(action.action) {
@@ -233,7 +252,7 @@ export default function AIAssistantPage() {
     setPendingActions(null);
   };
 
-  const generateActionSummary = (actions: any[]): string[] => {
+  const generateActionSummary = (actions: any[] | null): string[] => {
     if (!actions) return [];
     return actions.filter(a => a.action !== 'answer').map(action => {
       const { action: type, data } = action;
@@ -262,17 +281,41 @@ export default function AIAssistantPage() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Confirm AI Actions</AlertDialogTitle>
                         <AlertDialogDescription>
-                          The assistant proposes the following actions. Please review before confirming.
-                          <div className="mt-4 text-left bg-muted p-3 rounded-md max-h-60 overflow-y-auto">
-                            <ul className="list-disc list-inside space-y-1">
-                                {generateActionSummary(pendingActions).map((action, i) => <li key={i}>{action}</li>)}
-                            </ul>
-                          </div>
+                          The assistant proposes the following actions. Select the ones you want to perform.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
+                    <div className="mt-2 text-sm bg-muted p-3 rounded-md max-h-60 overflow-y-auto space-y-4">
+                        {generateActionSummary(pendingActions).map((summary, index) => (
+                            <div key={index} className="flex items-start space-x-3">
+                                <Checkbox
+                                    id={`action-${index}`}
+                                    checked={selectedActionIndices.has(index)}
+                                    onCheckedChange={(checked) => {
+                                        setSelectedActionIndices(current => {
+                                            const newSet = new Set(current);
+                                            if (checked) {
+                                                newSet.add(index);
+                                            } else {
+                                                newSet.delete(index);
+                                            }
+                                            return newSet;
+                                        });
+                                    }}
+                                />
+                                <label
+                                    htmlFor={`action-${index}`}
+                                    className="font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                    {summary}
+                                </label>
+                            </div>
+                        ))}
+                    </div>
                     <AlertDialogFooter>
                         <AlertDialogCancel onClick={() => setPendingActions(null)}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleConfirmActions}>Confirm</AlertDialogAction>
+                        <AlertDialogAction onClick={handleConfirmActions} disabled={selectedActionIndices.size === 0}>
+                            Confirm ({selectedActionIndices.size})
+                        </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

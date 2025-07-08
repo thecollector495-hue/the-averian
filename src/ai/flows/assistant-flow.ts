@@ -27,6 +27,10 @@ const AddBirdDataSchema = z.object({
     splitMutations: z.array(z.string()).optional(),
     status: z.enum(['Available', 'Sold', 'Deceased', 'Hand-rearing']).default('Available'),
     cageName: z.string().optional().describe("The name of the cage to put the bird in. Can be an existing cage or a new one."),
+    // Sale details for updates
+    salePrice: z.number().optional().describe("The price the bird was sold for."),
+    saleDate: z.string().optional().describe("The date the bird was sold in YYYY-MM-DD format."),
+    buyerInfo: z.string().optional().describe("Information about the buyer."),
 }).describe("The data required to add a new bird.");
 
 const UpdateBirdDataSchema = z.object({
@@ -67,9 +71,17 @@ const DeleteDataSchema = z.object({
     ids: z.array(z.string()).describe("An array of IDs for the items to be deleted."),
 }).describe("The data required to delete one or more items.");
 
+const AddTransactionDataSchema = z.object({
+    type: z.enum(['income', 'expense']),
+    date: z.string().describe("The date of the transaction in YYYY-MM-DD format."),
+    description: z.string(),
+    amount: z.number(),
+    relatedBirdId: z.string().optional().describe("The ID of a bird related to this transaction."),
+}).describe("The data required to add a new financial transaction.");
+
 const ActionSchema = z.object({
-    action: z.enum(['addBird', 'updateBird', 'addNote', 'updateNote', 'addCage', 'updateCage', 'addMutation', 'deleteBird', 'deleteCage', 'deleteNote', 'answer']).describe("The action the assistant should take."),
-    data: z.union([AddBirdDataSchema, UpdateBirdDataSchema, AddNoteDataSchema, UpdateNoteDataSchema, AddCageDataSchema, UpdateCageDataSchema, AddMutationDataSchema, DeleteDataSchema, z.null()]).describe("The data associated with the action. This should be null for 'answer' actions."),
+    action: z.enum(['addBird', 'updateBird', 'addNote', 'updateNote', 'addCage', 'updateCage', 'addMutation', 'deleteBird', 'deleteCage', 'deleteNote', 'answer', 'addTransaction']).describe("The action the assistant should take."),
+    data: z.union([AddBirdDataSchema, UpdateBirdDataSchema, AddNoteDataSchema, UpdateNoteDataSchema, AddCageDataSchema, UpdateCageDataSchema, AddMutationDataSchema, DeleteDataSchema, AddTransactionDataSchema, z.null()]).describe("The data associated with the action. This should be null for 'answer' actions."),
 });
 
 const AviaryAssistantOutputSchema = z.object({
@@ -96,9 +108,15 @@ Analyze the query and determine a list of actions the user wants to perform. You
 - If they want to update a note, use the 'updateNote' action. You MUST find the note's ID.
 - If they want to add one or more cages, use the 'addCage' action. If the user asks to add multiple cages, such as "cages 100 to 102", populate the 'names' array with each individual cage name: ["100", "101", "102"]. If they mention a cost, include it in the 'cost' field.
 - If they want to update a cage's name or cost, use 'updateCage'. You MUST find the cage's ID.
-- To remove items, use 'deleteBird', 'deleteCage', or 'deleteNote'. Find the ID(s) of the item(s) to remove. For deletions, your text response should confirm what you are about to do, as the user will need to confirm this action in the UI. For example "I am ready to delete 15 cages. Please confirm."
+- To remove items, use 'deleteBird', 'deleteCage', or 'deleteNote'. Find the ID(s) of the item(s) to remove.
+- If they want to add a transaction, use 'addTransaction'.
+- **IMPORTANT**: If a user asks to sell a bird (e.g., "sell bird A123 for 500 to John"), you must generate TWO actions:
+    1. An 'updateBird' action. Set the 'status' to 'Sold' and include 'salePrice', 'saleDate' (in YYYY-MM-DD format, use today if not specified), and 'buyerInfo' in the 'updates' object.
+    2. An 'addTransaction' action. Set the 'type' to 'income', and include the 'amount', 'description', and 'relatedBirdId'.
 - If they want to add one or more mutations, use the 'addMutation' action.
 - If they are just asking a question or having a conversation, use the 'answer' action and provide a helpful text response. The data field should be null for 'answer' actions.
+
+For any set of actions that will add, update, or delete data, your text 'response' should clearly state what you are about to do and ask for confirmation. For example: "I'm ready to mark bird A123 as sold and add an income transaction of R500. Please confirm." or "I'm ready to add 10 cages. Please confirm."
 
 Always provide a friendly confirmation message in the 'response' field that summarizes all actions taken or answers the user's question.
 

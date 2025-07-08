@@ -36,7 +36,7 @@ export default function AIAssistantPage() {
   const { items, addItems, updateItem, updateItems, deleteItem, deleteBirdItem } = useItems();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [actionToConfirm, setActionToConfirm] = useState<any | null>(null);
+  const [pendingActions, setPendingActions] = useState<any[] | null>(null);
 
   const handleInputResize = useCallback(() => {
     if (textareaRef.current) {
@@ -73,138 +73,14 @@ export default function AIAssistantPage() {
       const context = JSON.stringify(items.filter(i => ['Bird', 'NoteReminder', 'Cage', 'CustomMutation', 'CustomSpecies'].includes(i.category)));
       const assistantResponse = await aviaryAssistant({ query: currentInput, context });
       
-      const allCages = items.filter((item): item is Cage => item.category === 'Cage');
-      
-      if (assistantResponse.actions && assistantResponse.actions.length > 0) {
-        let itemsToAdd: CollectionItem[] = [];
-        let itemsToUpdate: Partial<CollectionItem>[] = [];
-
-        for (const action of assistantResponse.actions) {
-          if (!action.data && action.action !== 'answer') continue;
-
-          switch(action.action) {
-            case 'addBird': {
-              const birdData = action.data as any;
-              const newBirdId = `b${Date.now()}${Math.random()}`;
-              const newBird: Bird = {
-                species: "",
-                sex: "unsexed",
-                visualMutations: [],
-                splitMutations: [],
-                offspringIds: [],
-                status: "Available",
-                ...birdData,
-                id: newBirdId,
-                category: 'Bird',
-              };
-              
-              itemsToAdd.push(newBird);
-              
-              if (birdData.cageName) {
-                const existingCage = allCages.find(c => c.name.toLowerCase() === birdData.cageName.toLowerCase());
-                if (existingCage) {
-                    itemsToUpdate.push({ id: existingCage.id, birdIds: [...existingCage.birdIds, newBirdId] });
-                } else {
-                    const newCage: Cage = {
-                        id: `c${Date.now()}${Math.random()}`,
-                        name: birdData.cageName,
-                        category: 'Cage',
-                        birdIds: [newBirdId]
-                    };
-                    itemsToAdd.push(newCage);
-                }
-              }
-              
-              toast({ title: "AI Action: Bird Added", description: `Successfully added ${getBirdIdentifier(newBird)}.` });
-              break;
-            }
-            case 'updateBird': {
-              const updateData = action.data as any;
-              itemsToUpdate.push({ id: updateData.id, ...updateData.updates });
-              toast({ title: "AI Action: Bird Updated", description: `Successfully updated bird ID ${updateData.id}.` });
-              break;
-            }
-            case 'addNote': {
-              const noteData = action.data as any;
-              const newNote: NoteReminder = {
-                 title: "",
-                 isReminder: false,
-                 isRecurring: false,
-                 recurrencePattern: 'none',
-                 associatedBirdIds: [],
-                 subTasks: [],
-                 completed: false,
-                 ...noteData,
-                 id: `nr${Date.now()}`,
-                 category: 'NoteReminder',
-                 reminderDate: noteData.reminderDate ? format(new Date(noteData.reminderDate), 'yyyy-MM-dd') : undefined,
-              };
-              itemsToAdd.push(newNote);
-              toast({ title: "AI Action: Note Added", description: `Successfully added note: "${newNote.title}"` });
-              break;
-            }
-            case 'addCage': {
-              const cageData = action.data as any;
-              if (cageData.names && cageData.names.length > 0) {
-                const newCages: Cage[] = cageData.names.map((name: string) => ({
-                  id: `c${Date.now()}${Math.random()}`,
-                  category: 'Cage',
-                  name: name,
-                  birdIds: [],
-                  cost: cageData.cost
-                }));
-                itemsToAdd.push(...newCages);
-
-                if (cageData.cost && cageData.cost > 0) {
-                  const newTransactions: Transaction[] = newCages.map(cage => ({
-                    id: `t${Date.now()}${Math.random()}`,
-                    category: 'Transaction',
-                    type: 'expense',
-                    date: format(new Date(), 'yyyy-MM-dd'),
-                    description: `Purchase of cage: ${cage.name}`,
-                    amount: cage.cost!,
-                  }));
-                  itemsToAdd.push(...newTransactions);
-                }
-
-                toast({ title: "AI Action: Cages Added", description: `Successfully added ${newCages.length} cage(s).` });
-              }
-              break;
-            }
-            case 'addMutation': {
-              const mutationData = action.data as any;
-              if (mutationData.names && mutationData.names.length > 0) {
-                  const newMutations: CustomMutation[] = mutationData.names.map((name: string) => ({
-                      id: `cm_${Date.now()}${Math.random()}`,
-                      category: 'CustomMutation',
-                      name: name,
-                  }));
-                  itemsToAdd.push(...newMutations);
-                  toast({ title: "AI Action: Mutations Added", description: `Successfully added ${newMutations.length} mutation(s).` });
-              }
-              break;
-            }
-            case 'updateNote':
-            case 'updateCage': {
-                const updateData = action.data as any;
-                updateItem(updateData.id, updateData.updates);
-                toast({ title: `AI Action: ${action.action.includes('Note') ? 'Note' : 'Cage'} Updated` });
-                break;
-            }
-            case 'deleteBird':
-            case 'deleteCage':
-            case 'deleteNote': {
-                setActionToConfirm(action);
-                break;
-            }
-          }
-        }
-        if (itemsToAdd.length > 0) addItems(itemsToAdd);
-        if (itemsToUpdate.length > 0) updateItems(itemsToUpdate as CollectionItem[]);
-      }
-
       const newAssistantMessage: Message = { id: `assistant-${Date.now()}`, role: 'assistant', text: assistantResponse.response };
       setMessages(prev => [...prev, newAssistantMessage]);
+
+      const hasDataActions = assistantResponse.actions && assistantResponse.actions.some(a => a.action !== 'answer');
+
+      if (hasDataActions) {
+        setPendingActions(assistantResponse.actions);
+      }
       
     } catch (error) {
       console.error('AI assistant failed:', error);
@@ -222,46 +98,181 @@ export default function AIAssistantPage() {
     }
   };
   
-  const handleConfirmDelete = () => {
-    if (!actionToConfirm) return;
+  const handleConfirmActions = () => {
+    if (!pendingActions) return;
 
-    const { action, data } = actionToConfirm;
-    const ids = (data as any)?.ids || [];
+    const allCages = items.filter((item): item is Cage => item.category === 'Cage');
+    let itemsToAdd: CollectionItem[] = [];
+    let itemsToUpdate: Partial<CollectionItem>[] = [];
+    let idsToDelete: { type: 'Bird' | 'Cage' | 'Note', id: string }[] = [];
+    let summary: string[] = [];
 
-    if (ids.length === 0) {
-        toast({ variant: 'destructive', title: 'Deletion Failed', description: 'No items were selected for deletion.' });
-        setActionToConfirm(null);
-        return;
-    }
+    for (const action of pendingActions) {
+      if (!action.data && !['answer', 'deleteBird', 'deleteCage', 'deleteNote'].includes(action.action)) continue;
 
-    switch (action) {
+      switch(action.action) {
+        case 'addBird': {
+          const birdData = action.data as any;
+          const newBirdId = `b${Date.now()}${Math.random()}`;
+          const newBird: Bird = {
+            species: "",
+            sex: "unsexed",
+            visualMutations: [],
+            splitMutations: [],
+            offspringIds: [],
+            status: "Available",
+            ...birdData,
+            id: newBirdId,
+            category: 'Bird',
+          };
+          itemsToAdd.push(newBird);
+          if (birdData.cageName) {
+            const existingCage = allCages.find(c => c.name.toLowerCase() === birdData.cageName.toLowerCase());
+            if (existingCage) {
+                itemsToUpdate.push({ id: existingCage.id, birdIds: [...existingCage.birdIds, newBirdId] });
+            } else {
+                const newCage: Cage = { id: `c${Date.now()}${Math.random()}`, name: birdData.cageName, category: 'Cage', birdIds: [newBirdId] };
+                itemsToAdd.push(newCage);
+            }
+          }
+          summary.push(`Added bird: ${getBirdIdentifier(newBird)}`);
+          break;
+        }
+        case 'updateBird': {
+            const updateData = action.data as any;
+            const updatesPayload = { ...updateData.updates };
+
+            if (updatesPayload.status === 'Sold' && updatesPayload.salePrice) {
+                updatesPayload.saleDetails = {
+                    date: format(new Date(updatesPayload.saleDate || new Date()), 'yyyy-MM-dd'),
+                    price: updatesPayload.salePrice,
+                    buyer: updatesPayload.buyerInfo || 'Unknown',
+                };
+                delete updatesPayload.salePrice;
+                delete updatesPayload.saleDate;
+                delete updatesPayload.buyerInfo;
+            }
+            itemsToUpdate.push({ id: updateData.id, ...updatesPayload });
+            summary.push(`Updated bird ID ${updateData.id}`);
+            break;
+        }
+        case 'addNote': {
+          const noteData = action.data as any;
+          const newNote: NoteReminder = {
+             title: "", isReminder: false, isRecurring: false, recurrencePattern: 'none', associatedBirdIds: [], subTasks: [], completed: false,
+             ...noteData, id: `nr${Date.now()}`, category: 'NoteReminder',
+             reminderDate: noteData.reminderDate ? format(new Date(noteData.reminderDate), 'yyyy-MM-dd') : undefined,
+          };
+          itemsToAdd.push(newNote);
+          summary.push(`Added note: "${newNote.title}"`);
+          break;
+        }
+        case 'updateNote':
+        case 'updateCage': {
+            const updateData = action.data as any;
+            updateItem(updateData.id, updateData.updates);
+            summary.push(`Updated ${action.action.includes('Note') ? 'note' : 'cage'}`);
+            break;
+        }
+        case 'addCage': {
+          const cageData = action.data as any;
+          if (cageData.names && cageData.names.length > 0) {
+            const newCages: Cage[] = cageData.names.map((name: string) => ({ id: `c${Date.now()}${Math.random()}`, category: 'Cage', name: name, birdIds: [], cost: cageData.cost }));
+            itemsToAdd.push(...newCages);
+            if (cageData.cost && cageData.cost > 0) {
+              const newTransactions: Transaction[] = newCages.map(cage => ({ id: `t${Date.now()}${Math.random()}`, category: 'Transaction', type: 'expense', date: format(new Date(), 'yyyy-MM-dd'), description: `Purchase of cage: ${cage.name}`, amount: cage.cost! }));
+              itemsToAdd.push(...newTransactions);
+            }
+            summary.push(`Added ${newCages.length} cage(s)`);
+          }
+          break;
+        }
+        case 'addMutation': {
+          const mutationData = action.data as any;
+          if (mutationData.names && mutationData.names.length > 0) {
+              const newMutations: CustomMutation[] = mutationData.names.map((name: string) => ({ id: `cm_${Date.now()}${Math.random()}`, category: 'CustomMutation', name: name }));
+              itemsToAdd.push(...newMutations);
+              summary.push(`Added ${newMutations.length} mutation(s)`);
+          }
+          break;
+        }
+        case 'addTransaction': {
+            const transData = action.data as any;
+            const newTransaction: Transaction = {
+                id: `t${Date.now()}${Math.random()}`,
+                category: 'Transaction',
+                ...transData,
+                date: format(new Date(transData.date || new Date()), 'yyyy-MM-dd'),
+            };
+            itemsToAdd.push(newTransaction);
+            summary.push(`Added ${newTransaction.type} transaction`);
+            break;
+        }
         case 'deleteBird':
-            ids.forEach((id: string) => deleteBirdItem(id));
+            (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'Bird', id }));
             break;
         case 'deleteCage':
-        case 'deleteNote':
-            ids.forEach((id: string) => deleteItem(id));
+            (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'Cage', id }));
             break;
+        case 'deleteNote':
+            (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'Note', id }));
+            break;
+      }
+    }
+    if (itemsToAdd.length > 0) addItems(itemsToAdd);
+    if (itemsToUpdate.length > 0) updateItems(itemsToUpdate as CollectionItem[]);
+    if (idsToDelete.length > 0) {
+        summary.push(`Deleted ${idsToDelete.length} item(s)`);
+        idsToDelete.forEach(item => {
+            if (item.type === 'Bird') deleteBirdItem(item.id);
+            else deleteItem(item.id);
+        });
     }
 
-    toast({ title: 'Items Deleted', description: `${ids.length} item(s) have been removed.` });
-    setActionToConfirm(null);
+    toast({ title: 'AI Actions Completed', description: summary.length > 0 ? summary.join(', ') + '.' : "No actions were taken." });
+    setPendingActions(null);
+  };
+
+  const generateActionSummary = (actions: any[]): string[] => {
+    if (!actions) return [];
+    return actions.filter(a => a.action !== 'answer').map(action => {
+      const { action: type, data } = action;
+      switch (type) {
+        case 'addBird': return `Add Bird: ${data.species || 'Unknown'}`;
+        case 'updateBird': return `Update Bird (ID: ${data.id})`;
+        case 'addNote': return `Add Note: "${data.title}"`;
+        case 'updateNote': return `Update Note (ID: ${data.id})`;
+        case 'addCage': return `Add ${data.names?.length || 1} cage(s): ${data.names?.join(', ')}`;
+        case 'updateCage': return `Update Cage (ID: ${data.id})`;
+        case 'addMutation': return `Add ${data.names?.length || 1} mutation(s): ${data.names?.join(', ')}`;
+        case 'addTransaction': return `Add ${data.type} transaction for ${data.amount}`;
+        case 'deleteBird': return `Delete ${data.ids?.length || 0} bird(s)`;
+        case 'deleteCage': return `Delete ${data.ids?.length || 0} cage(s)`;
+        case 'deleteNote': return `Delete ${data.ids?.length || 0} note(s)`;
+        default: return `Perform action: ${type}`;
+      }
+    });
   };
 
   return (
     <div className="flex flex-col h-[calc(100vh_-_4rem)]">
-        {actionToConfirm && (
-            <AlertDialog open={!!actionToConfirm} onOpenChange={(open) => !open && setActionToConfirm(null)}>
+        {pendingActions && (
+            <AlertDialog open={!!pendingActions} onOpenChange={(open) => !open && setPendingActions(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogTitle>Confirm AI Actions</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {`This will permanently delete ${actionToConfirm.data.ids.length} ${actionToConfirm.action.replace('delete', '').toLowerCase()}(s). This action cannot be undone.`}
+                          The assistant proposes the following actions. Please review before confirming.
+                          <div className="mt-4 text-left bg-muted p-3 rounded-md max-h-60 overflow-y-auto">
+                            <ul className="list-disc list-inside space-y-1">
+                                {generateActionSummary(pendingActions).map((action, i) => <li key={i}>{action}</li>)}
+                            </ul>
+                          </div>
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setActionToConfirm(null)}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleConfirmDelete}>Confirm Delete</AlertDialogAction>
+                        <AlertDialogCancel onClick={() => setPendingActions(null)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleConfirmActions}>Confirm</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

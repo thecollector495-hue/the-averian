@@ -81,7 +81,7 @@ export default function AIAssistantPage() {
     }
 
     try {
-      const context = JSON.stringify(items.filter(i => ['Bird', 'NoteReminder', 'Cage', 'CustomMutation', 'CustomSpecies'].includes(i.category)));
+      const context = JSON.stringify(items.filter(i => ['Bird', 'NoteReminder', 'Cage', 'CustomMutation', 'CustomSpecies', 'Transaction'].includes(i.category)));
       const assistantResponse = await aviaryAssistant({ query: currentInput, context });
       
       const newAssistantMessage: Message = { id: `assistant-${Date.now()}`, role: 'assistant', text: assistantResponse.response };
@@ -126,11 +126,11 @@ export default function AIAssistantPage() {
     const allCages = items.filter((item): item is Cage => item.category === 'Cage');
     let itemsToAdd: CollectionItem[] = [];
     let itemsToUpdate: Partial<CollectionItem>[] = [];
-    let idsToDelete: { type: 'Bird' | 'Cage' | 'Note', id: string }[] = [];
+    let idsToDelete: { type: 'Bird' | 'Cage' | 'Note' | 'Transaction', id: string }[] = [];
     let summary: string[] = [];
 
     for (const action of actionsToExecute) {
-      if (!action.data && !['answer', 'deleteBird', 'deleteCage', 'deleteNote'].includes(action.action)) continue;
+      if (!action.data && !['answer', 'deleteBird', 'deleteCage', 'deleteNote', 'deleteTransaction'].includes(action.action)) continue;
 
       switch(action.action) {
         case 'addBird': {
@@ -239,6 +239,9 @@ export default function AIAssistantPage() {
         case 'deleteNote':
             (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'Note', id }));
             break;
+        case 'deleteTransaction':
+            (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'Transaction', id }));
+            break;
       }
     }
     if (itemsToAdd.length > 0) addItems(itemsToAdd);
@@ -286,6 +289,7 @@ export default function AIAssistantPage() {
         case 'deleteBird': return `Delete ${data.ids?.length || 0} bird(s)`;
         case 'deleteCage': return `Delete ${data.ids?.length || 0} cage(s)`;
         case 'deleteNote': return `Delete ${data.ids?.length || 0} note(s)`;
+        case 'deleteTransaction': return `Delete ${data.ids?.length || 0} transaction(s)`;
         default: return `Perform action: ${type}`;
       }
     });

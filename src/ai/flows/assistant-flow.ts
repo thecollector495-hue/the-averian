@@ -13,7 +13,7 @@ import {z} from 'zod';
 
 const AviaryAssistantInputSchema = z.object({
   query: z.string().describe("The user's query or command."),
-  context: z.string().describe("A JSON string of existing birds and notes to provide context for the query."),
+  context: z.string().describe("A JSON string of existing birds, notes, cages, and financial transactions to provide context for the query."),
 });
 export type AviaryAssistantInput = z.infer<typeof AviaryAssistantInputSchema>;
 
@@ -80,7 +80,7 @@ const AddTransactionDataSchema = z.object({
 }).describe("The data required to add a new financial transaction.");
 
 const ActionSchema = z.object({
-    action: z.enum(['addBird', 'updateBird', 'addNote', 'updateNote', 'addCage', 'updateCage', 'addMutation', 'deleteBird', 'deleteCage', 'deleteNote', 'answer', 'addTransaction']).describe("The action the assistant should take."),
+    action: z.enum(['addBird', 'updateBird', 'addNote', 'updateNote', 'addCage', 'updateCage', 'addMutation', 'deleteBird', 'deleteCage', 'deleteNote', 'deleteTransaction', 'answer', 'addTransaction']).describe("The action the assistant should take."),
     data: z.union([AddBirdDataSchema, UpdateBirdDataSchema, AddNoteDataSchema, UpdateNoteDataSchema, AddCageDataSchema, UpdateCageDataSchema, AddMutationDataSchema, DeleteDataSchema, AddTransactionDataSchema, z.null()]).describe("The data associated with the action. This should be null for 'answer' actions."),
 });
 
@@ -110,7 +110,7 @@ Analyze the query and determine a list of actions the user wants to perform. You
 - If they want to update a note, use the 'updateNote' action. You MUST find the note's ID.
 - If they want to add one or more cages, use the 'addCage' action. If the user asks to add multiple cages, such as "cages 100 to 102", populate the 'names' array with each individual cage name: ["100", "101", "102"]. If they mention a cost, you MUST include it in the 'cost' field.
 - If they want to update a cage's name or cost, use 'updateCage'. You MUST find the cage's ID.
-- To remove items, use 'deleteBird', 'deleteCage', 'or 'deleteNote'. Find the ID(s) of the item(s) to remove.
+- To remove items, use 'deleteBird', 'deleteCage', 'deleteNote', or 'deleteTransaction'. Find the ID(s) of the item(s) to remove from the context.
 - If they want to add a transaction, use 'addTransaction'.
 - **IMPORTANT**: If a user asks to sell a bird (e.g., "sell bird A123 for 500 to John"), you must generate TWO actions:
     1. An 'updateBird' action. Set the 'status' to 'Sold' and include 'salePrice', 'saleDate' (in YYYY-MM-DD format, use today if not specified), and 'buyerInfo' in the 'updates' object.

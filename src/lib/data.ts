@@ -128,6 +128,17 @@ export const speciesData = {
 
 export const mutationOptions = ['Opaline', 'Cinnamon', 'Lutino', 'Albino', 'Fallow', 'Spangle', 'Pied'] as const;
 
+export const inheritanceTypes = [
+  'Autosomal Recessive',
+  'Autosomal Dominant',
+  'Sex-linked Recessive',
+  'Sex-linked Dominant',
+  'Sex-linked Co-dominant',
+  'Incomplete Dominant',
+] as const;
+export type InheritanceType = typeof inheritanceTypes[number];
+
+
 export type BirdFormValues = {
   species: string;
   subspecies?: string;
@@ -249,6 +260,7 @@ export type CustomMutation = {
   id: string;
   category: 'CustomMutation';
   name: string;
+  inheritance: InheritanceType;
 };
 
 export type CollectionItem = Bird | Cage | Pair | BreedingRecord | NoteReminder | Transaction | Permit | CustomSpecies | CustomMutation;

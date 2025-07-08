@@ -8,9 +8,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { inheritanceTypes } from "@/lib/data";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 const mutationSchema = z.object({
   name: z.string().min(1, { message: "Mutation name is required." }),
+  inheritance: z.enum(inheritanceTypes, { required_error: "Please select an inheritance type." }),
 });
 export type AddMutationFormValues = z.infer<typeof mutationSchema>;
 
@@ -30,7 +33,7 @@ export function AddMutationDialog({ isOpen, onOpenChange, onSave }: { isOpen: bo
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add Custom Mutation</DialogTitle>
-          <DialogDescription>Enter the name of the new mutation.</DialogDescription>
+          <DialogDescription>Enter the name of the new mutation and its inheritance type.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -43,6 +46,26 @@ export function AddMutationDialog({ isOpen, onOpenChange, onSave }: { isOpen: bo
                   <FormControl>
                     <Input placeholder="e.g., Pearl" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="inheritance"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Inheritance Type</FormLabel>
+                   <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Select a type" /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {inheritanceTypes.map(type => (
+                           <SelectItem key={type} value={type}>{type}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   <FormMessage />
                 </FormItem>
               )}

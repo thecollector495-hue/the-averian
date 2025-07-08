@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Sparkles, Send, Bot, User, RefreshCw, AlertTriangle } from 'lucide-react';
 import { aviaryAssistant } from '@/ai/flows/assistant-flow';
 import { useItems } from '@/context/ItemsContext';
-import { Bird, NoteReminder, Cage, getBirdIdentifier, CustomMutation, CollectionItem, CustomSpecies, Transaction } from '@/lib/data';
+import { Bird, NoteReminder, Cage, getBirdIdentifier, CustomMutation, CollectionItem, CustomSpecies, Transaction, Pair } from '@/lib/data';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -81,7 +81,7 @@ export default function AIAssistantPage() {
     }
 
     try {
-      const context = JSON.stringify(items.filter(i => ['Bird', 'NoteReminder', 'Cage', 'CustomMutation', 'CustomSpecies', 'Transaction'].includes(i.category)));
+      const context = JSON.stringify(items.filter(i => ['Bird', 'NoteReminder', 'Cage', 'CustomMutation', 'CustomSpecies', 'Transaction', 'Pair'].includes(i.category)));
       const assistantResponse = await aviaryAssistant({ query: currentInput, context });
       
       const newAssistantMessage: Message = { id: `assistant-${Date.now()}`, role: 'assistant', text: assistantResponse.response };
@@ -211,11 +211,27 @@ export default function AIAssistantPage() {
         }
         case 'addMutation': {
           const mutationData = action.data as any;
-          if (mutationData.names && mutationData.names.length > 0) {
-              const newMutations: CustomMutation[] = mutationData.names.map((name: string) => ({ id: `cm_${Date.now()}${Math.random()}`, category: 'CustomMutation', name: name }));
-              itemsToAdd.push(...newMutations);
-              summary.push(`Added ${newMutations.length} mutation(s)`);
-          }
+          const newMutation: CustomMutation = {
+              id: `cm_${Date.now()}${Math.random()}`,
+              category: 'CustomMutation',
+              name: mutationData.name,
+              inheritance: mutationData.inheritance,
+          };
+          itemsToAdd.push(newMutation);
+          summary.push(`Added mutation: "${newMutation.name}"`);
+          break;
+        }
+        case 'addSpecies': {
+          const speciesData = action.data as any;
+          const newSpecies: CustomSpecies = {
+            id: `cs_${Date.now()}`,
+            category: 'CustomSpecies',
+            name: speciesData.name,
+            incubationPeriod: speciesData.incubationPeriod,
+            subspecies: speciesData.subspecies || [],
+          };
+          itemsToAdd.push(newSpecies);
+          summary.push(`Added species: "${newSpecies.name}"`);
           break;
         }
         case 'addTransaction': {
@@ -284,7 +300,8 @@ export default function AIAssistantPage() {
           return summary;
         }
         case 'updateCage': return `Update Cage (ID: ${data.id})`;
-        case 'addMutation': return `Add ${data.names?.length || 1} mutation(s): ${data.names?.join(', ')}`;
+        case 'addMutation': return `Add Mutation: ${data.name} (${data.inheritance})`;
+        case 'addSpecies': return `Add Species: ${data.name} (${data.incubationPeriod} days)`;
         case 'addTransaction': return `Add ${data.type} transaction for ${formatCurrency(data.amount)}`;
         case 'deleteBird': return `Delete ${data.ids?.length || 0} bird(s)`;
         case 'deleteCage': return `Delete ${data.ids?.length || 0} cage(s)`;

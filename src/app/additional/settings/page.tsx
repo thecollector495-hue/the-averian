@@ -68,6 +68,7 @@ export default function SettingsPage() {
         id: `cm_${Date.now()}`,
         category: 'CustomMutation',
         name: data.name,
+        inheritance: data.inheritance,
     };
     addItem(newMutation);
     toast({ title: "Mutation Added", description: `Mutation "${data.name}" has been created.` });
@@ -162,8 +163,9 @@ export default function SettingsPage() {
                     {customMutations.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
                            {customMutations.map(m => (
-                                <div key={m.id} className="px-3 py-1.5 border rounded-md bg-secondary text-secondary-foreground font-medium">
-                                    {m.name}
+                                <div key={m.id} className="px-3 py-1.5 border rounded-md bg-secondary text-secondary-foreground font-medium flex items-baseline gap-2">
+                                    <span>{m.name}</span>
+                                    <span className="text-xs font-normal text-muted-foreground">({m.inheritance})</span>
                                 </div>
                            ))}
                         </div>

@@ -4,16 +4,17 @@
 import { useState, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { useCurrency } from '@/context/CurrencyContext';
-import { initialItems, Transaction } from '@/lib/data';
+import { Transaction } from '@/lib/data';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO } from 'date-fns';
+import { useItems } from '@/context/ItemsContext';
 
 type TimeFilter = 'month' | 'year' | 'all';
 
 export default function ReportsPage() {
-  const [items] = useState(initialItems);
+  const { items } = useItems();
   const { formatCurrency, currency } = useCurrency();
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
 

@@ -34,39 +34,45 @@ export function AIAssistantDialog({ isOpen, onOpenChange }: { isOpen: boolean; o
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isOpen) {
+      recognitionRef.current?.stop();
+      return;
+    }
 
     const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      console.warn("Speech recognition not supported in this browser.");
+      toast({ variant: "destructive", title: "Unsupported", description: "Your browser does not support speech recognition." });
       return;
     }
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = 'en-ZA'; 
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'af-ZA';
 
     recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
+      const transcript = Array.from(event.results)
+        .map(result => result[0])
+        .map(result => result.transcript)
+        .join('');
       setInput(transcript);
-      setIsRecording(false);
     };
 
     recognition.onerror = (event) => {
       console.error("Speech recognition error", event.error);
       toast({ variant: "destructive", title: "Microphone Error", description: `Could not start voice recognition: ${event.error}` });
-      setIsRecording(false);
     };
-    
+
     recognition.onend = () => {
-        if (isRecording) {
-            setIsRecording(false);
-        }
+      setIsRecording(false);
     };
 
     recognitionRef.current = recognition;
-  }, [toast, isRecording]);
+
+    return () => {
+      recognitionRef.current?.stop();
+    };
+  }, [isOpen, toast]);
 
   useEffect(() => {
     if (audioSrc && audioRef.current) {
@@ -90,6 +96,7 @@ export function AIAssistantDialog({ isOpen, onOpenChange }: { isOpen: boolean; o
       recognitionRef.current.stop();
     } else {
       try {
+        setInput('');
         recognitionRef.current.start();
         setIsRecording(true);
       } catch (e) {

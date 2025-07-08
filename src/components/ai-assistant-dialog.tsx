@@ -70,19 +70,23 @@ export function AIAssistantDialog({ isOpen, onOpenChange }: { isOpen: boolean; o
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = 'af-ZA';
 
     recognition.onresult = (event) => {
       const transcript = Array.from(event.results)
-        .map(result => result[0])
-        .map(result => result.transcript)
+        .map(result => result[0].transcript)
         .join('');
       setInput(transcript);
     };
 
     recognition.onerror = (event) => {
       console.error("Speech recognition error", event.error);
-      toast({ variant: "destructive", title: "Microphone Error", description: `Could not start voice recognition: ${event.error}` });
+       if (event.error === 'no-speech') {
+        toast({ variant: "destructive", title: "No speech detected", description: "Your microphone didn't pick up any sound." });
+      } else if (event.error === 'not-allowed') {
+        toast({ variant: "destructive", title: "Permission Denied", description: "Please allow microphone access in your browser settings to use voice commands." });
+      } else {
+        toast({ variant: "destructive", title: "Voice Error", description: `An error occurred: ${event.error}` });
+      }
     };
 
     recognition.onend = () => {

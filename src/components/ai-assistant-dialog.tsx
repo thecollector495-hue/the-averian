@@ -10,7 +10,7 @@ import { Loader2, Sparkles, Send, Bot, User, Mic } from 'lucide-react';
 import { aviaryAssistant } from '@/ai/flows/assistant-flow';
 import { textToSpeech } from '@/ai/flows/tts-flow';
 import { useItems } from '@/context/ItemsContext';
-import { Bird, NoteReminder } from '@/lib/data';
+import { Bird, NoteReminder, getBirdIdentifier } from '@/lib/data';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -117,13 +117,18 @@ export function AIAssistantDialog({ isOpen, onOpenChange }: { isOpen: boolean; o
           case 'addBird': {
             const birdData = assistantResponse.data as any;
             const newBird: Bird = {
+              species: "",
+              sex: "unsexed",
+              visualMutations: [],
+              splitMutations: [],
+              offspringIds: [],
+              status: "Available",
               ...birdData,
               id: `b${Date.now()}`,
               category: 'Bird',
-              offspringIds: [],
             };
             addItem(newBird);
-            toast({ title: "AI Action: Bird Added", description: `Successfully added ${newBird.species}.` });
+            toast({ title: "AI Action: Bird Added", description: `Successfully added ${getBirdIdentifier(newBird)}.` });
             break;
           }
           case 'updateBird': {
@@ -135,15 +140,17 @@ export function AIAssistantDialog({ isOpen, onOpenChange }: { isOpen: boolean; o
           case 'addNote': {
             const noteData = assistantResponse.data as any;
             const newNote: NoteReminder = {
-               ...noteData,
-               id: `nr${Date.now()}`,
-               category: 'NoteReminder',
-               reminderDate: noteData.reminderDate ? format(new Date(noteData.reminderDate), 'yyyy-MM-dd') : undefined,
+               title: "",
+               isReminder: false,
                isRecurring: false,
                recurrencePattern: 'none',
                associatedBirdIds: [],
                subTasks: [],
                completed: false,
+               ...noteData,
+               id: `nr${Date.now()}`,
+               category: 'NoteReminder',
+               reminderDate: noteData.reminderDate ? format(new Date(noteData.reminderDate), 'yyyy-MM-dd') : undefined,
             };
             addItem(newNote);
             toast({ title: "AI Action: Note Added", description: `Successfully added note: "${newNote.title}"` });

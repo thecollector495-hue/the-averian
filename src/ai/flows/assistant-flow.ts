@@ -40,9 +40,13 @@ const AddNoteDataSchema = z.object({
     reminderDate: z.string().optional().describe("The reminder date in YYYY-MM-DD format."),
 }).describe("The data required to add a new note or reminder.");
 
+const AddCageDataSchema = z.object({
+    names: z.array(z.string()).describe("An array of names for the new cages to be created."),
+}).describe("The data required to add one or more new cages.");
+
 const AviaryAssistantOutputSchema = z.object({
-  action: z.enum(['addBird', 'updateBird', 'addNote', 'answer']).describe("The action the assistant should take."),
-  data: z.union([AddBirdDataSchema, UpdateBirdDataSchema, AddNoteDataSchema, z.null()]).describe("The data associated with the action."),
+  action: z.enum(['addBird', 'updateBird', 'addNote', 'addCage', 'answer']).describe("The action the assistant should take."),
+  data: z.union([AddBirdDataSchema, UpdateBirdDataSchema, AddNoteDataSchema, AddCageDataSchema, z.null()]).describe("The data associated with the action."),
   response: z.string().describe("The assistant's text response to the user."),
 });
 export type AviaryAssistantOutput = z.infer<typeof AviaryAssistantOutputSchema>;
@@ -61,6 +65,7 @@ Analyze the query and determine if the user wants to add or update an item.
 - If they want to add a bird, use the 'addBird' action.
 - If they want to update a bird, use the 'updateBird' action. You MUST find the bird's ID from the context.
 - If they want to add a note or reminder, use the 'addNote' action.
+- If they want to add one or more cages, use the 'addCage' action. If the user asks to add multiple cages, such as "cages 100 to 102", populate the 'names' array with each individual cage name: ["100", "101", "102"].
 - If they are just asking a question or having a conversation, use the 'answer' action and provide a helpful text response. The data field should be null for 'answer' actions.
 
 Always provide a friendly confirmation message in the 'response' field that summarizes the action taken or answers the user's question.

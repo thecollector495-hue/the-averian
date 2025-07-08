@@ -10,7 +10,7 @@ import { Loader2, Sparkles, Send, Bot, User, Mic } from 'lucide-react';
 import { aviaryAssistant } from '@/ai/flows/assistant-flow';
 import { textToSpeech } from '@/ai/flows/tts-flow';
 import { useItems } from '@/context/ItemsContext';
-import { Bird, NoteReminder, getBirdIdentifier } from '@/lib/data';
+import { Bird, NoteReminder, Cage, getBirdIdentifier } from '@/lib/data';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -28,7 +28,7 @@ export function AIAssistantDialog({ isOpen, onOpenChange }: { isOpen: boolean; o
   const [isRecording, setIsRecording] = useState(false);
   const [audioSrc, setAudioSrc] = useState<string | null>(null);
   const { toast } = useToast();
-  const { items, addItem, updateItem } = useItems();
+  const { items, addItem, addItems, updateItem } = useItems();
   const audioRef = useRef<HTMLAudioElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -161,6 +161,20 @@ export function AIAssistantDialog({ isOpen, onOpenChange }: { isOpen: boolean; o
             };
             addItem(newNote);
             toast({ title: "AI Action: Note Added", description: `Successfully added note: "${newNote.title}"` });
+            break;
+          }
+          case 'addCage': {
+            const cageData = assistantResponse.data as any;
+            if (cageData.names && cageData.names.length > 0) {
+              const newCages: Cage[] = cageData.names.map((name: string) => ({
+                id: `c${Date.now()}${Math.random()}`,
+                category: 'Cage',
+                name: name,
+                birdIds: [],
+              }));
+              addItems(newCages);
+              toast({ title: "AI Action: Cages Added", description: `Successfully added ${newCages.length} cage(s).` });
+            }
             break;
           }
         }

@@ -7,8 +7,7 @@ import { useForm, ControllerRenderProps } from "react-hook-form";
 import { z } from "zod";
 import { format, parseISO } from 'date-fns';
 
-import { Bird, Cage, Permit, speciesData, mutationOptions, getBirdIdentifier, CustomSpecies, CustomMutation } from '@/lib/data';
-import { useItems } from '@/context/ItemsContext';
+import { Bird, Cage, Permit, speciesData, mutationOptions, getBirdIdentifier } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { MultiSelectCombobox } from './multi-select-combobox';
 import { GeneralCombobox } from './general-combobox';
@@ -77,7 +76,6 @@ export type BirdFormValues = z.infer<typeof birdFormSchema>;
 
 export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, allCages, allPermits }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onSave: (data: BirdFormValues & { newCageName?: string }) => void, initialData: Bird | null, allBirds: Bird[], allCages: Cage[], allPermits: Permit[] }) {
   const [isCreatingCage, setIsCreatingCage] = useState(false);
-  const { items } = useItems();
   
   const form = useForm<BirdFormValues>({
     resolver: zodResolver(birdFormSchema),
@@ -137,21 +135,16 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
     }
   }, [initialData, form, isOpen, allCages]);
 
-  const customSpecies = useMemo(() => items.filter((item): item is CustomSpecies => item.category === 'CustomSpecies'), [items]);
-  const customMutations = useMemo(() => items.filter((item): item is CustomMutation => item.category === 'CustomMutation'), [items]);
-
   const allSpeciesOptions = useMemo(() => {
     const options = [
       ...Object.entries(speciesData).map(([code, { name }]) => ({ value: code, label: name })),
-      ...customSpecies.map(s => ({ value: s.id, label: `${s.name} (Custom)` })),
     ];
     return options.sort((a, b) => a.label.localeCompare(b.label));
-  }, [customSpecies]);
+  }, []);
 
   const allMutationOptions = useMemo(() => {
-    const combined = [...mutationOptions, ...customMutations.map(m => m.name)];
-    return [...new Set(combined)].map(m => ({ value: m, label: m })).sort((a, b) => a.label.localeCompare(b.label));
-  }, [customMutations]);
+    return mutationOptions.map(m => ({ value: m, label: m })).sort((a, b) => a.label.localeCompare(b.label));
+  }, []);
 
   const watchedSpecies = form.watch("species");
   const unbanded = form.watch("unbanded");
@@ -167,15 +160,9 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
     if (builtinSpecies && builtinSpecies.subspecies) {
       return builtinSpecies.subspecies.sort((a,b) => a.localeCompare(b));
     }
-    
-    // Check custom data
-    const custom = customSpecies.find(s => s.id === watchedSpecies);
-    if (custom && custom.subspecies) {
-      return custom.subspecies.sort((a,b) => a.localeCompare(b));
-    }
 
     return [];
-  }, [watchedSpecies, customSpecies]);
+  }, [watchedSpecies]);
 
   const getBirdIdentifierWithCage = useCallback((bird: Bird): string => {
     const speciesInfo = allSpeciesOptions.find(s => s.value === bird.species);

@@ -2,13 +2,12 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Sparkles, Send, Bot, User, RefreshCw, AlertTriangle } from 'lucide-react';
 import { aviaryAssistant } from '@/ai/flows/assistant-flow';
 import { useItems } from '@/context/ItemsContext';
-import { Bird, NoteReminder, Cage, getBirdIdentifier, CustomMutation, CollectionItem, CustomSpecies, Transaction, Pair } from '@/lib/data';
+import { Bird, NoteReminder, Cage, getBirdIdentifier, CollectionItem, Transaction, Pair } from '@/lib/data';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -17,8 +16,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Checkbox } from '@/components/ui/checkbox';
 import { useCurrency } from '@/context/CurrencyContext';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-
-const GeneticsCalculatorDialog = dynamic(() => import('@/components/genetics-calculator-dialog').then(mod => mod.GeneticsCalculatorDialog), { ssr: false });
 
 type Message = {
   id: string;
@@ -33,7 +30,7 @@ export default function AIAssistantPage() {
     {
       id: 'assistant-init',
       role: 'assistant',
-      text: "Hello! How can I help you manage your aviary today? You can ask me to calculate genetic outcomes by typing 'Calculate genetics'."
+      text: "Hello! How can I help you manage your aviary today?"
     }
   ]);
   const [input, setInput] = useState('');
@@ -45,10 +42,7 @@ export default function AIAssistantPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [pendingActions, setPendingActions] = useState<any[] | null>(null);
   const [selectedActionIndices, setSelectedActionIndices] = useState<Set<number>>(new Set());
-  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   
-  const customMutations = items.filter((item): item is CustomMutation => item.category === 'CustomMutation');
-
   useEffect(() => {
     if (pendingActions) {
       setSelectedActionIndices(new Set(pendingActions.map((_, i) => i)));
@@ -73,33 +67,20 @@ export default function AIAssistantPage() {
     }
   }, [messages]);
 
-  const handleSend = async (options: { query: string; isFromCalculator?: boolean; isRetry?: boolean }) => {
-    const { query, isFromCalculator, isRetry } = options;
+  const handleSend = async (options: { query: string; isRetry?: boolean }) => {
+    const { query, isRetry } = options;
     if (!query.trim()) return;
-
-    if (!isFromCalculator && !isRetry && query.trim().toLowerCase() === 'calculate genetics') {
-      setIsCalculatorOpen(true);
-      return;
-    }
 
     setIsLoading(true);
     setMessages(prev => prev.filter(m => !m.isError));
 
     if (!isRetry) {
-      let userMessageText = query;
-      if (isFromCalculator) {
-        userMessageText = `*Used Genetics Calculator to ask:* "${query}"`;
-      }
-
-      const newUserMessage: Message = { id: `user-${Date.now()}`, role: 'user', text: userMessageText };
+      const newUserMessage: Message = { id: `user-${Date.now()}`, role: 'user', text: query };
       setMessages(prev => [...prev, newUserMessage]);
-      
-      if (!isFromCalculator) {
-        setInput('');
-      }
+      setInput('');
     }
     
-    const context = JSON.stringify(items.filter(i => ['Bird', 'NoteReminder', 'Cage', 'CustomMutation', 'CustomSpecies', 'Transaction', 'Pair'].includes(i.category)));
+    const context = JSON.stringify(items.filter(i => ['Bird', 'NoteReminder', 'Cage', 'Transaction', 'Pair'].includes(i.category)));
     const assistantResponse = await aviaryAssistant({ query: query, context });
     
     setIsLoading(false);
@@ -227,31 +208,6 @@ export default function AIAssistantPage() {
           }
           break;
         }
-        case 'addMutation': {
-          const mutationData = action.data as any;
-          const newMutation: CustomMutation = {
-              id: `cm_${Date.now()}${Math.random()}`,
-              category: 'CustomMutation',
-              name: mutationData.name,
-              inheritance: mutationData.inheritance,
-          };
-          itemsToAdd.push(newMutation);
-          summary.push(`Added mutation: "${newMutation.name}"`);
-          break;
-        }
-        case 'addSpecies': {
-          const speciesData = action.data as any;
-          const newSpecies: CustomSpecies = {
-            id: `cs_${Date.now()}`,
-            category: 'CustomSpecies',
-            name: speciesData.name,
-            incubationPeriod: speciesData.incubationPeriod,
-            subspecies: speciesData.subspecies || [],
-          };
-          itemsToAdd.push(newSpecies);
-          summary.push(`Added species: "${newSpecies.name}"`);
-          break;
-        }
         case 'addTransaction': {
             const transData = action.data as any;
             const newTransaction: Transaction = {
@@ -318,8 +274,6 @@ export default function AIAssistantPage() {
           return summary;
         }
         case 'updateCage': return `Update Cage (ID: ${data.id})`;
-        case 'addMutation': return `Add Mutation: ${data.name} (${data.inheritance})`;
-        case 'addSpecies': return `Add Species: ${data.name} (${data.incubationPeriod} days)`;
         case 'addTransaction': return `Add ${data.type} transaction for ${formatCurrency(data.amount)}`;
         case 'deleteBird': return `Delete ${data.ids?.length || 0} bird(s)`;
         case 'deleteCage': return `Delete ${data.ids?.length || 0} cage(s)`;
@@ -332,14 +286,6 @@ export default function AIAssistantPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh_-_4rem)]">
-        {isCalculatorOpen && (
-            <GeneticsCalculatorDialog
-                isOpen={isCalculatorOpen}
-                onOpenChange={setIsCalculatorOpen}
-                onCalculate={(query) => handleSend({ query, isFromCalculator: true })}
-                customMutations={customMutations}
-            />
-        )}
         {pendingActions && (
             <AlertDialog open={!!pendingActions} onOpenChange={(open) => !open && setPendingActions(null)}>
                 <AlertDialogContent>
@@ -399,7 +345,7 @@ export default function AIAssistantPage() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pt-0 pb-4 text-sm text-muted-foreground px-4">
-                  Please double-check the AI's proposed actions before confirming, as it can make mistakes. This is an experimental feature designed to simplify tasks, not replace your expertise. It can also provide basic genetic outcome predictions, which should be treated as estimates.
+                  Please double-check the AI's proposed actions before confirming, as it can make mistakes. This is an experimental feature designed to simplify tasks, not replace your expertise.
                 </AccordionContent>
               </AccordionItem>
             </Accordion>

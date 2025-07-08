@@ -10,7 +10,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
-import { inheritanceTypes } from '@/lib/data';
 
 const AviaryAssistantInputSchema = z.object({
   query: z.string().describe("The user's query or command."),
@@ -64,17 +63,6 @@ const UpdateCageDataSchema = z.object({
     }).describe("The fields to update on the cage's record. Supported fields are 'name' and 'cost'.")
 }).describe("The data required to update an existing cage.");
 
-const AddMutationDataSchema = z.object({
-    name: z.string().describe("The name of the new mutation."),
-    inheritance: z.enum(inheritanceTypes).describe("The genetic inheritance type of the mutation."),
-}).describe("The data required to add a new mutation. Create one action for each mutation if multiple are requested.");
-
-const AddSpeciesDataSchema = z.object({
-    name: z.string().describe("The name of the new species."),
-    incubationPeriod: z.number().int().describe("The incubation period for this species in days."),
-    subspecies: z.array(z.string()).optional().describe("An array of subspecies names, if any."),
-}).describe("The data required to add a new custom species.");
-
 const DeleteDataSchema = z.object({
     ids: z.array(z.string()).describe("An array of IDs for the items to be deleted."),
 }).describe("The data required to delete one or more items.");
@@ -88,8 +76,8 @@ const AddTransactionDataSchema = z.object({
 }).describe("The data required to add a new financial transaction.");
 
 const ActionSchema = z.object({
-    action: z.enum(['addBird', 'updateBird', 'addNote', 'updateNote', 'addCage', 'updateCage', 'addMutation', 'addSpecies', 'deleteBird', 'deleteCage', 'deleteNote', 'deleteTransaction', 'answer', 'addTransaction']).describe("The action the assistant should take."),
-    data: z.union([AddBirdDataSchema, UpdateBirdDataSchema, AddNoteDataSchema, UpdateNoteDataSchema, AddCageDataSchema, UpdateCageDataSchema, AddMutationDataSchema, AddSpeciesDataSchema, DeleteDataSchema, AddTransactionDataSchema, z.null()]).describe("The data associated with the action. This should be null for 'answer' actions."),
+    action: z.enum(['addBird', 'updateBird', 'addNote', 'updateNote', 'addCage', 'updateCage', 'deleteBird', 'deleteCage', 'deleteNote', 'deleteTransaction', 'answer', 'addTransaction']).describe("The action the assistant should take."),
+    data: z.union([AddBirdDataSchema, UpdateBirdDataSchema, AddNoteDataSchema, UpdateNoteDataSchema, AddCageDataSchema, UpdateCageDataSchema, DeleteDataSchema, AddTransactionDataSchema, z.null()]).describe("The data associated with the action. This should be null for 'answer' actions."),
 });
 
 const AviaryAssistantOutputSchema = z.object({
@@ -119,7 +107,7 @@ export async function aviaryAssistant(input: AviaryAssistantInput): Promise<Avia
   }
 }
 
-const promptTemplate = `You are an expert aviary assistant and avian geneticist. Your goal is to help the user manage their birds and notes. You must understand queries in both English and Afrikaans, and you should respond in the same language as the user's query. You will be given a user's query and a JSON object containing the current state of their aviary (birds and notes).
+const promptTemplate = `You are an expert aviary assistant. Your goal is to help the user manage their birds, cages, notes and finances. You must understand queries in both English and Afrikaans, and you should respond in the same language as the user's query. You will be given a user's query and a JSON object containing the current state of their aviary.
 
 You MUST parse the user's entire query and not miss any details. For complex commands, break them down into multiple actions. For example, if a user asks to add cages with a cost and a related note, you must create actions for BOTH adding the cages (with the cost) AND adding the note.
 
@@ -136,30 +124,9 @@ Analyze the query and determine a list of actions the user wants to perform. You
 - **IMPORTANT**: If a user asks to sell a bird (e.g., "sell bird A123 for 500 to John"), you must generate TWO actions:
     1. An 'updateBird' action. Set the 'status' to 'Sold' and include 'salePrice', 'saleDate' (in YYYY-MM-DD format, use today if not specified), and 'buyerInfo' in the 'updates' object.
     2. An 'addTransaction' action. Set the 'type' to 'income', and include the 'amount', 'description', and 'relatedBirdId'.
-- If they want to add a new mutation, use the 'addMutation' action. If the user does not provide an inheritance type, use your knowledge of avian genetics to infer the most common one (e.g., Lutino is 'Sex-linked Recessive', Pied is 'Autosomal Recessive'). You MUST select one of the available inheritance types: ${inheritanceTypes.join(', ')}. For multiple mutations, create a separate 'addMutation' action for each.
-- If they want to add a new species, use the 'addSpecies' action.
 - If they are just asking a question or having a conversation, use the 'answer' action and provide a helpful text response. The data field should be null for 'answer' actions.
 
-**Genetic Calculations**:
-If the user asks to calculate genetic outcomes, use the 'answer' action.
-- If the query refers to existing birds in the aviary (e.g., "pair bird A1 and B2"), find their mutations in the provided Aviary Context.
-- If the query describes a theoretical pair (e.g., "a visual blue male split for fallow and a normal female"), use the mutations described in the query.
-Find the inheritance type of each mutation from the 'customMutations' list in the context.
-Your final answer must be a clear breakdown of percentages for each sex. For example: "Males: 50% Blue, 50% Green (split Blue). Females: 50% Blue, 50% Green."
-Use the following logic (Male ZZ, Female ZW).
-- **Autosomal Recessive**: A bird needs two copies to be visual, one copy means it is "split".
-- **Autosomal Dominant**: One copy of the gene makes the bird visual. A bird without the gene is 'normal'.
-  - Visual (heterozygous) x Normal -> 50% Visual (heterozygous), 50% Normal offspring.
-  - Visual (heterozygous) x Visual (heterozygous) -> 75% Visual, 25% Normal offspring.
-- **Sex-linked Recessive**:
-  - Visual male (Z-gene/Z-gene) x Normal female (Z/W) -> 100% Visual females, 100% split males.
-  - Split male (Z-gene/Z) x Normal female (Z/W) -> 50% Visual females, 50% normal females, 50% split males, 50% normal males.
-  - Normal male (Z/Z) x Visual female (Z-gene/W) -> 100% normal females, 100% split males.
-- **Sex-linked Dominant**:
-  - Visual Male (Z-Gene/Z) x Normal Female (z/W) -> 50% Visual Males, 50% Visual Females.
-  - Normal Male (z/z) x Visual Female (Z-Gene/W) -> 50% Normal Females, 50% Visual Males.
-
-For any set of actions that will add, update, or delete data, your text 'response' should clearly state what you are about to do and ask for confirmation. For example: "I'm ready to mark bird A123 as sold and add an income transaction of R500. Please confirm." When inferring a mutation's inheritance type, be sure to mention it in the response, for example: "I can add the Lutino mutation (Sex-linked Recessive). Please confirm."
+For any set of actions that will add, update, or delete data, your text 'response' should clearly state what you are about to do and ask for confirmation. For example: "I'm ready to mark bird A123 as sold and add an income transaction of R500. Please confirm."
 
 Always provide a friendly confirmation message in the 'response' field that summarizes all actions taken or answers the user's question.
 

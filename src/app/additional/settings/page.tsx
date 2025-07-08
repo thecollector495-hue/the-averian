@@ -2,34 +2,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Crown, Star, Check } from 'lucide-react';
+import { Crown, Star, Check } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurrency, currencies } from "@/context/CurrencyContext";
-import { useItems, CustomSpecies, CustomMutation } from '@/context/ItemsContext';
-import { AddSpeciesFormValues } from '@/components/add-species-dialog';
-import { AddMutationFormValues } from '@/components/add-mutation-dialog';
 import { addDays, format, isFuture } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
-
-const AddSpeciesDialog = dynamic(() => import('@/components/add-species-dialog').then(mod => mod.AddSpeciesDialog), { ssr: false });
-const AddMutationDialog = dynamic(() => import('@/components/add-mutation-dialog').then(mod => mod.AddMutationDialog), { ssr: false });
-
 
 export default function SettingsPage() {
   const { currency, setCurrency } = useCurrency();
-  const { items, addItem } = useItems();
-  const { toast } = useToast();
-
-  const [isSpeciesDialogOpen, setIsSpeciesDialogOpen] = useState(false);
-  const [isMutationDialogOpen, setIsMutationDialogOpen] = useState(false);
-
   const [trialEndDate, setTrialEndDate] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -47,54 +32,23 @@ export default function SettingsPage() {
 
   }, []);
 
-  const customSpecies = items.filter((item): item is CustomSpecies => item.category === 'CustomSpecies');
-  const customMutations = items.filter((item): item is CustomMutation => item.category === 'CustomMutation');
-  
-  const handleSaveSpecies = (data: AddSpeciesFormValues) => {
-    const subspeciesArray = data.subspecies.map(s => s.value.trim()).filter(Boolean);
-    const newSpecies: CustomSpecies = {
-        id: `cs_${Date.now()}`,
-        category: 'CustomSpecies',
-        name: data.name,
-        incubationPeriod: data.incubationPeriod,
-        subspecies: subspeciesArray,
-    };
-    addItem(newSpecies);
-    toast({ title: "Species Added", description: `Species "${data.name}" has been created.` });
-  };
-  
-  const handleSaveMutation = (data: AddMutationFormValues) => {
-    const newMutation: CustomMutation = {
-        id: `cm_${Date.now()}`,
-        category: 'CustomMutation',
-        name: data.name,
-        inheritance: data.inheritance,
-    };
-    addItem(newMutation);
-    toast({ title: "Mutation Added", description: `Mutation "${data.name}" has been created.` });
-  };
-
   const isTrialActive = trialEndDate && isFuture(trialEndDate);
   
   const premiumFeatures = [
     "Unlimited bird, cage, and pair entries",
     "Advanced breeding and incubation tracking",
     "Comprehensive financial reports",
-    "Custom species and mutation management"
+    "AI Assistant for faster management"
   ];
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
-      {isSpeciesDialogOpen && <AddSpeciesDialog isOpen={isSpeciesDialogOpen} onOpenChange={setIsSpeciesDialogOpen} onSave={handleSaveSpecies} />}
-      {isMutationDialogOpen && <AddMutationDialog isOpen={isMutationDialogOpen} onOpenChange={setIsMutationDialogOpen} onSave={handleSaveMutation} />}
       
       <h1 className="text-3xl font-bold mb-6">Settings</h1>
       
       <Tabs defaultValue="general">
-        <TabsList className="grid h-auto w-full grid-cols-1 md:grid-cols-4">
+        <TabsList className="grid h-auto w-full grid-cols-1 md:grid-cols-2">
           <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="species">Species</TabsTrigger>
-          <TabsTrigger value="mutations">Mutations</TabsTrigger>
           <TabsTrigger value="subscription">Subscription</TabsTrigger>
         </TabsList>
         <TabsContent value="general" className="mt-6">
@@ -120,58 +74,6 @@ export default function SettingsPage() {
                             </SelectContent>
                         </Select>
                     </div>
-                </CardContent>
-            </Card>
-        </TabsContent>
-        <TabsContent value="species" className="mt-6">
-           <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                        <CardTitle>Custom Species</CardTitle>
-                        <CardDescription>Add and manage your own species definitions.</CardDescription>
-                    </div>
-                    <Button onClick={() => setIsSpeciesDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" /> Add Species</Button>
-                </CardHeader>
-                <CardContent>
-                    {customSpecies.length > 0 ? (
-                        <ul className="space-y-3">
-                            {customSpecies.map(s => (
-                                <li key={s.id} className="p-3 border rounded-md flex justify-between items-center">
-                                    <div>
-                                        <p className="font-semibold">{s.name}</p>
-                                        <p className="text-sm text-muted-foreground">Incubation: {s.incubationPeriod} days | Subspecies: {s.subspecies.length}</p>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <p className="text-muted-foreground text-center py-4">No custom species added yet.</p>
-                    )}
-                </CardContent>
-            </Card>
-        </TabsContent>
-        <TabsContent value="mutations" className="mt-6">
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                        <CardTitle>Custom Mutations</CardTitle>
-                        <CardDescription>Add and manage your own mutation names.</CardDescription>
-                    </div>
-                    <Button onClick={() => setIsMutationDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" /> Add Mutation</Button>
-                </CardHeader>
-                <CardContent>
-                    {customMutations.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                           {customMutations.map(m => (
-                                <div key={m.id} className="px-3 py-1.5 border rounded-md bg-secondary text-secondary-foreground font-medium flex items-baseline gap-2">
-                                    <span>{m.name}</span>
-                                    <span className="text-xs font-normal text-muted-foreground">({m.inheritance})</span>
-                                </div>
-                           ))}
-                        </div>
-                    ) : (
-                         <p className="text-muted-foreground text-center py-4">No custom mutations added yet.</p>
-                    )}
                 </CardContent>
             </Card>
         </TabsContent>

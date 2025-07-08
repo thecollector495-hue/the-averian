@@ -126,17 +126,6 @@ export const speciesData = {
 
 export const mutationOptions = ['Opaline', 'Cinnamon', 'Lutino', 'Albino', 'Fallow', 'Spangle', 'Pied'] as const;
 
-export const inheritanceTypes = [
-  'Autosomal Recessive',
-  'Autosomal Dominant',
-  'Sex-linked Recessive',
-  'Sex-linked Dominant',
-  'Sex-linked Co-dominant',
-  'Incomplete Dominant',
-] as const;
-export type InheritanceType = typeof inheritanceTypes[number];
-
-
 export type BirdFormValues = {
   species: string;
   subspecies?: string;
@@ -246,27 +235,11 @@ export type Permit = {
   expiryDate?: string; // YYYY-MM-DD
 }
 
-export type CustomSpecies = {
-  id: string;
-  category: 'CustomSpecies';
-  name: string;
-  incubationPeriod: number;
-  subspecies: string[];
-};
-
-export type CustomMutation = {
-  id: string;
-  category: 'CustomMutation';
-  name: string;
-  inheritance: InheritanceType;
-};
-
-export type CollectionItem = Bird | Cage | Pair | BreedingRecord | NoteReminder | Transaction | Permit | CustomSpecies | CustomMutation;
+export type CollectionItem = Bird | Cage | Pair | BreedingRecord | NoteReminder | Transaction | Permit;
 
 export const getBirdIdentifier = (bird: Bird) => {
     if (!bird) return 'N/A';
-    const allSpecies = [...Object.values(speciesData), ...initialItems.filter((i): i is CustomSpecies => i.category === 'CustomSpecies').map(cs => ({ name: cs.name, id: cs.id }))];
-    const speciesName = allSpecies.find(s => s.name === bird.species || (s as any).id === bird.species)?.name || bird.species;
+    const speciesName = speciesData[bird.species as keyof typeof speciesData]?.name || bird.species;
     const identifier = bird.unbanded || !bird.ringNumber ? '(Unbanded)' : `(${bird.ringNumber})`;
     return `${speciesName} ${identifier}`;
 };

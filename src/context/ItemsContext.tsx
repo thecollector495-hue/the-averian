@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { CollectionItem, initialItems, CustomMutation, CustomSpecies, Bird, Cage, Pair } from '@/lib/data';
+import { CollectionItem, initialItems, Bird, Cage, Pair } from '@/lib/data';
 
 interface ItemsContextType {
   items: CollectionItem[];
@@ -160,5 +160,3 @@ export const useItems = (): ItemsContextType => {
   }
   return context;
 };
-
-export type { CustomSpecies, CustomMutation };

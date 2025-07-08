@@ -110,7 +110,7 @@ export async function aviaryAssistant(input: AviaryAssistantInput): Promise<Avia
     console.error("Error in assistant flow", e);
     const errorMessage = e.message?.includes('503') || e.message?.includes('overloaded')
         ? "The AI model is currently overloaded. Please try again in a moment."
-        : "An error occurred while processing your request. Please try again.";
+        : e.message || "An error occurred while processing your request. Please try again.";
     return {
         actions: [],
         response: errorMessage,
@@ -119,11 +119,7 @@ export async function aviaryAssistant(input: AviaryAssistantInput): Promise<Avia
   }
 }
 
-const prompt = ai.definePrompt({
-  name: 'aviaryAssistantPrompt',
-  input: {schema: AviaryAssistantInputSchema},
-  output: {schema: AviaryAssistantOutputSchema},
-  prompt: `You are an expert aviary assistant and avian geneticist. Your goal is to help the user manage their birds and notes. You must understand queries in both English and Afrikaans, and you should respond in the same language as the user's query. You will be given a user's query and a JSON object containing the current state of their aviary (birds and notes).
+const promptTemplate = `You are an expert aviary assistant and avian geneticist. Your goal is to help the user manage their birds and notes. You must understand queries in both English and Afrikaans, and you should respond in the same language as the user's query. You will be given a user's query and a JSON object containing the current state of their aviary (birds and notes).
 
 You MUST parse the user's entire query and not miss any details. For complex commands, break them down into multiple actions. For example, if a user asks to add cages with a cost and a related note, you must create actions for BOTH adding the cages (with the cost) AND adding the note.
 
@@ -140,7 +136,7 @@ Analyze the query and determine a list of actions the user wants to perform. You
 - **IMPORTANT**: If a user asks to sell a bird (e.g., "sell bird A123 for 500 to John"), you must generate TWO actions:
     1. An 'updateBird' action. Set the 'status' to 'Sold' and include 'salePrice', 'saleDate' (in YYYY-MM-DD format, use today if not specified), and 'buyerInfo' in the 'updates' object.
     2. An 'addTransaction' action. Set the 'type' to 'income', and include the 'amount', 'description', and 'relatedBirdId'.
-- If they want to add a new mutation, use the 'addMutation' action. If the user does not provide an inheritance type, use your knowledge of avian genetics to infer the most common one (e.g., Lutino is 'Sex-linked Recessive', Pied is 'Autosomal Recessive'). You MUST select one of the available inheritance types. For multiple mutations, create a separate 'addMutation' action for each.
+- If they want to add a new mutation, use the 'addMutation' action. If the user does not provide an inheritance type, use your knowledge of avian genetics to infer the most common one (e.g., Lutino is 'Sex-linked Recessive', Pied is 'Autosomal Recessive'). You MUST select one of the available inheritance types: ${inheritanceTypes.join(', ')}. For multiple mutations, create a separate 'addMutation' action for each.
 - If they want to add a new species, use the 'addSpecies' action.
 - If they are just asking a question or having a conversation, use the 'answer' action and provide a helpful text response. The data field should be null for 'answer' actions.
 
@@ -172,7 +168,13 @@ User query:
 
 Aviary Context (existing data):
 {{{context}}}
-`,
+`;
+
+const prompt = ai.definePrompt({
+  name: 'aviaryAssistantPrompt',
+  input: {schema: AviaryAssistantInputSchema},
+  output: {schema: AviaryAssistantOutputSchema},
+  prompt: promptTemplate,
 });
 
 const assistantFlow = ai.defineFlow(

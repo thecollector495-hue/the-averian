@@ -218,6 +218,82 @@ export default function BirdsPage() {
       }
     }
 
+    // --- PARENTING LOGIC ---
+    const initialFatherId = editingBird?.fatherId;
+    const newFatherId = formData.fatherId;
+    if (initialFatherId !== newFatherId) {
+      // Detach from old father
+      if (initialFatherId) {
+        const oldFather = allBirds.find(b => b.id === initialFatherId);
+        if (oldFather) {
+          updateItem(oldFather.id, {
+            offspringIds: oldFather.offspringIds.filter(id => id !== birdId),
+          });
+        }
+      }
+      // Attach to new father
+      if (newFatherId) {
+        const newFather = allBirds.find(b => b.id === newFatherId);
+        if (newFather) {
+          updateItem(newFather.id, {
+            offspringIds: [...new Set([...newFather.offspringIds, birdId])],
+          });
+        }
+      }
+    }
+
+    const initialMotherId = editingBird?.motherId;
+    const newMotherId = formData.motherId;
+    if (initialMotherId !== newMotherId) {
+      // Detach from old mother
+      if (initialMotherId) {
+        const oldMother = allBirds.find(b => b.id === initialMotherId);
+        if (oldMother) {
+          updateItem(oldMother.id, {
+            offspringIds: oldMother.offspringIds.filter(id => id !== birdId),
+          });
+        }
+      }
+      // Attach to new mother
+      if (newMotherId) {
+        const newMother = allBirds.find(b => b.id === newMotherId);
+        if (newMother) {
+          updateItem(newMother.id, {
+            offspringIds: [...new Set([...newMother.offspringIds, birdId])],
+          });
+        }
+      }
+    }
+
+    // --- OFFSPRING LOGIC (Reverse linking) ---
+    const initialOffspringIds = editingBird?.offspringIds || [];
+    const newOffspringIds = formData.offspringIds || [];
+    
+    const addedOffspring = newOffspringIds.filter(id => !initialOffspringIds.includes(id));
+    const removedOffspring = initialOffspringIds.filter(id => !newOffspringIds.includes(id));
+
+    addedOffspring.forEach(offspringId => {
+        const offspring = allBirds.find(b => b.id === offspringId);
+        if (offspring) {
+            if (birdToSave.sex === 'male') {
+                updateItem(offspringId, { fatherId: birdId });
+            } else if (birdToSave.sex === 'female') {
+                updateItem(offspringId, { motherId: birdId });
+            }
+        }
+    });
+
+    removedOffspring.forEach(offspringId => {
+        const offspring = allBirds.find(b => b.id === offspringId);
+        if (offspring) {
+            if (birdToSave.sex === 'male' && offspring.fatherId === birdId) {
+                updateItem(offspringId, { fatherId: undefined });
+            } else if (birdToSave.sex === 'female' && offspring.motherId === birdId) {
+                updateItem(offspringId, { motherId: undefined });
+            }
+        }
+    });
+
     if (isEditing) {
         updateItem(birdId, birdToSave);
     } else {

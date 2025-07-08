@@ -5,7 +5,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Sparkles, Send, Bot, User, RefreshCw, AlertTriangle, Calculator } from 'lucide-react';
+import { Loader2, Sparkles, Send, Bot, User, RefreshCw, AlertTriangle } from 'lucide-react';
 import { aviaryAssistant } from '@/ai/flows/assistant-flow';
 import { useItems } from '@/context/ItemsContext';
 import { Bird, NoteReminder, Cage, getBirdIdentifier, CustomMutation, CollectionItem, CustomSpecies, Transaction, Pair } from '@/lib/data';
@@ -17,7 +17,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Checkbox } from '@/components/ui/checkbox';
 import { useCurrency } from '@/context/CurrencyContext';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const GeneticsCalculatorDialog = dynamic(() => import('@/components/genetics-calculator-dialog').then(mod => mod.GeneticsCalculatorDialog), { ssr: false });
 
@@ -34,7 +33,7 @@ export default function AIAssistantPage() {
     {
       id: 'assistant-init',
       role: 'assistant',
-      text: "Hello! How can I help you manage your aviary today?"
+      text: "Hello! How can I help you manage your aviary today? You can ask me to calculate genetic outcomes by typing 'Calculate genetics'."
     }
   ]);
   const [input, setInput] = useState('');
@@ -78,6 +77,11 @@ export default function AIAssistantPage() {
     const { query, isFromCalculator, isRetry } = options;
     if (!query.trim()) return;
 
+    if (!isFromCalculator && !isRetry && query.trim().toLowerCase() === 'calculate genetics') {
+      setIsCalculatorOpen(true);
+      return;
+    }
+
     setIsLoading(true);
     setMessages(prev => prev.filter(m => !m.isError));
 
@@ -103,9 +107,9 @@ export default function AIAssistantPage() {
     if (assistantResponse.error) {
         console.error('AI assistant failed:', assistantResponse.error);
 
-        const errorMessageText = assistantResponse.error.includes('503') 
+        const errorMessageText = assistantResponse.response || (assistantResponse.error.includes('503')
             ? "The AI model is currently overloaded. Please try again in a moment."
-            : "Couldn't connect right now. Please try again.";
+            : "Couldn't connect right now. Please try again.");
         
         const newErrorMessage: Message = {
             id: `assistant-err-${Date.now()}`,
@@ -447,20 +451,6 @@ export default function AIAssistantPage() {
 
         <div className="shrink-0 border-t p-4 bg-background">
             <div className="max-w-3xl mx-auto flex items-end gap-2">
-                 <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="lg" className="shrink-0">
-                            <Sparkles className="h-5 w-5" />
-                            <span className="sr-only">Quick Actions</span>
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                        <DropdownMenuItem onClick={() => setIsCalculatorOpen(true)}>
-                            <Calculator className="mr-2 h-4 w-4" />
-                            <span>Genetics Calculator</span>
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
                 <Textarea
                     ref={textareaRef}
                     rows={1}

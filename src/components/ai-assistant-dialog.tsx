@@ -1,12 +1,11 @@
 
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Sparkles, Send, Bot, User, Mic } from 'lucide-react';
+import { Loader2, Sparkles, Send, Bot, User, Mic, Volume2, VolumeX } from 'lucide-react';
 import { aviaryAssistant } from '@/ai/flows/assistant-flow';
 import { textToSpeech } from '@/ai/flows/tts-flow';
 import { useItems } from '@/context/ItemsContext';
@@ -14,6 +13,7 @@ import { Bird, NoteReminder, Cage, getBirdIdentifier } from '@/lib/data';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { Textarea } from './ui/textarea';
 
 type Message = {
   id: string;
@@ -27,11 +27,33 @@ export function AIAssistantDialog({ isOpen, onOpenChange }: { isOpen: boolean; o
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [audioSrc, setAudioSrc] = useState<string | null>(null);
+  const [isTtsEnabled, setIsTtsEnabled] = useState(true);
   const { toast } = useToast();
   const { items, addItem, addItems, updateItem } = useItems();
   const audioRef = useRef<HTMLAudioElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const savedTtsPref = localStorage.getItem('ai-assistant-tts-enabled');
+    if (savedTtsPref !== null) {
+      setIsTtsEnabled(JSON.parse(savedTtsPref));
+    }
+  }, []);
+
+  const handleInputResize = useCallback(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      const scrollHeight = textareaRef.current.scrollHeight;
+      textareaRef.current.style.height = `${scrollHeight}px`;
+    }
+  }, []);
+
+  useEffect(() => {
+    handleInputResize();
+  }, [input, handleInputResize]);
+
 
   useEffect(() => {
     if (!isOpen) {
@@ -75,10 +97,10 @@ export function AIAssistantDialog({ isOpen, onOpenChange }: { isOpen: boolean; o
   }, [isOpen, toast]);
 
   useEffect(() => {
-    if (audioSrc && audioRef.current) {
+    if (audioSrc && audioRef.current && isTtsEnabled) {
       audioRef.current.play().catch(e => console.error("Audio play failed", e));
     }
-  }, [audioSrc]);
+  }, [audioSrc, isTtsEnabled]);
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -104,6 +126,12 @@ export function AIAssistantDialog({ isOpen, onOpenChange }: { isOpen: boolean; o
         toast({ variant: "destructive", title: "Microphone Error", description: "Could not start voice recognition. Please check permissions." });
       }
     }
+  };
+
+  const toggleTts = () => {
+    const newState = !isTtsEnabled;
+    setIsTtsEnabled(newState);
+    localStorage.setItem('ai-assistant-tts-enabled', JSON.stringify(newState));
   };
 
 
@@ -183,8 +211,10 @@ export function AIAssistantDialog({ isOpen, onOpenChange }: { isOpen: boolean; o
       const newAssistantMessage: Message = { id: `assistant-${Date.now()}`, role: 'assistant', text: assistantResponse.response };
       setMessages(prev => [...prev, newAssistantMessage]);
       
-      const ttsResponse = await textToSpeech(assistantResponse.response);
-      setAudioSrc(ttsResponse.audio);
+      if (isTtsEnabled) {
+          const ttsResponse = await textToSpeech(assistantResponse.response);
+          setAudioSrc(ttsResponse.audio);
+      }
 
     } catch (error) {
       console.error('AI assistant failed:', error);
@@ -254,17 +284,29 @@ export function AIAssistantDialog({ isOpen, onOpenChange }: { isOpen: boolean; o
             </div>
         </ScrollArea>
 
-        <div className="mt-auto pt-4 flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={handleMicClick} disabled={isLoading}>
+        <div className="mt-auto pt-4 flex items-end gap-2">
+            <Button variant="ghost" size="icon" onClick={toggleTts} disabled={isLoading} title={isTtsEnabled ? 'Disable voice response' : 'Enable voice response'}>
+                {isTtsEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5 text-muted-foreground" />}
+                <span className="sr-only">Toggle voice response</span>
+            </Button>
+            <Button variant="ghost" size="icon" onClick={handleMicClick} disabled={isLoading} title="Use Microphone">
                 <Mic className={cn("h-5 w-5", isRecording && "text-destructive animate-pulse")} />
                 <span className="sr-only">Use Microphone</span>
             </Button>
-            <Input 
+            <Textarea
+                ref={textareaRef}
+                rows={1}
                 placeholder="e.g., Add a male cockatiel"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && !isLoading && handleSend()}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (!isLoading && !isRecording) handleSend();
+                    }
+                }}
                 disabled={isLoading}
+                className="flex-1 resize-none max-h-32"
             />
             <Button onClick={handleSend} disabled={isLoading || !input.trim()}>
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

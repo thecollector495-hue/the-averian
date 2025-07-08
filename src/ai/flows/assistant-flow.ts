@@ -100,7 +100,23 @@ const AviaryAssistantOutputSchema = z.object({
 export type AviaryAssistantOutput = z.infer<typeof AviaryAssistantOutputSchema>;
 
 export async function aviaryAssistant(input: AviaryAssistantInput): Promise<AviaryAssistantOutput> {
-  return assistantFlow(input);
+  try {
+    const {output} = await assistantFlow(input);
+    if (!output) {
+        throw new Error("Received an empty response from the AI model.");
+    }
+    return output;
+  } catch (e: any) {
+    console.error("Error in assistant flow", e);
+    const errorMessage = e.message?.includes('503') || e.message?.includes('overloaded')
+        ? "The AI model is currently overloaded. Please try again in a moment."
+        : "An error occurred while processing your request. Please try again.";
+    return {
+        actions: [],
+        response: errorMessage,
+        error: e.message || 'An unknown error occurred in the AI flow.',
+    }
+  }
 }
 
 const prompt = ai.definePrompt({
@@ -124,7 +140,7 @@ Analyze the query and determine a list of actions the user wants to perform. You
 - **IMPORTANT**: If a user asks to sell a bird (e.g., "sell bird A123 for 500 to John"), you must generate TWO actions:
     1. An 'updateBird' action. Set the 'status' to 'Sold' and include 'salePrice', 'saleDate' (in YYYY-MM-DD format, use today if not specified), and 'buyerInfo' in the 'updates' object.
     2. An 'addTransaction' action. Set the 'type' to 'income', and include the 'amount', 'description', and 'relatedBirdId'.
-- If they want to add a mutation, use the 'addMutation' action. For multiple mutations, create one 'addMutation' action for each.
+- If they want to add a new mutation, use the 'addMutation' action. If the user does not provide an inheritance type, use your knowledge of avian genetics to infer the most common one (e.g., Lutino is 'Sex-linked Recessive', Pied is 'Autosomal Recessive'). You MUST select one of the available inheritance types. For multiple mutations, create a separate 'addMutation' action for each.
 - If they want to add a new species, use the 'addSpecies' action.
 - If they are just asking a question or having a conversation, use the 'answer' action and provide a helpful text response. The data field should be null for 'answer' actions.
 
@@ -147,7 +163,7 @@ Use the following logic (Male ZZ, Female ZW).
   - Visual Male (Z-Gene/Z) x Normal Female (z/W) -> 50% Visual Males, 50% Visual Females.
   - Normal Male (z/z) x Visual Female (Z-Gene/W) -> 50% Normal Females, 50% Visual Males.
 
-For any set of actions that will add, update, or delete data, your text 'response' should clearly state what you are about to do and ask for confirmation. For example: "I'm ready to mark bird A123 as sold and add an income transaction of R500. Please confirm." or "I'm ready to add 10 cages at a cost of R500 each and create a reminder note. Please confirm."
+For any set of actions that will add, update, or delete data, your text 'response' should clearly state what you are about to do and ask for confirmation. For example: "I'm ready to mark bird A123 as sold and add an income transaction of R500. Please confirm." When inferring a mutation's inheritance type, be sure to mention it in the response, for example: "I can add the Lutino mutation (Sex-linked Recessive). Please confirm."
 
 Always provide a friendly confirmation message in the 'response' field that summarizes all actions taken or answers the user's question.
 
@@ -166,16 +182,7 @@ const assistantFlow = ai.defineFlow(
     outputSchema: AviaryAssistantOutputSchema,
   },
   async (input) => {
-    try {
-      const {output} = await prompt(input);
-      return output!;
-    } catch (e: any) {
-        console.error("Error in assistant flow", e);
-        return {
-            actions: [],
-            response: "An error occurred while processing your request.",
-            error: e.message || 'An unknown error occurred in the AI flow.',
-        }
-    }
+    const {output} = await prompt(input);
+    return output!;
   }
 );

@@ -257,7 +257,7 @@ export const getBirdIdentifier = (bird: Bird) => {
     if (!bird) return 'N/A';
     const allSpecies = [...Object.values(speciesData), ...initialItems.filter((i): i is CustomSpecies => i.category === 'CustomSpecies').map(cs => ({ name: cs.name, id: cs.id }))];
     const speciesName = allSpecies.find(s => s.name === bird.species || (s as any).id === bird.species)?.name || bird.species;
-    const identifier = bird.ringNumber ? `(${bird.ringNumber})` : '(Unbanded)';
+    const identifier = bird.unbanded || !bird.ringNumber ? '(Unbanded)' : `(${bird.ringNumber})`;
     return `${speciesName} ${identifier}`;
 };
 

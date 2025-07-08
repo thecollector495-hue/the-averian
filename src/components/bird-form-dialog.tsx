@@ -180,7 +180,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
   const getBirdIdentifierWithCage = useCallback((bird: Bird): string => {
     const speciesInfo = allSpeciesOptions.find(s => s.value === bird.species);
     const speciesName = speciesInfo ? speciesInfo.label : bird.species;
-    const identifier = bird.ringNumber ? `(${bird.ringNumber})` : '(Unbanded)';
+    const identifier = bird.unbanded || !bird.ringNumber ? '(Unbanded)' : `(${bird.ringNumber})`;
     const cage = allCages.find(c => c.birdIds.includes(bird.id));
     const cageName = cage ? ` - ${cage.name}` : '';
     return `${speciesName} ${identifier}${cageName}`;

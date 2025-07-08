@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Sparkles, Send, Bot, User, RefreshCw } from 'lucide-react';
 import { aviaryAssistant } from '@/ai/flows/assistant-flow';
 import { useItems } from '@/context/ItemsContext';
-import { Bird, NoteReminder, Cage, getBirdIdentifier, CustomMutation, CollectionItem, CustomSpecies } from '@/lib/data';
+import { Bird, NoteReminder, Cage, getBirdIdentifier, CustomMutation, CollectionItem, CustomSpecies, Transaction } from '@/lib/data';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -151,8 +151,22 @@ export default function AIAssistantPage() {
                   category: 'Cage',
                   name: name,
                   birdIds: [],
+                  cost: cageData.cost
                 }));
                 itemsToAdd.push(...newCages);
+
+                if (cageData.cost && cageData.cost > 0) {
+                  const newTransactions: Transaction[] = newCages.map(cage => ({
+                    id: `t${Date.now()}${Math.random()}`,
+                    category: 'Transaction',
+                    type: 'expense',
+                    date: format(new Date(), 'yyyy-MM-dd'),
+                    description: `Purchase of cage: ${cage.name}`,
+                    amount: cage.cost!,
+                  }));
+                  itemsToAdd.push(...newTransactions);
+                }
+
                 toast({ title: "AI Action: Cages Added", description: `Successfully added ${newCages.length} cage(s).` });
               }
               break;

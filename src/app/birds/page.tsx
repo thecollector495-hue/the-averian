@@ -2,9 +2,10 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Sparkles, Send, Bot, User, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Loader2, Sparkles, Send, Bot, User, RefreshCw, AlertTriangle, Calculator } from 'lucide-react';
 import { aviaryAssistant } from '@/ai/flows/assistant-flow';
 import { useItems } from '@/context/ItemsContext';
 import { Bird, NoteReminder, Cage, getBirdIdentifier, CustomMutation, CollectionItem, CustomSpecies, Transaction, Pair } from '@/lib/data';
@@ -16,6 +17,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Checkbox } from '@/components/ui/checkbox';
 import { useCurrency } from '@/context/CurrencyContext';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+
+const GeneticsCalculatorDialog = dynamic(() => import('@/components/genetics-calculator-dialog').then(mod => mod.GeneticsCalculatorDialog), { ssr: false });
 
 type Message = {
   id: string;
@@ -42,6 +46,9 @@ export default function AIAssistantPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [pendingActions, setPendingActions] = useState<any[] | null>(null);
   const [selectedActionIndices, setSelectedActionIndices] = useState<Set<number>>(new Set());
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+  
+  const customMutations = items.filter((item): item is CustomMutation => item.category === 'CustomMutation');
 
   useEffect(() => {
     if (pendingActions) {
@@ -78,6 +85,10 @@ export default function AIAssistantPage() {
       const newUserMessage: Message = { id: `user-${Date.now()}`, role: 'user', text: currentInput };
       setMessages(prev => [...prev, newUserMessage]);
       setInput('');
+    } else {
+       // For quick actions, we add a user-like message to show what was asked
+      const newUserMessage: Message = { id: `user-${Date.now()}`, role: 'user', text: `*Used Genetics Calculator to ask:* "${currentInput}"` };
+      setMessages(prev => [...prev, newUserMessage]);
     }
 
     const context = JSON.stringify(items.filter(i => ['Bird', 'NoteReminder', 'Cage', 'CustomMutation', 'CustomSpecies', 'Transaction', 'Pair'].includes(i.category)));
@@ -313,6 +324,14 @@ export default function AIAssistantPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh_-_4rem)]">
+        {isCalculatorOpen && (
+            <GeneticsCalculatorDialog
+                isOpen={isCalculatorOpen}
+                onOpenChange={setIsCalculatorOpen}
+                onCalculate={(query) => handleSend(query)}
+                customMutations={customMutations}
+            />
+        )}
         {pendingActions && (
             <AlertDialog open={!!pendingActions} onOpenChange={(open) => !open && setPendingActions(null)}>
                 <AlertDialogContent>
@@ -424,6 +443,20 @@ export default function AIAssistantPage() {
 
         <div className="shrink-0 border-t p-4 bg-background">
             <div className="max-w-3xl mx-auto flex items-end gap-2">
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="lg" className="shrink-0">
+                            <Sparkles className="h-5 w-5" />
+                            <span className="sr-only">Quick Actions</span>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                        <DropdownMenuItem onClick={() => setIsCalculatorOpen(true)}>
+                            <Calculator className="mr-2 h-4 w-4" />
+                            <span>Genetics Calculator</span>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
                 <Textarea
                     ref={textareaRef}
                     rows={1}

@@ -129,7 +129,10 @@ Analyze the query and determine a list of actions the user wants to perform. You
 - If they are just asking a question or having a conversation, use the 'answer' action and provide a helpful text response. The data field should be null for 'answer' actions.
 
 **Genetic Calculations**:
-If the user asks to calculate genetic outcomes for a pair, use the 'answer' action. Your response should explain the expected offspring based on their visual and split mutations from the context. Find the inheritance type of each mutation from the 'customMutations' list in the context.
+If the user asks to calculate genetic outcomes, use the 'answer' action.
+- If the query refers to existing birds in the aviary (e.g., "pair bird A1 and B2"), find their mutations in the provided Aviary Context.
+- If the query describes a theoretical pair (e.g., "a visual blue male split for fallow and a normal female"), use the mutations described in the query.
+Find the inheritance type of each mutation from the 'customMutations' list in the context.
 Your final answer must be a clear breakdown of percentages for each sex. For example: "Males: 50% Blue, 50% Green (split Blue). Females: 50% Blue, 50% Green."
 Use the following logic (Male ZZ, Female ZW).
 - **Autosomal Recessive**: A bird needs two copies to be visual, one copy means it is "split".

@@ -74,25 +74,29 @@ export default function AIAssistantPage() {
     }
   }, [messages]);
 
-  const handleSend = async (queryOverride?: string) => {
-    const currentInput = queryOverride || input;
-    if (!currentInput.trim()) return;
+  const handleSend = async (options: { query: string; isFromCalculator?: boolean; isRetry?: boolean }) => {
+    const { query, isFromCalculator, isRetry } = options;
+    if (!query.trim()) return;
 
     setIsLoading(true);
     setMessages(prev => prev.filter(m => !m.isError));
 
-    if (!queryOverride) {
-      const newUserMessage: Message = { id: `user-${Date.now()}`, role: 'user', text: currentInput };
-      setMessages(prev => [...prev, newUserMessage]);
-      setInput('');
-    } else {
-       // For quick actions, we add a user-like message to show what was asked
-      const newUserMessage: Message = { id: `user-${Date.now()}`, role: 'user', text: `*Used Genetics Calculator to ask:* "${currentInput}"` };
-      setMessages(prev => [...prev, newUserMessage]);
-    }
+    if (!isRetry) {
+      let userMessageText = query;
+      if (isFromCalculator) {
+        userMessageText = `*Used Genetics Calculator to ask:* "${query}"`;
+      }
 
+      const newUserMessage: Message = { id: `user-${Date.now()}`, role: 'user', text: userMessageText };
+      setMessages(prev => [...prev, newUserMessage]);
+      
+      if (!isFromCalculator) {
+        setInput('');
+      }
+    }
+    
     const context = JSON.stringify(items.filter(i => ['Bird', 'NoteReminder', 'Cage', 'CustomMutation', 'CustomSpecies', 'Transaction', 'Pair'].includes(i.category)));
-    const assistantResponse = await aviaryAssistant({ query: currentInput, context });
+    const assistantResponse = await aviaryAssistant({ query: query, context });
     
     setIsLoading(false);
 
@@ -108,7 +112,7 @@ export default function AIAssistantPage() {
             role: 'assistant',
             text: errorMessageText,
             isError: true,
-            onRetry: () => handleSend(currentInput),
+            onRetry: () => handleSend({ query: query, isRetry: true }),
         };
         setMessages(prev => [...prev, newErrorMessage]);
         toast({
@@ -328,7 +332,7 @@ export default function AIAssistantPage() {
             <GeneticsCalculatorDialog
                 isOpen={isCalculatorOpen}
                 onOpenChange={setIsCalculatorOpen}
-                onCalculate={(query) => handleSend(query)}
+                onCalculate={(query) => handleSend({ query, isFromCalculator: true })}
                 customMutations={customMutations}
             />
         )}
@@ -466,13 +470,13 @@ export default function AIAssistantPage() {
                     onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
-                            if (!isLoading) handleSend();
+                            if (!isLoading) handleSend({ query: input });
                         }
                     }}
                     disabled={isLoading}
                     className="flex-1 resize-none max-h-48 text-base"
                 />
-                <Button onClick={() => handleSend()} disabled={isLoading || !input.trim()} size="lg">
+                <Button onClick={() => handleSend({ query: input })} disabled={isLoading || !input.trim()} size="lg">
                     {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                     <span className="sr-only">Send</span>
                 </Button>

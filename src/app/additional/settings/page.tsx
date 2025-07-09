@@ -2,20 +2,42 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from '@/components/ui/button';
-import { Crown, Star, Check } from 'lucide-react';
+import { Crown, Star, Check, PlusCircle, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurrency, currencies } from "@/context/CurrencyContext";
 import { addDays, format, isFuture } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
+import { useItems } from '@/context/ItemsContext';
+import { CustomMutation, CustomSpecies, inheritanceTypes } from '@/lib/data';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AddMutationFormValues } from '@/components/add-mutation-dialog';
+import { AddSpeciesFormValues } from '@/components/add-species-dialog';
+import { useToast } from '@/hooks/use-toast';
+
+const AddMutationDialog = dynamic(() => import('@/components/add-mutation-dialog').then(mod => mod.AddMutationDialog), { ssr: false });
+const AddSpeciesDialog = dynamic(() => import('@/components/add-species-dialog').then(mod => mod.AddSpeciesDialog), { ssr: false });
+
 
 export default function SettingsPage() {
   const { currency, setCurrency } = useCurrency();
+  const { items, addItem, deleteItem } = useItems();
+  const { toast } = useToast();
+
   const [trialEndDate, setTrialEndDate] = useState<Date | null>(null);
+  const [isMutationDialogOpen, setIsMutationDialogOpen] = useState(false);
+  const [isSpeciesDialogOpen, setIsSpeciesDialogOpen] = useState(false);
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
+
+  const customMutations = items.filter((item): item is CustomMutation => item.category === 'CustomMutation');
+  const customSpecies = items.filter((item): item is CustomSpecies => item.category === 'CustomSpecies');
+
+  const itemToDelete = deletingItemId ? items.find(i => i.id === deletingItemId) : null;
 
   useEffect(() => {
     const trialStartDateStr = localStorage.getItem('app_trial_start_date');
@@ -29,7 +51,6 @@ export default function SettingsPage() {
     }
     
     setTrialEndDate(addDays(startDate, 7));
-
   }, []);
 
   const isTrialActive = trialEndDate && isFuture(trialEndDate);
@@ -40,22 +61,69 @@ export default function SettingsPage() {
     "Comprehensive financial reports",
     "AI Assistant for faster management"
   ];
+  
+  const handleSaveMutation = (data: AddMutationFormValues) => {
+    const newMutation: CustomMutation = {
+      ...data,
+      id: `cm${Date.now()}`,
+      category: 'CustomMutation',
+    };
+    addItem(newMutation);
+    toast({ title: "Mutation Added", description: `The "${data.name}" mutation has been saved.` });
+  };
+
+  const handleSaveSpecies = (data: AddSpeciesFormValues) => {
+    const newSpecies: CustomSpecies = {
+      name: data.name,
+      incubationPeriod: data.incubationPeriod,
+      subspecies: data.subspecies.map(s => s.value),
+      id: `cs${Date.now()}`,
+      category: 'CustomSpecies',
+    };
+    addItem(newSpecies);
+    toast({ title: "Species Added", description: `The "${data.name}" species has been saved.` });
+  };
+  
+  const handleDeleteItem = () => {
+    if (!deletingItemId) return;
+    deleteItem(deletingItemId);
+    toast({ title: "Item Deleted", description: "The custom data has been removed." });
+    setDeletingItemId(null);
+  };
+
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
-      
+      {isMutationDialogOpen && <AddMutationDialog isOpen={isMutationDialogOpen} onOpenChange={setIsMutationDialogOpen} onSave={handleSaveMutation} />}
+      {isSpeciesDialogOpen && <AddSpeciesDialog isOpen={isSpeciesDialogOpen} onOpenChange={setIsSpeciesDialogOpen} onSave={handleSaveSpecies} />}
+
+      <AlertDialog open={!!deletingItemId} onOpenChange={(open) => !open && setDeletingItemId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the custom item. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteItem}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <h1 className="text-3xl font-bold mb-6">Settings</h1>
       
-      <Tabs defaultValue="general">
-        <TabsList className="grid h-auto w-full grid-cols-1 md:grid-cols-2">
+      <Tabs defaultValue="general" className="w-full">
+        <TabsList className="grid h-auto w-full grid-cols-1 md:grid-cols-3">
           <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="data">Data</TabsTrigger>
           <TabsTrigger value="subscription">Subscription</TabsTrigger>
         </TabsList>
+
         <TabsContent value="general" className="mt-6">
             <Card>
-                <CardHeader>
-                    <CardTitle>Application Settings</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle>Application Settings</CardTitle></CardHeader>
                 <CardContent className="space-y-6">
                     <div className="flex items-center justify-between">
                         <Label htmlFor="dark-mode" className="text-base">Dark Mode</Label>
@@ -77,6 +145,56 @@ export default function SettingsPage() {
                 </CardContent>
             </Card>
         </TabsContent>
+        
+        <TabsContent value="data" className="mt-6 space-y-6">
+            <Card>
+                <CardHeader className="flex-row items-center justify-between">
+                    <CardTitle>Custom Mutations</CardTitle>
+                    <Button size="sm" onClick={() => setIsMutationDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/>Add Mutation</Button>
+                </CardHeader>
+                <CardContent>
+                    {customMutations.length > 0 ? (
+                        <ul className="space-y-2">
+                           {customMutations.map(m => (
+                               <li key={m.id} className="flex items-center justify-between rounded-md border p-3">
+                                   <div>
+                                       <p className="font-medium">{m.name}</p>
+                                       <p className="text-sm text-muted-foreground">{m.inheritance}</p>
+                                   </div>
+                                   <Button variant="ghost" size="icon" onClick={() => setDeletingItemId(m.id)}>
+                                       <Trash2 className="h-4 w-4 text-destructive"/>
+                                   </Button>
+                               </li>
+                           ))}
+                        </ul>
+                    ) : <p className="text-center text-muted-foreground py-4">No custom mutations added yet.</p>}
+                </CardContent>
+            </Card>
+             <Card>
+                <CardHeader className="flex-row items-center justify-between">
+                    <CardTitle>Custom Species</CardTitle>
+                    <Button size="sm" onClick={() => setIsSpeciesDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/>Add Species</Button>
+                </CardHeader>
+                <CardContent>
+                     {customSpecies.length > 0 ? (
+                        <ul className="space-y-2">
+                           {customSpecies.map(s => (
+                               <li key={s.id} className="flex items-center justify-between rounded-md border p-3">
+                                   <div>
+                                       <p className="font-medium">{s.name}</p>
+                                       <p className="text-sm text-muted-foreground">Incubation: {s.incubationPeriod} days. Subspecies: {s.subspecies.length}</p>
+                                   </div>
+                                    <Button variant="ghost" size="icon" onClick={() => setDeletingItemId(s.id)}>
+                                       <Trash2 className="h-4 w-4 text-destructive"/>
+                                   </Button>
+                               </li>
+                           ))}
+                        </ul>
+                    ) : <p className="text-center text-muted-foreground py-4">No custom species added yet.</p>}
+                </CardContent>
+            </Card>
+        </TabsContent>
+
         <TabsContent value="subscription" className="mt-6">
             <Card>
                 <CardHeader>

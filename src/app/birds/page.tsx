@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Sparkles, Send, Bot, User, RefreshCw, AlertTriangle } from 'lucide-react';
 import { aviaryAssistant } from '@/ai/flows/assistant-flow';
 import { useItems } from '@/context/ItemsContext';
-import { Bird, NoteReminder, Cage, getBirdIdentifier, CollectionItem, Transaction, Pair } from '@/lib/data';
+import { Bird, NoteReminder, Cage, getBirdIdentifier, CollectionItem, Transaction, Pair, CustomSpecies, CustomMutation, inheritanceTypes } from '@/lib/data';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -80,7 +80,7 @@ export default function AIAssistantPage() {
       setInput('');
     }
     
-    const context = JSON.stringify(items.filter(i => ['Bird', 'NoteReminder', 'Cage', 'Transaction', 'Pair'].includes(i.category)));
+    const context = JSON.stringify(items.filter(i => ['Bird', 'NoteReminder', 'Cage', 'Transaction', 'Pair', 'CustomSpecies', 'CustomMutation'].includes(i.category)));
     const assistantResponse = await aviaryAssistant({ query: query, context });
     
     setIsLoading(false);
@@ -125,11 +125,11 @@ export default function AIAssistantPage() {
     const allCages = items.filter((item): item is Cage => item.category === 'Cage');
     let itemsToAdd: CollectionItem[] = [];
     let itemsToUpdate: Partial<CollectionItem>[] = [];
-    let idsToDelete: { type: 'Bird' | 'Cage' | 'Note' | 'Transaction', id: string }[] = [];
+    let idsToDelete: { type: CollectionItem['category'], id: string }[] = [];
     let summary: string[] = [];
 
     for (const action of actionsToExecute) {
-      if (!action.data && !['answer', 'deleteBird', 'deleteCage', 'deleteNote', 'deleteTransaction'].includes(action.action)) continue;
+      if (!action.data && !['answer'].includes(action.action) && !action.action.startsWith('delete')) continue;
 
       switch(action.action) {
         case 'addBird': {
@@ -220,18 +220,37 @@ export default function AIAssistantPage() {
             summary.push(`Added ${newTransaction.type} transaction`);
             break;
         }
-        case 'deleteBird':
-            (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'Bird', id }));
+        case 'addSpecies': {
+            const speciesData = action.data as any;
+            const newSpecies: CustomSpecies = {
+                id: `cs${Date.now()}`,
+                category: 'CustomSpecies',
+                name: speciesData.name,
+                incubationPeriod: speciesData.incubationPeriod,
+                subspecies: speciesData.subspecies || [],
+            };
+            itemsToAdd.push(newSpecies);
+            summary.push(`Added species: ${newSpecies.name}`);
             break;
-        case 'deleteCage':
-            (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'Cage', id }));
+        }
+        case 'addMutation': {
+            const mutationData = action.data as any;
+            const newMutation: CustomMutation = {
+                id: `cm${Date.now()}`,
+                category: 'CustomMutation',
+                name: mutationData.name,
+                inheritance: mutationData.inheritance,
+            };
+            itemsToAdd.push(newMutation);
+            summary.push(`Added mutation: ${newMutation.name}`);
             break;
-        case 'deleteNote':
-            (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'Note', id }));
-            break;
-        case 'deleteTransaction':
-            (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'Transaction', id }));
-            break;
+        }
+        case 'deleteBird': (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'Bird', id })); break;
+        case 'deleteCage': (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'Cage', id })); break;
+        case 'deleteNote': (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'NoteReminder', id })); break;
+        case 'deleteTransaction': (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'Transaction', id })); break;
+        case 'deleteSpecies': (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'CustomSpecies', id })); break;
+        case 'deleteMutation': (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'CustomMutation', id })); break;
       }
     }
     if (itemsToAdd.length > 0) addItems(itemsToAdd);
@@ -255,30 +274,19 @@ export default function AIAssistantPage() {
       switch (type) {
         case 'addBird': return `Add Bird: ${data.species || 'Unknown'}`;
         case 'updateBird': return `Update Bird (ID: ${data.id})`;
-        case 'addNote': {
-            let summary = `Add Note: "${data.title}"`;
-            if (data.content) {
-                const truncatedContent = data.content.length > 50 ? `${data.content.substring(0, 50)}...` : data.content;
-                summary += ` - "${truncatedContent}"`;
-            }
-            return summary;
-        }
+        case 'addNote': return `Add Note: "${data.title}"`;
         case 'updateNote': return `Update Note (ID: ${data.id})`;
-        case 'addCage': {
-          const names = data.names || [];
-          const truncatedNames = names.length > 5 ? `${names.slice(0, 5).join(', ')}, ...` : names.join(', ');
-          let summary = `Add ${names.length || 1} cage(s): ${truncatedNames}`;
-          if (data.cost) {
-              summary += ` at a cost of ${formatCurrency(data.cost)} each`;
-          }
-          return summary;
-        }
+        case 'addCage': return `Add ${data.names?.length || 1} cage(s): ${data.names?.join(', ')}`;
         case 'updateCage': return `Update Cage (ID: ${data.id})`;
         case 'addTransaction': return `Add ${data.type} transaction for ${formatCurrency(data.amount)}`;
+        case 'addSpecies': return `Add Species: ${data.name} (${data.incubationPeriod} days)`;
+        case 'addMutation': return `Add Mutation: ${data.name} (${data.inheritance})`;
         case 'deleteBird': return `Delete ${data.ids?.length || 0} bird(s)`;
         case 'deleteCage': return `Delete ${data.ids?.length || 0} cage(s)`;
         case 'deleteNote': return `Delete ${data.ids?.length || 0} note(s)`;
         case 'deleteTransaction': return `Delete ${data.ids?.length || 0} transaction(s)`;
+        case 'deleteSpecies': return `Delete ${data.ids?.length || 0} species`;
+        case 'deleteMutation': return `Delete ${data.ids?.length || 0} mutation(s)`;
         default: return `Perform action: ${type}`;
       }
     });

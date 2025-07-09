@@ -10,10 +10,11 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
+import { inheritanceTypes } from '@/lib/data';
 
 const AviaryAssistantInputSchema = z.object({
   query: z.string().describe("The user's query or command."),
-  context: z.string().describe("A JSON string of existing birds, notes, cages, and financial transactions to provide context for the query."),
+  context: z.string().describe("A JSON string of existing birds, notes, cages, financial transactions, custom species and mutations to provide context for the query."),
 });
 export type AviaryAssistantInput = z.infer<typeof AviaryAssistantInputSchema>;
 
@@ -27,7 +28,6 @@ const AddBirdDataSchema = z.object({
     splitMutations: z.array(z.string()).optional(),
     status: z.enum(['Available', 'Sold', 'Deceased', 'Hand-rearing']).default('Available'),
     cageName: z.string().optional().describe("The name of the cage to put the bird in. Can be an existing cage or a new one."),
-    // Sale details for updates
     salePrice: z.number().optional().describe("The price the bird was sold for."),
     saleDate: z.string().optional().describe("The date the bird was sold in YYYY-MM-DD format."),
     buyerInfo: z.string().optional().describe("Information about the buyer."),
@@ -75,9 +75,38 @@ const AddTransactionDataSchema = z.object({
     relatedBirdId: z.string().optional().describe("The ID of a bird related to this transaction."),
 }).describe("The data required to add a new financial transaction.");
 
+const AddSpeciesDataSchema = z.object({
+    name: z.string().describe("The name of the new species."),
+    incubationPeriod: z.number().describe("The incubation period in days."),
+    subspecies: z.array(z.string()).optional().describe("An optional list of subspecies names."),
+}).describe("The data required to add a new species.");
+
+const AddMutationDataSchema = z.object({
+    name: z.string().describe("The name of the new mutation."),
+    inheritance: z.enum(inheritanceTypes).describe("The genetic inheritance type of the mutation."),
+}).describe("The data required to add a new mutation.");
+
+
 const ActionSchema = z.object({
-    action: z.enum(['addBird', 'updateBird', 'addNote', 'updateNote', 'addCage', 'updateCage', 'deleteBird', 'deleteCage', 'deleteNote', 'deleteTransaction', 'answer', 'addTransaction']).describe("The action the assistant should take."),
-    data: z.union([AddBirdDataSchema, UpdateBirdDataSchema, AddNoteDataSchema, UpdateNoteDataSchema, AddCageDataSchema, UpdateCageDataSchema, DeleteDataSchema, AddTransactionDataSchema, z.null()]).describe("The data associated with the action. This should be null for 'answer' actions."),
+    action: z.enum([
+        'addBird', 'updateBird', 'deleteBird',
+        'addCage', 'updateCage', 'deleteCage',
+        'addNote', 'updateNote', 'deleteNote',
+        'addTransaction', 'deleteTransaction',
+        'addSpecies', 'deleteSpecies',
+        'addMutation', 'deleteMutation',
+        'answer'
+    ]).describe("The action the assistant should take."),
+    data: z.union([
+        AddBirdDataSchema, UpdateBirdDataSchema,
+        AddCageDataSchema, UpdateCageDataSchema,
+        AddNoteDataSchema, UpdateNoteDataSchema,
+        AddTransactionDataSchema,
+        AddSpeciesDataSchema,
+        AddMutationDataSchema,
+        DeleteDataSchema, 
+        z.null()
+    ]).describe("The data associated with the action. This should be null for 'answer' actions."),
 });
 
 const AviaryAssistantOutputSchema = z.object({
@@ -107,28 +136,36 @@ export async function aviaryAssistant(input: AviaryAssistantInput): Promise<Avia
   }
 }
 
-const promptTemplate = `You are an expert aviary assistant. Your goal is to help the user manage their birds, cages, notes and finances. You must understand queries in both English and Afrikaans, and you should respond in the same language as the user's query. You will be given a user's query and a JSON object containing the current state of their aviary.
+const promptTemplate = `You are an expert aviary management assistant. Your goal is to help the user manage their birds, cages, notes, finances, and custom data like species and mutations. You must understand queries in both English and Afrikaans, and you should respond in the same language as the user's query. You will be given a user's query and a JSON object containing the current state of their aviary.
 
-You MUST parse the user's entire query and not miss any details. For complex commands, break them down into multiple actions. For example, if a user asks to add cages with a cost and a related note, you must create actions for BOTH adding the cages (with the cost) AND adding the note.
+You MUST parse the user's entire query and not miss any details. For complex commands, break them down into multiple actions.
 
-Analyze the query and determine a list of actions the user wants to perform. You can perform multiple actions for a single query. For example, if the user asks to add two birds, you should return two 'addBird' actions in the 'actions' array.
+Analyze the query and determine a list of actions. You can perform multiple actions for a single query.
 
-- If they want to add a bird, use the 'addBird' action. If they mention a cage, include it in the 'cageName' field.
-- If they want to update a bird, use the 'updateBird' action. You MUST find the bird's ID from the context.
-- If they want to add a note or reminder, use the 'addNote' action. If the note refers to other items (like newly created cages), make sure to reference them in the note's title or content for clarity. For example, if adding cages A1-A5, the note content could be "Move Conures to new cages A1-A5".
-- If they want to update a note, use the 'updateNote' action. You MUST find the note's ID.
-- If they want to add one or more cages, use the 'addCage' action. If the user asks to add multiple cages, such as "cages 100 to 102", populate the 'names' array with each individual cage name: ["100", "101", "102"]. If they mention a cost, you MUST include it in the 'cost' field.
-- If they want to update a cage's name or cost, use 'updateCage'. You MUST find the cage's ID.
-- To remove items, use 'deleteBird', 'deleteCage', 'deleteNote', or 'deleteTransaction'. Find the ID(s) of the item(s) to remove from the context.
-- If they want to add a transaction, use 'addTransaction'.
-- **IMPORTANT**: If a user asks to sell a bird (e.g., "sell bird A123 for 500 to John"), you must generate TWO actions:
-    1. An 'updateBird' action. Set the 'status' to 'Sold' and include 'salePrice', 'saleDate' (in YYYY-MM-DD format, use today if not specified), and 'buyerInfo' in the 'updates' object.
-    2. An 'addTransaction' action. Set the 'type' to 'income', and include the 'amount', 'description', and 'relatedBirdId'.
-- If they are just asking a question or having a conversation, use the 'answer' action and provide a helpful text response. The data field should be null for 'answer' actions.
+- ADDING/UPDATING DATA:
+  - To add a bird, use 'addBird'.
+  - To update a bird, use 'updateBird'. You MUST find the bird's ID from the context.
+  - To add a note/reminder, use 'addNote'.
+  - To update a note, use 'updateNote'. Find the note's ID.
+  - To add cages, use 'addCage'. Handle ranges like "cages 100 to 102" by creating an action for each cage name: ["100", "101", "102"].
+  - To update a cage, use 'updateCage'. Find the cage's ID.
+  - To add a transaction, use 'addTransaction'.
+  - To add a species, use 'addSpecies'.
+  - To add a mutation, use 'addMutation'. You MUST specify the 'inheritance' field. Valid inheritance types are: ${inheritanceTypes.join(', ')}. If the user doesn't specify one for a common mutation, infer it (e.g., Lutino is 'Sex-Linked Recessive').
 
-For any set of actions that will add, update, or delete data, your text 'response' should clearly state what you are about to do and ask for confirmation. For example: "I'm ready to mark bird A123 as sold and add an income transaction of R500. Please confirm."
+- DELETING DATA:
+  - To remove items, use 'deleteBird', 'deleteCage', 'deleteNote', 'deleteTransaction', 'deleteSpecies', or 'deleteMutation'. Find the ID(s) of the item(s) to remove from the context.
 
-Always provide a friendly confirmation message in the 'response' field that summarizes all actions taken or answers the user's question.
+- SPECIAL INSTRUCTIONS:
+  - **SELLING A BIRD**: If a user asks to sell a bird (e.g., "sell bird A123 for 500 to John"), you must generate TWO actions:
+    1. An 'updateBird' action: Set status to 'Sold', include 'salePrice', 'saleDate' (YYYY-MM-DD), and 'buyerInfo'.
+    2. An 'addTransaction' action: Set type to 'income', include 'amount', 'description', and 'relatedBirdId'.
+  - **ADDING CAGE WITH COST**: If a user adds cages with a cost, generate an 'addCage' action AND an 'addTransaction' action of type 'expense' for each cage.
+
+- CONFIRMATION & RESPONSE:
+  - For any actions that will change data, your text 'response' should clearly state what you are about to do and ask for confirmation.
+  - Always provide a friendly confirmation message in the 'response' field that summarizes all actions taken or answers the user's question.
+  - If the user is just asking a question or having a conversation, use the 'answer' action and provide a helpful text response. The data field should be null for 'answer' actions.
 
 User query:
 "{{{query}}}"

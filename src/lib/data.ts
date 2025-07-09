@@ -1,4 +1,5 @@
 
+
 export const speciesData = {
     'Cockatoo': {
         name: 'Cockatoo',
@@ -126,6 +127,19 @@ export const speciesData = {
 
 export const mutationOptions = ['Opaline', 'Cinnamon', 'Lutino', 'Albino', 'Fallow', 'Spangle', 'Pied'] as const;
 
+export const inheritanceTypes = [
+  'Autosomal Recessive',
+  'Autosomal Dominant',
+  'Autosomal Co-Dominant',
+  'Autosomal Incomplete Dominant',
+  'Sex-Linked Recessive',
+  'Sex-Linked Dominant',
+  'Sex-Linked Co-Dominant',
+  'Polygenic',
+  'Modifier',
+] as const;
+
+
 export type BirdFormValues = {
   species: string;
   subspecies?: string;
@@ -235,7 +249,23 @@ export type Permit = {
   expiryDate?: string; // YYYY-MM-DD
 }
 
-export type CollectionItem = Bird | Cage | Pair | BreedingRecord | NoteReminder | Transaction | Permit;
+export type CustomSpecies = {
+    id: string;
+    category: 'CustomSpecies';
+    name: string;
+    incubationPeriod: number;
+    subspecies: string[];
+};
+
+export type CustomMutation = {
+    id: string;
+    category: 'CustomMutation';
+    name: string;
+    inheritance: typeof inheritanceTypes[number];
+};
+
+
+export type CollectionItem = Bird | Cage | Pair | BreedingRecord | NoteReminder | Transaction | Permit | CustomSpecies | CustomMutation;
 
 export const getBirdIdentifier = (bird: Bird) => {
     if (!bird) return 'N/A';
@@ -330,5 +360,18 @@ export const initialPermits: Permit[] = [
     { id: 'p2', category: 'Permit', permitNumber: 'ZA-GP-67890', issuingAuthority: 'GDARD', issueDate: '2023-07-15' }
 ];
 
+export const initialCustomSpecies: CustomSpecies[] = [];
+export const initialCustomMutations: CustomMutation[] = [];
 
-export const initialItems: CollectionItem[] = [...initialBirds, ...initialPairs, ...initialCages, ...initialBreedingRecords, ...initialNotes, ...initialTransactions, ...initialPermits];
+
+export const initialItems: CollectionItem[] = [
+    ...initialBirds, 
+    ...initialPairs, 
+    ...initialCages, 
+    ...initialBreedingRecords, 
+    ...initialNotes, 
+    ...initialTransactions, 
+    ...initialPermits,
+    ...initialCustomSpecies,
+    ...initialCustomMutations,
+];

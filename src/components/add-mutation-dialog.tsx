@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { inheritanceTypes } from "@/lib/data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { CustomMutation } from "@/lib/data";
 
 const mutationSchema = z.object({
   name: z.string().min(1, { message: "Mutation name is required." }),

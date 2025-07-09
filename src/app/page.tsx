@@ -11,7 +11,7 @@ import { BirdDetailsDialog } from '@/components/bird-details-dialog';
 import { BirdCard } from '@/components/bird-card';
 import { CageCard } from '@/components/cage-card';
 import { PairCard } from '@/components/pair-card';
-import { Bird, Cage, Pair, BreedingRecord, CollectionItem, getBirdIdentifier, Transaction, Permit, BirdFormValues } from '@/lib/data';
+import { Bird, Cage, Pair, BreedingRecord, CollectionItem, getBirdIdentifier, Transaction, Permit, BirdFormValues, CustomSpecies, CustomMutation } from '@/lib/data';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useItems } from '@/context/ItemsContext';
@@ -41,6 +41,7 @@ export default function HomePage() {
   const allPairs = items.filter((item): item is Pair => item.category === 'Pair');
   const allBreedingRecords = items.filter((item): item is BreedingRecord => item.category === 'BreedingRecord');
   const allPermits = items.filter((item): item is Permit => item.category === 'Permit');
+  const allCustomSpecies = items.filter((item): item is CustomSpecies => item.category === 'CustomSpecies');
 
   const birdToDelete = useMemo(() => 
     deletingBirdId ? allBirds.find(b => b.id === deletingBirdId) : null
@@ -129,16 +130,41 @@ export default function HomePage() {
     }
   };
 
-  const handleSaveBird = (formData: BirdFormValues & { newCageName?: string }) => {
+  const handleSaveBird = (formData: BirdFormValues & { newCageName?: string, newSpeciesName?: string, newSpeciesIncubation?: number, newSubspeciesName?: string }) => {
     const isEditing = !!editingBird;
     const birdId = editingBird?.id || `b${Date.now()}`;
     
     let itemsToAdd: CollectionItem[] = [];
-    let itemsToUpdate: Partial<Bird | Cage>[] = [];
+    let itemsToUpdate: Partial<Bird | Cage | CustomSpecies>[] = [];
     
     let finalCageId = formData.cageId;
+    let finalSpecies = formData.species;
 
-    // Handle new cage creation directly
+    // Handle new Species creation
+    if (formData.newSpeciesName && formData.newSpeciesIncubation) {
+        const newSpeciesId = `cs${Date.now()}`;
+        const newSpecies: CustomSpecies = {
+            id: newSpeciesId,
+            category: 'CustomSpecies',
+            name: formData.newSpeciesName,
+            incubationPeriod: formData.newSpeciesIncubation,
+            subspecies: [],
+        };
+        itemsToAdd.push(newSpecies);
+        finalSpecies = newSpecies.name;
+    }
+    
+    // Handle new Subspecies creation
+    if (formData.newSubspeciesName && formData.species) {
+        const parentSpecies = allCustomSpecies.find(s => s.name === formData.species);
+        if (parentSpecies) {
+            const updatedSubspecies = [...parentSpecies.subspecies, formData.newSubspeciesName];
+            itemsToUpdate.push({ id: parentSpecies.id, subspecies: updatedSubspecies });
+        }
+    }
+
+
+    // Handle new cage creation
     if (formData.newCageName && formData.newCageName.trim() !== "") {
         const trimmedCageName = formData.newCageName.trim();
         const existingCage = allCages.find(c => c.name.toLowerCase() === trimmedCageName.toLowerCase());
@@ -150,7 +176,7 @@ export default function HomePage() {
           id: `c${Date.now()}`,
           name: trimmedCageName,
           category: 'Cage',
-          birdIds: [birdId], // Immediately add the current bird
+          birdIds: [birdId],
           cost: 0,
         };
         itemsToAdd.push(newCage);
@@ -158,7 +184,7 @@ export default function HomePage() {
     }
 
     const birdToSave: Bird = {
-      species: formData.species,
+      species: finalSpecies,
       subspecies: formData.subspecies,
       sex: formData.sex,
       ringNumber: formData.ringNumber,
@@ -501,5 +527,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    

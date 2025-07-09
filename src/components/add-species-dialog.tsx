@@ -66,7 +66,7 @@ export function AddSpeciesDialog({ isOpen, onOpenChange, onSave }: { isOpen: boo
                 <FormItem>
                   <FormLabel>Species Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Cockatiel" {...field} />
+                    <Input placeholder="e.g., Quaker Parrot" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -79,7 +79,7 @@ export function AddSpeciesDialog({ isOpen, onOpenChange, onSave }: { isOpen: boo
                 <FormItem>
                   <FormLabel>Incubation Period (days)</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="e.g., 21" {...field} />
+                    <Input type="number" placeholder="e.g., 24" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -87,7 +87,7 @@ export function AddSpeciesDialog({ isOpen, onOpenChange, onSave }: { isOpen: boo
             />
             
             <div className="space-y-3">
-              <FormLabel>Subspecies</FormLabel>
+              <FormLabel>Subspecies (Optional)</FormLabel>
               <FormDescription>
                 If this species has subspecies, add them below.
               </FormDescription>

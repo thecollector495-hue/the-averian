@@ -36,13 +36,30 @@ export default function HomePage() {
   const [deletingCageId, setDeletingCageId] = useState<string | null>(null);
   const { toast } = useToast();
   
-  const allBirds = items.filter((item): item is Bird => item.category === 'Bird');
-  const allCages = items.filter((item): item is Cage => item.category === 'Cage');
-  const allPairs = items.filter((item): item is Pair => item.category === 'Pair');
-  const allBreedingRecords = items.filter((item): item is BreedingRecord => item.category === 'BreedingRecord');
-  const allPermits = items.filter((item): item is Permit => item.category === 'Permit');
-  const allCustomSpecies = items.filter((item): item is CustomSpecies => item.category === 'CustomSpecies');
-
+  const {
+    allBirds,
+    allCages,
+    allPairs,
+    allBreedingRecords,
+    allPermits,
+    allCustomSpecies
+  } = useMemo(() => {
+    const birds = items.filter((item): item is Bird => item.category === 'Bird');
+    const cages = items.filter((item): item is Cage => item.category === 'Cage');
+    const pairs = items.filter((item): item is Pair => item.category === 'Pair');
+    const breedingRecords = items.filter((item): item is BreedingRecord => item.category === 'BreedingRecord');
+    const permits = items.filter((item): item is Permit => item.category === 'Permit');
+    const customSpecies = items.filter((item): item is CustomSpecies => item.category === 'CustomSpecies');
+    return {
+      allBirds: birds,
+      allCages: cages,
+      allPairs: pairs,
+      allBreedingRecords: breedingRecords,
+      allPermits: permits,
+      allCustomSpecies: customSpecies,
+    };
+  }, [items]);
+  
   const birdToDelete = useMemo(() => 
     deletingBirdId ? allBirds.find(b => b.id === deletingBirdId) : null
   , [deletingBirdId, allBirds]);
@@ -381,7 +398,7 @@ export default function HomePage() {
     setDeletingCageId(null);
   };
 
-  const filteredItems = items.filter(item => {
+  const filteredItems = useMemo(() => items.filter(item => {
     if (item.category !== filterCategory) return false;
 
     if (filterCategory !== 'Bird' || !search) {
@@ -391,7 +408,7 @@ export default function HomePage() {
     const bird = item as Bird;
     const birdIdentifier = `${bird.species} ${bird.subspecies || ''} ${bird.ringNumber || ''} ${bird.birthDate || ''} ${(bird.visualMutations || []).join(' ')} ${(bird.splitMutations || []).join(' ')}`.toLowerCase();
     return birdIdentifier.includes(search.toLowerCase());
-  });
+  }), [items, filterCategory, search]);
 
   const categories = ['Bird', 'Cage', 'Pair'];
 

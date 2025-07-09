@@ -3,6 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { CollectionItem, initialItems, Bird, Cage, Pair } from '@/lib/data';
+import { FullPageLoader } from '@/components/full-page-loader';
 
 interface ItemsContextType {
   items: CollectionItem[];
@@ -143,7 +144,7 @@ export const ItemsProvider = ({ children }: { children: ReactNode }) => {
   };
 
   if (!isLoaded) {
-    return null;
+    return <FullPageLoader />;
   }
 
   return (

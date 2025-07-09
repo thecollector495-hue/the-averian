@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
@@ -20,16 +20,21 @@ export default function NotesPage() {
     const { items, addItem, updateItem, deleteItem } = useItems();
     const { toast } = useToast();
 
-    const allBirds = items.filter((item): item is Bird => item.category === 'Bird');
-    const allCages = items.filter((item): item is Cage => item.category === 'Cage');
-    const notes = items.filter((item): item is NoteReminder => item.category === 'NoteReminder');
+    const { allBirds, allCages, notes } = useMemo(() => ({
+      allBirds: items.filter((item): item is Bird => item.category === 'Bird'),
+      allCages: items.filter((item): item is Cage => item.category === 'Cage'),
+      notes: items.filter((item): item is NoteReminder => item.category === 'NoteReminder'),
+    }), [items]);
 
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [editingNote, setEditingNote] = useState<NoteReminder | null>(null);
     const [viewingBird, setViewingBird] = useState<Bird | null>(null);
     const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
 
-    const noteToDelete = deletingNoteId ? notes.find(n => n.id === deletingNoteId) : null;
+    const noteToDelete = useMemo(() => 
+      deletingNoteId ? notes.find(n => n.id === deletingNoteId) : null,
+      [deletingNoteId, notes]
+    );
 
     const handleEditNote = (note: NoteReminder) => {
         setEditingNote(note);

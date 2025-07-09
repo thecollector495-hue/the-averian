@@ -35,7 +35,6 @@ const defaultCurrency = currencies.find(c => c.code === 'ZAR') || currencies[0];
 
 export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
   const [currency, setCurrencyState] = useState<Currency>(defaultCurrency);
-  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     const savedCurrencyCode = localStorage.getItem('app-currency');
@@ -43,7 +42,6 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
       const savedCurrency = currencies.find(c => c.code === savedCurrencyCode) || defaultCurrency;
       setCurrencyState(savedCurrency);
     }
-    setIsLoaded(true);
   }, []);
 
   const setCurrency = (currencyCode: string) => {
@@ -58,17 +56,12 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
     if (amount === null || amount === undefined) {
       return 'N/A';
     }
-    if (!isLoaded) return '...';
     
     return new Intl.NumberFormat(undefined, {
       style: 'currency',
       currency: currency.code,
     }).format(amount);
   };
-
-  if (!isLoaded) {
-    return null; 
-  }
 
   return (
     <CurrencyContext.Provider value={{ currency, setCurrency, formatCurrency }}>

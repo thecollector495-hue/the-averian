@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -32,18 +32,20 @@ export default function TransactionsPage() {
   const { toast } = useToast();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-
-  const allBirds = items.filter((item): item is Bird => item.category === 'Bird');
-  const allCages = items.filter((item): item is Cage => item.category === 'Cage');
-  const allPermits = items.filter((item): item is Permit => item.category === 'Permit');
-
-  const transactions = items
-    .filter((item): item is Transaction => item.category === 'Transaction')
-    .sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
+  const { allBirds, allCages, allPermits, transactions } = useMemo(() => {
+    return {
+      allBirds: items.filter((item): item is Bird => item.category === 'Bird'),
+      allCages: items.filter((item): item is Cage => item.category === 'Cage'),
+      allPermits: items.filter((item): item is Permit => item.category === 'Permit'),
+      transactions: items
+        .filter((item): item is Transaction => item.category === 'Transaction')
+        .sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()),
+    };
+  }, [items]);
     
-  const filteredTransactions = transactions.filter(t => 
+  const filteredTransactions = useMemo(() => transactions.filter(t => 
     t.description.toLowerCase().includes(search.toLowerCase())
-  );
+  ), [transactions, search]);
 
   const handleAddClick = () => {
     setEditingTransaction(null);

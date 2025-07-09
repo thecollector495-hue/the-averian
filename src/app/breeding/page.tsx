@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
@@ -18,10 +18,12 @@ export default function BreedingPage() {
     const { items, addItem, addItems } = useItems();
     const { toast } = useToast();
     
-    const allBirds = items.filter((item): item is Bird => item.category === 'Bird');
-    const allCages = items.filter((item): item is Cage => item.category === 'Cage');
-    const allPairs = items.filter((item): item is Pair => item.category === 'Pair');
-    const records = items.filter((item): item is BreedingRecord => item.category === 'BreedingRecord');
+    const { allBirds, allCages, allPairs, records } = useMemo(() => ({
+      allBirds: items.filter((item): item is Bird => item.category === 'Bird'),
+      allCages: items.filter((item): item is Cage => item.category === 'Cage'),
+      allPairs: items.filter((item): item is Pair => item.category === 'Pair'),
+      records: items.filter((item): item is BreedingRecord => item.category === 'BreedingRecord'),
+    }), [items]);
     
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [viewingBird, setViewingBird] = useState<Bird | null>(null);

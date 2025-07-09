@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,10 +21,15 @@ export default function PermitsPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [deletingPermitId, setDeletingPermitId] = useState<string | null>(null);
 
-  const permits = items.filter((item): item is Permit => item.category === 'Permit');
-  const allBirds = items.filter((item): item is Bird => item.category === 'Bird');
-  const permitToDelete = deletingPermitId ? permits.find(p => p.id === deletingPermitId) : null;
+  const { permits, allBirds } = useMemo(() => ({
+    permits: items.filter((item): item is Permit => item.category === 'Permit'),
+    allBirds: items.filter((item): item is Bird => item.category === 'Bird'),
+  }), [items]);
 
+  const permitToDelete = useMemo(() => 
+    deletingPermitId ? permits.find(p => p.id === deletingPermitId) : null,
+    [deletingPermitId, permits]
+  );
 
   const handleSavePermit = (data: PermitFormValues) => {
     const newPermit: Permit = {

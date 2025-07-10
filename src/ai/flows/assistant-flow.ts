@@ -111,7 +111,7 @@ const ActionSchema = z.object({
 
 const AviaryAssistantOutputSchema = z.object({
   actions: z.array(ActionSchema).describe("A list of actions for the assistant to take based on the user's query."),
-  response: z.string().describe("The assistant's friendly text response to the user, summarizing the actions taken."),
+  response: z.string().describe("The assistant's friendly text response to the user, summarizing the actions taken or asking for more information."),
   error: z.string().optional(),
 });
 export type AviaryAssistantOutput = z.infer<typeof AviaryAssistantOutputSchema>;
@@ -150,8 +150,8 @@ Analyze the query and determine a list of actions. You can perform multiple acti
   - To add cages, use 'addCage'. Handle ranges like "cages 100 to 102" by creating an action for each cage name: ["100", "101", "102"].
   - To update a cage, use 'updateCage'. Find the cage's ID.
   - To add a transaction, use 'addTransaction'.
-  - To add a species, use 'addSpecies'.
-  - To add a mutation, use 'addMutation'. You MUST specify the 'inheritance' field. Valid inheritance types are: ${inheritanceTypes.join(', ')}. If the user doesn't specify one for a common mutation, infer it (e.g., Lutino is 'Sex-Linked Recessive').
+  - To add a species, use 'addSpecies'. The 'incubationPeriod' field is REQUIRED. If the user does not provide an incubation period, you MUST ask for it in your response and use the 'answer' action. Do not try to guess it.
+  - To add a mutation, use 'addMutation'. You MUST specify the 'inheritance' field. Valid inheritance types are: ${inheritanceTypes.join(', ')}.
 
 - DELETING DATA:
   - To remove items, use 'deleteBird', 'deleteCage', 'deleteNote', 'deleteTransaction', 'deleteSpecies', or 'deleteMutation'. Find the ID(s) of the item(s) to remove from the context.

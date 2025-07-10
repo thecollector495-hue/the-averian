@@ -48,8 +48,7 @@ export default function AIAssistantPage() {
   const [selectedActionIndices, setSelectedActionIndices] = useState<Set<number>>(new Set());
   const [isGeneticsDialogOpen, setIsGeneticsDialogOpen] = useState(false);
   
-  const { allCustomMutations } = useItems();
-  const customMutations = allCustomMutations.filter((item): item is CustomMutation => item.category === 'CustomMutation');
+  const customMutations = items.filter((item): item is CustomMutation => item.category === 'CustomMutation');
   
   useEffect(() => {
     if (pendingActions) {

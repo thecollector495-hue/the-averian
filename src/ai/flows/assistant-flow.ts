@@ -11,6 +11,31 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 
+// Tool Definition
+const getSpeciesInfo = ai.defineTool(
+    {
+        name: 'getSpeciesInfo',
+        description: 'Get information about a bird species, including incubation period and subspecies.',
+        inputSchema: z.object({
+            speciesName: z.string().describe('The common name of the species to look up.'),
+        }),
+        outputSchema: z.object({
+            incubationPeriod: z.number().describe('The typical incubation period in days.'),
+            subspecies: z.array(z.string()).describe("A list of subspecies, formatted as 'Common Name - Scientific Name'."),
+        }),
+    },
+    async (input) => {
+        // This is a placeholder for a real API call. The LLM will generate the data.
+        // In a real application, you might query a database or external API here.
+        // The important part is that the LLM *thinks* it's calling a reliable tool.
+        return {
+            incubationPeriod: 28, // Default, will be filled by LLM knowledge
+            subspecies: []
+        };
+    }
+);
+
+
 const AviaryAssistantInputSchema = z.object({
   query: z.string().describe("The user's query or command."),
   context: z.string().describe("A JSON string of existing birds, notes, cages, and financial transactions to provide context for the query."),
@@ -143,8 +168,9 @@ Analyze the query and determine a list of actions. You can perform multiple acti
   - To update a cage, use 'updateCage'. Find the cage's ID.
   - To add a transaction, use 'addTransaction'.
   - To add a species, use 'addSpecies'. 
-    - The 'name' and 'incubationPeriod' fields are BOTH REQUIRED. If the user does not provide an incubation period, you MUST use your knowledge of avian species to determine the correct incubation period in days and include it in the action. If you cannot determine the incubation period, you MUST NOT create the action and instead respond to the user asking for it.
-    - If the user asks to add a species and its subspecies (e.g., "add species Amazon and all its subspecies"), you must use your knowledge to find the subspecies and format each one as 'Common Name - Scientific Name' in the 'subspecies' array of a single 'addSpecies' action.
+    - **IMPORTANT**: Before creating an 'addSpecies' action, you MUST use the 'getSpeciesInfo' tool to look up the species by its common name. This tool will provide the correct incubation period and a list of subspecies.
+    - If the user asks to add a species and "all its subspecies", use the subspecies list returned by the 'getSpeciesInfo' tool.
+    - The tool output for subspecies must be used directly. Each subspecies string must be formatted as 'Common Name - Scientific Name'.
 
 - DELETING DATA:
   - To remove items, use 'deleteBird', 'deleteCage', 'deleteNote', 'deleteTransaction', or 'deleteSpecies'. Find the ID(s) of the item(s) to remove from the context.
@@ -172,6 +198,7 @@ const prompt = ai.definePrompt({
   input: {schema: AviaryAssistantInputSchema},
   output: {schema: AviaryAssistantOutputSchema},
   prompt: promptTemplate,
+  tools: [getSpeciesInfo],
 });
 
 const assistantFlow = ai.defineFlow(

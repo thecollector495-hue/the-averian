@@ -150,7 +150,7 @@ Analyze the query and determine a list of actions. You can perform multiple acti
   - To add cages, use 'addCage'. Handle ranges like "cages 100 to 102" by creating an action for each cage name: ["100", "101", "102"].
   - To update a cage, use 'updateCage'. Find the cage's ID.
   - To add a transaction, use 'addTransaction'.
-  - To add a species, use 'addSpecies'. The 'incubationPeriod' field is REQUIRED. If the user does not provide an incubation period, you MUST ask for it in your response and use the 'answer' action. Do not try to guess it.
+  - To add a species, use 'addSpecies'. The 'incubationPeriod' field is REQUIRED. If the user does not provide an incubation period, you MUST use your knowledge of avian species to determine the correct incubation period in days and include it in the action.
   - To add a mutation, use 'addMutation'. You MUST specify the 'inheritance' field. Valid inheritance types are: ${inheritanceTypes.join(', ')}.
 
 - DELETING DATA:

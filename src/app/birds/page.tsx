@@ -16,6 +16,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Checkbox } from '@/components/ui/checkbox';
 import { useCurrency } from '@/context/CurrencyContext';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import dynamic from 'next/dynamic';
+
+const GeneticsCalculatorDialog = dynamic(() => import('@/components/genetics-calculator-dialog').then(mod => mod.GeneticsCalculatorDialog), { ssr: false });
+
 
 type Message = {
   id: string;
@@ -30,7 +34,7 @@ export default function AIAssistantPage() {
     {
       id: 'assistant-init',
       role: 'assistant',
-      text: "Hello! How can I help you manage your aviary today?"
+      text: "Hello! How can I help you manage your aviary today? You can ask me to calculate genetic outcomes by typing 'Calculate genetics'."
     }
   ]);
   const [input, setInput] = useState('');
@@ -42,6 +46,10 @@ export default function AIAssistantPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [pendingActions, setPendingActions] = useState<any[] | null>(null);
   const [selectedActionIndices, setSelectedActionIndices] = useState<Set<number>>(new Set());
+  const [isGeneticsDialogOpen, setIsGeneticsDialogOpen] = useState(false);
+  
+  const { allCustomMutations } = useItems();
+  const customMutations = allCustomMutations.filter((item): item is CustomMutation => item.category === 'CustomMutation');
   
   useEffect(() => {
     if (pendingActions) {
@@ -71,6 +79,12 @@ export default function AIAssistantPage() {
     const { query, isRetry } = options;
     if (!query.trim()) return;
 
+    if (query.trim().toLowerCase() === 'calculate genetics') {
+      setIsGeneticsDialogOpen(true);
+      setInput('');
+      return;
+    }
+
     setIsLoading(true);
     setMessages(prev => prev.filter(m => !m.isError));
 
@@ -85,10 +99,11 @@ export default function AIAssistantPage() {
     
     setIsLoading(false);
 
-    if (assistantResponse.error) {
-        console.error('AI assistant failed:', assistantResponse.error);
+    if (assistantResponse.error || !assistantResponse.response) {
+        const errorText = assistantResponse.error || "Received an empty response from the AI model.";
+        console.error('AI assistant failed:', errorText);
 
-        const errorMessageText = assistantResponse.response || (assistantResponse.error.includes('503')
+        const errorMessageText = assistantResponse.response || (errorText.includes('503')
             ? "The AI model is currently overloaded. Please try again in a moment."
             : "Couldn't connect right now. Please try again.");
         
@@ -103,7 +118,7 @@ export default function AIAssistantPage() {
         toast({
             variant: "destructive",
             title: "AI Request Failed",
-            description: assistantResponse.error,
+            description: errorText,
         });
     } else {
         const newAssistantMessage: Message = { id: `assistant-${Date.now()}`, role: 'assistant', text: assistantResponse.response };
@@ -233,24 +248,11 @@ export default function AIAssistantPage() {
             summary.push(`Added species: ${newSpecies.name}`);
             break;
         }
-        case 'addMutation': {
-            const mutationData = action.data as any;
-            const newMutation: CustomMutation = {
-                id: `cm${Date.now()}`,
-                category: 'CustomMutation',
-                name: mutationData.name,
-                inheritance: mutationData.inheritance,
-            };
-            itemsToAdd.push(newMutation);
-            summary.push(`Added mutation: ${newMutation.name}`);
-            break;
-        }
         case 'deleteBird': (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'Bird', id })); break;
         case 'deleteCage': (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'Cage', id })); break;
         case 'deleteNote': (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'NoteReminder', id })); break;
         case 'deleteTransaction': (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'Transaction', id })); break;
         case 'deleteSpecies': (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'CustomSpecies', id })); break;
-        case 'deleteMutation': (action.data.ids || []).forEach((id: string) => idsToDelete.push({ type: 'CustomMutation', id })); break;
       }
     }
     if (itemsToAdd.length > 0) addItems(itemsToAdd);
@@ -280,13 +282,11 @@ export default function AIAssistantPage() {
         case 'updateCage': return `Update Cage (ID: ${data.id})`;
         case 'addTransaction': return `Add ${data.type} transaction for ${formatCurrency(data.amount)}`;
         case 'addSpecies': return `Add Species: ${data.name} (${data.incubationPeriod} days)`;
-        case 'addMutation': return `Add Mutation: ${data.name} (${data.inheritance})`;
         case 'deleteBird': return `Delete ${data.ids?.length || 0} bird(s)`;
         case 'deleteCage': return `Delete ${data.ids?.length || 0} cage(s)`;
         case 'deleteNote': return `Delete ${data.ids?.length || 0} note(s)`;
         case 'deleteTransaction': return `Delete ${data.ids?.length || 0} transaction(s)`;
         case 'deleteSpecies': return `Delete ${data.ids?.length || 0} species`;
-        case 'deleteMutation': return `Delete ${data.ids?.length || 0} mutation(s)`;
         default: return `Perform action: ${type}`;
       }
     });
@@ -294,6 +294,14 @@ export default function AIAssistantPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh_-_4rem)]">
+        {isGeneticsDialogOpen && (
+          <GeneticsCalculatorDialog
+            isOpen={isGeneticsDialogOpen}
+            onOpenChange={setIsGeneticsDialogOpen}
+            onCalculate={(query) => handleSend({ query })}
+            customMutations={customMutations}
+          />
+        )}
         {pendingActions && (
             <AlertDialog open={!!pendingActions} onOpenChange={(open) => !open && setPendingActions(null)}>
                 <AlertDialogContent>

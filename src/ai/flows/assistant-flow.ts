@@ -10,11 +10,10 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
-import { inheritanceTypes } from '@/lib/data';
 
 const AviaryAssistantInputSchema = z.object({
   query: z.string().describe("The user's query or command."),
-  context: z.string().describe("A JSON string of existing birds, notes, cages, financial transactions, custom species and mutations to provide context for the query."),
+  context: z.string().describe("A JSON string of existing birds, notes, cages, and financial transactions to provide context for the query."),
 });
 export type AviaryAssistantInput = z.infer<typeof AviaryAssistantInputSchema>;
 
@@ -78,13 +77,8 @@ const AddTransactionDataSchema = z.object({
 const AddSpeciesDataSchema = z.object({
     name: z.string().describe("The name of the new species."),
     incubationPeriod: z.number().describe("The incubation period in days."),
-    subspecies: z.array(z.string()).optional().describe("An optional list of subspecies names."),
+    subspecies: z.array(z.string()).optional().describe("An optional list of subspecies names. Each subspecies must be a string formatted as 'Common Name - Scientific Name'."),
 }).describe("The data required to add a new species.");
-
-const AddMutationDataSchema = z.object({
-    name: z.string().describe("The name of the new mutation."),
-    inheritance: z.enum(inheritanceTypes).describe("The genetic inheritance type of the mutation."),
-}).describe("The data required to add a new mutation.");
 
 
 const ActionSchema = z.object({
@@ -94,7 +88,6 @@ const ActionSchema = z.object({
         'addNote', 'updateNote', 'deleteNote',
         'addTransaction', 'deleteTransaction',
         'addSpecies', 'deleteSpecies',
-        'addMutation', 'deleteMutation',
         'answer'
     ]).describe("The action the assistant should take."),
     data: z.union([
@@ -103,7 +96,6 @@ const ActionSchema = z.object({
         AddNoteDataSchema, UpdateNoteDataSchema,
         AddTransactionDataSchema,
         AddSpeciesDataSchema,
-        AddMutationDataSchema,
         DeleteDataSchema, 
         z.null()
     ]).describe("The data associated with the action. This should be null for 'answer' actions."),
@@ -136,7 +128,7 @@ export async function aviaryAssistant(input: AviaryAssistantInput): Promise<Avia
   }
 }
 
-const promptTemplate = `You are an expert aviary management assistant. Your goal is to help the user manage their birds, cages, notes, finances, and custom data like species and mutations. You must understand queries in both English and Afrikaans, and you should respond in the same language as the user's query. You will be given a user's query and a JSON object containing the current state of their aviary.
+const promptTemplate = `You are an expert aviary management assistant. Your goal is to help the user manage their birds, cages, notes, finances, and custom data like species. You must understand queries in both English and Afrikaans, and you should respond in the same language as the user's query. You will be given a user's query and a JSON object containing the current state of their aviary.
 
 You MUST parse the user's entire query and not miss any details. For complex commands, break them down into multiple actions.
 
@@ -150,11 +142,12 @@ Analyze the query and determine a list of actions. You can perform multiple acti
   - To add cages, use 'addCage'. Handle ranges like "cages 100 to 102" by creating an action for each cage name: ["100", "101", "102"].
   - To update a cage, use 'updateCage'. Find the cage's ID.
   - To add a transaction, use 'addTransaction'.
-  - To add a species, use 'addSpecies'. The 'incubationPeriod' field is REQUIRED. If the user does not provide an incubation period, you MUST use your knowledge of avian species to determine the correct incubation period in days and include it in the action.
-  - To add a mutation, use 'addMutation'. You MUST specify the 'inheritance' field. Valid inheritance types are: ${inheritanceTypes.join(', ')}.
+  - To add a species, use 'addSpecies'. 
+    - The 'incubationPeriod' field is REQUIRED. If the user does not provide an incubation period, you MUST use your knowledge of avian species to determine the correct incubation period in days and include it in the action.
+    - If the user asks to add a species and its subspecies (e.g., "add species Amazon and all its subspecies"), you must use your knowledge to find the subspecies and format each one as 'Common Name - Scientific Name' in the 'subspecies' array.
 
 - DELETING DATA:
-  - To remove items, use 'deleteBird', 'deleteCage', 'deleteNote', 'deleteTransaction', 'deleteSpecies', or 'deleteMutation'. Find the ID(s) of the item(s) to remove from the context.
+  - To remove items, use 'deleteBird', 'deleteCage', 'deleteNote', 'deleteTransaction', or 'deleteSpecies'. Find the ID(s) of the item(s) to remove from the context.
 
 - SPECIAL INSTRUCTIONS:
   - **SELLING A BIRD**: If a user asks to sell a bird (e.g., "sell bird A123 for 500 to John"), you must generate TWO actions:

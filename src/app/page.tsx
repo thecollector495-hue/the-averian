@@ -12,7 +12,7 @@ import { BirdCard } from '@/components/bird-card';
 import { CageCard } from '@/components/cage-card';
 import { PairCard } from '@/components/pair-card';
 import { Bird, Cage, Pair, BreedingRecord, CollectionItem, getBirdIdentifier, Transaction, Permit, BirdFormValues, CustomSpecies, CustomMutation } from '@/lib/data';
-import { format } from 'date-fns';
+import { format, startOfYear } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useItems } from '@/context/ItemsContext';
 import { CageFormValues } from '@/components/add-cage-dialog';
@@ -200,13 +200,21 @@ export default function HomePage() {
         finalCageId = newCage.id;
     }
 
+    let birthDateToSave: string | undefined;
+    if (formData.birthDateType === 'year' && formData.birthYear) {
+      birthDateToSave = format(startOfYear(new Date(formData.birthYear, 1, 1)), 'yyyy-MM-dd');
+    } else if (formData.birthDateType === 'date' && formData.birthDate) {
+      birthDateToSave = format(formData.birthDate, 'yyyy-MM-dd');
+    }
+
+
     const birdToSave: Bird = {
       species: finalSpecies!,
       subspecies: formData.subspecies,
       sex: formData.sex,
       ringNumber: formData.ringNumber,
       unbanded: formData.unbanded,
-      birthDate: formData.birthDate ? format(formData.birthDate, 'yyyy-MM-dd') : undefined,
+      birthDate: birthDateToSave,
       visualMutations: formData.visualMutations,
       splitMutations: formData.splitMutations,
       fatherId: formData.fatherId,
@@ -544,5 +552,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    

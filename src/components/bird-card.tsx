@@ -8,10 +8,10 @@ import { Users2, Egg, Landmark, Pencil, ShieldCheck, Trash2 } from "lucide-react
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Bird, Cage, Pair, BreedingRecord, Permit, speciesData, getBirdIdentifier } from '@/lib/data';
+import { Bird, Cage, Pair, BreedingRecord, Permit, getBirdIdentifier } from '@/lib/data';
 import { useCurrency } from '@/context/CurrencyContext';
 import { cn } from '@/lib/utils';
-import { format, parseISO, formatDistanceToNowStrict } from 'date-fns';
+import { format, parseISO, formatDistanceToNowStrict, getYear } from 'date-fns';
 
 export function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecords, allPermits, handleEditClick, handleDeleteClick, onBirdClick, onViewBreedingRecord }: { bird: Bird; allBirds: Bird[]; allCages: Cage[]; allPairs: Pair[], allBreedingRecords: BreedingRecord[], allPermits: Permit[], handleEditClick: (bird: Bird) => void; handleDeleteClick: (birdId: string) => void; onBirdClick: (bird: Bird) => void; onViewBreedingRecord: (record: BreedingRecord) => void; }) {
   const { formatCurrency } = useCurrency();
@@ -41,7 +41,12 @@ export function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecord
   const getAgeString = (birthDate: string | undefined): string => {
     if (!birthDate) return 'N/A';
     try {
-        return formatDistanceToNowStrict(parseISO(birthDate), { addSuffix: false });
+        const date = parseISO(birthDate);
+        // If it's the first of january, assume only year was provided
+        if (format(date, 'MM-dd') === '01-01') {
+            return `Born ${getYear(date)}`;
+        }
+        return formatDistanceToNowStrict(date, { addSuffix: false });
     } catch (e) {
         return 'Invalid date';
     }

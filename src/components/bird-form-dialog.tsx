@@ -1,14 +1,14 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, ControllerRenderProps } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfYear, getYear } from 'date-fns';
 
-import { Bird, Cage, Permit, mutationOptions, getBirdIdentifier, CustomSpecies, CustomMutation, AddMutationFormValues, inheritanceTypes } from '@/lib/data';
+import { Bird, Cage, Permit, getBirdIdentifier, CustomSpecies, CustomMutation, AddMutationFormValues } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { MultiSelectCombobox } from './multi-select-combobox';
 import { GeneralCombobox } from './general-combobox';
@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar as CalendarIcon, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 
 const AddMutationDialog = dynamic(() => import('@/components/add-mutation-dialog').then(mod => mod.AddMutationDialog), { ssr: false });
 
@@ -45,7 +46,14 @@ const birdFormSchema = z.object({
   }),
   ringNumber: z.string().optional(),
   unbanded: z.boolean().default(false),
+  
+  birthDateType: z.enum(['date', 'year']).default('date'),
   birthDate: z.date().optional(),
+  birthYear: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.coerce.number().int().min(1900, "Year must be after 1900").max(new Date().getFullYear(), "Year cannot be in the future").optional()
+  ),
+
   cageId: z.string().optional(),
   newCageName: z.string().optional(),
   visualMutations: z.array(z.string()).default([]),
@@ -90,14 +98,19 @@ const birdFormSchema = z.object({
         return !!data.salePrice && !!data.saleDate && !!data.buyerInfo;
     }
     return true;
-}, { message: "Sale details (price, date, buyer) are required when status is 'Sold'.", path: ['salePrice'] });
+}, { message: "Sale details (price, date, buyer) are required when status is 'Sold'.", path: ['salePrice'] })
+.refine(data => {
+    if(data.birthDateType === 'year') return !!data.birthYear;
+    return true;
+}, { message: "Birth year is required.", path: ['birthYear'] });
+
 
 export type BirdFormValues = z.infer<typeof birdFormSchema>;
 
 
 export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, allCages, allPermits }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onSave: (data: BirdFormValues & { newCageName?: string }) => void, initialData: Bird | null, allBirds: Bird[], allCages: Cage[], allPermits: Permit[] }) {
   const { toast } = useToast();
-  const { items, addItem, updateItem } = useItems();
+  const { items, addItem, updateItem, addItems, updateItems } = useItems();
   const [isCreatingCage, setIsCreatingCage] = useState(false);
   const [isCreatingSpecies, setIsCreatingSpecies] = useState(false);
   const [isCreatingSubspecies, setIsCreatingSubspecies] = useState(false);
@@ -110,7 +123,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
     resolver: zodResolver(birdFormSchema),
     defaultValues: {
       ringNumber: "", unbanded: false, visualMutations: [], splitMutations: [], offspringIds: [],
-      cageId: undefined, newCageName: "", addToExpenses: true, status: 'Available',
+      cageId: undefined, newCageName: "", addToExpenses: true, status: 'Available', birthDateType: 'date',
     },
   });
   
@@ -124,9 +137,14 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
     resetFormStates();
     if (initialData) {
       const currentCage = allCages.find(cage => cage.birdIds.includes(initialData.id));
+      const birthDate = initialData.birthDate ? parseISO(initialData.birthDate) : undefined;
+      const isYearOnly = birthDate ? format(birthDate, 'MM-dd') === '01-01' : false;
+
       form.reset({
         ...initialData,
-        birthDate: initialData.birthDate ? parseISO(initialData.birthDate) : undefined,
+        birthDate: birthDate,
+        birthDateType: isYearOnly ? 'year' : 'date',
+        birthYear: birthDate ? getYear(birthDate) : undefined,
         cageId: currentCage?.id,
         newCageName: "", addToExpenses: !initialData.paidPrice,
         saleDate: initialData.saleDetails ? parseISO(initialData.saleDetails.date) : undefined,
@@ -135,7 +153,8 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
     } else {
       form.reset({
         species: undefined, subspecies: undefined, sex: undefined, ringNumber: "",
-        unbanded: false, birthDate: undefined, cageId: undefined, newCageName: "", visualMutations: [],
+        unbanded: false, birthDate: undefined, birthYear: undefined, birthDateType: 'date',
+        cageId: undefined, newCageName: "", visualMutations: [],
         splitMutations: [], fatherId: undefined, motherId: undefined, mateId: undefined, offspringIds: [],
         paidPrice: undefined, estimatedValue: undefined, addToExpenses: true, status: 'Available',
         permitId: undefined, salePrice: undefined, saleDate: undefined, buyerInfo: "", createSaleTransaction: true,
@@ -150,9 +169,8 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
   }, [customSpecies]);
 
   const allMutationOptions = useMemo(() => {
-    const builtin = mutationOptions.map(m => ({ value: m, label: m }));
     const custom = customMutations.map(m => ({ value: m.name, label: m.name }));
-    return [...builtin, ...custom].sort((a, b) => a.label.localeCompare(b.label));
+    return [...custom].sort((a, b) => a.label.localeCompare(b.label));
   }, [customMutations]);
 
   const watchedSpecies = form.watch("species");
@@ -160,6 +178,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
   const paidPrice = form.watch("paidPrice");
   const status = form.watch("status");
   const watchedSex = form.watch("sex");
+  const birthDateType = form.watch("birthDateType");
 
   const subspeciesOptions = useMemo(() => {
     if (!watchedSpecies) return [];
@@ -295,19 +314,59 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                       <FormMessage />
                     </FormItem>
                   )} />
-                 <FormField control={form.control} name="birthDate" render={({ field }) => (
-                    <FormItem className="flex flex-col flex-grow"><FormLabel>Birth Date</FormLabel>
-                      <Popover><PopoverTrigger asChild><FormControl>
-                        <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl></PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus /></PopoverContent>
-                      </Popover><FormMessage />
-                    </FormItem>
-                )} />
+                 <div className="flex-grow">
+                     <FormField
+                        control={form.control}
+                        name="birthDateType"
+                        render={({ field }) => (
+                        <FormItem className="space-y-2">
+                            <FormLabel>Age</FormLabel>
+                            <FormControl>
+                                <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex">
+                                <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="date" id="r-date"/></FormControl><FormLabel htmlFor="r-date" className="font-normal">Full Date</FormLabel></FormItem>
+                                <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="year" id="r-year"/></FormControl><FormLabel htmlFor="r-year" className="font-normal">Year Only</FormLabel></FormItem>
+                                </RadioGroup>
+                            </FormControl>
+                        </FormItem>
+                     )}/>
+                 </div>
               </div>
+              <div className="md:col-span-2">
+                {birthDateType === 'date' ? (
+                     <FormField control={form.control} name="birthDate" render={({ field }) => (
+                        <FormItem className="flex flex-col"><FormLabel>Birth Date</FormLabel>
+                          <Popover><PopoverTrigger asChild><FormControl>
+                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                              {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl></PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                mode="single"
+                                captionLayout="dropdown-buttons"
+                                fromYear={1980}
+                                toYear={new Date().getFullYear()}
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                                initialFocus />
+                            </PopoverContent>
+                          </Popover><FormMessage />
+                        </FormItem>
+                    )} />
+                ) : (
+                    <FormField control={form.control} name="birthYear" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Birth Year</FormLabel>
+                            <FormControl>
+                                <Input type="number" placeholder={`e.g., ${new Date().getFullYear() - 2}`} {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}/>
+                )}
+               </div>
                <FormField control={form.control} name="status" render={({ field }) => (
                     <FormItem><FormLabel>Status</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -431,5 +490,3 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
     </>
   );
 }
-
-    

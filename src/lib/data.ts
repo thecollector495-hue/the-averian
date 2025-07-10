@@ -1,6 +1,6 @@
 
 
-export const speciesData = [
+export const initialSpeciesData = [
     {
         name: 'Cockatoo',
         incubationPeriod: 26,
@@ -125,8 +125,6 @@ export const speciesData = [
     }
 ];
 
-export const mutationOptions = ['Opaline', 'Cinnamon', 'Lutino', 'Albino', 'Fallow', 'Spangle', 'Pied'] as const;
-
 export const inheritanceTypes = [
   'Autosomal Recessive',
   'Autosomal Dominant',
@@ -141,12 +139,16 @@ export const inheritanceTypes = [
 
 
 export type BirdFormValues = {
-  species: string;
+  species?: string;
   subspecies?: string;
   sex: "male" | "female" | "unsexed";
   ringNumber?: string;
   unbanded: boolean;
+  
+  birthDateType: 'date' | 'year';
   birthDate?: Date;
+  birthYear?: number;
+
   cageId?: string;
   visualMutations: string[];
   splitMutations: string[];
@@ -165,9 +167,10 @@ export type BirdFormValues = {
   createSaleTransaction?: boolean;
 };
 
-export type Bird = Omit<BirdFormValues, 'cageId' | 'addToExpenses' | 'createSaleTransaction' | 'saleDate' | 'salePrice' | 'buyerInfo' | 'birthDate'> & { 
+export type Bird = Omit<BirdFormValues, 'cageId' | 'addToExpenses' | 'createSaleTransaction' | 'saleDate' | 'salePrice' | 'buyerInfo' | 'birthDate' | 'birthYear' | 'birthDateType'> & { 
   id: string, 
   category: 'Bird',
+  species: string,
   birthDate?: string, // Stored as YYYY-MM-DD
   saleDetails?: {
     date: string;
@@ -273,7 +276,7 @@ export const getBirdIdentifier = (bird: Bird) => {
     return `${bird.species} ${identifier}`;
 };
 
-const initialCustomSpecies: CustomSpecies[] = speciesData.map((s, i) => ({
+const initialCustomSpecies: CustomSpecies[] = initialSpeciesData.map((s, i) => ({
     ...s,
     id: `cs_initial_${i}`,
     category: 'CustomSpecies',
@@ -281,7 +284,7 @@ const initialCustomSpecies: CustomSpecies[] = speciesData.map((s, i) => ({
 
 export const initialBirds: Bird[] = [
   {
-    id: '1', species: 'Cockatoo', subspecies: 'Cockatiel - Nymphicus hollandicus', ringNumber: 'A123', unbanded: false, category: 'Bird', sex: 'male', birthDate: '2022-04-01', visualMutations: ['Opaline'], splitMutations: ['Cinnamon', 'Pied'], fatherId: undefined, motherId: undefined, mateId: '4', offspringIds: ['3'], paidPrice: 150, estimatedValue: 200, status: 'Available', permitId: 'p1'
+    id: '1', species: 'Cockatoo', subspecies: 'Cockatiel - Nymphicus hollandicus', ringNumber: 'A123', unbanded: false, category: 'Bird', sex: 'male', birthDate: '2022-04-01', visualMutations: ['Lutino'], splitMutations: ['Cinnamon', 'Pied'], fatherId: undefined, motherId: undefined, mateId: '4', offspringIds: ['3'], paidPrice: 150, estimatedValue: 200, status: 'Available', permitId: 'p1'
   },
   {
     id: '2', species: 'African Grey Parrot', subspecies: 'Congo African Grey - Psittacus erithacus', ringNumber: 'B456', unbanded: false, category: 'Bird', sex: 'female', birthDate: '2021-06-15', visualMutations: [], splitMutations: ['Lutino'], fatherId: undefined, motherId: undefined, mateId: undefined, offspringIds: [], paidPrice: 80, estimatedValue: 120, status: 'Sold', saleDetails: { date: '2024-06-10', price: 150, buyer: 'John Doe' }
@@ -364,7 +367,11 @@ export const initialPermits: Permit[] = [
     { id: 'p2', category: 'Permit', permitNumber: 'ZA-GP-67890', issuingAuthority: 'GDARD', issueDate: '2023-07-15' }
 ];
 
-export const initialCustomMutations: CustomMutation[] = [];
+export const initialCustomMutations: CustomMutation[] = [
+    { id: 'cm1', category: 'CustomMutation', name: 'Lutino', inheritance: 'Sex-Linked Recessive' },
+    { id: 'cm2', category: 'CustomMutation', name: 'Cinnamon', inheritance: 'Sex-Linked Recessive' },
+    { id: 'cm3', category: 'CustomMutation', name: 'Pied', inheritance: 'Autosomal Recessive' },
+];
 
 
 export const initialItems: CollectionItem[] = [
@@ -378,5 +385,3 @@ export const initialItems: CollectionItem[] = [
     ...initialCustomSpecies,
     ...initialCustomMutations,
 ];
-
-    

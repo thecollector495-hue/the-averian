@@ -225,49 +225,52 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-6 pl-1">
             <p className="text-base font-medium">Core Details</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="species" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Species</FormLabel>
-                    <GeneralCombobox field={field} options={allSpeciesOptions} placeholder="Select a species" disabled={isCreatingSpecies}/>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <div className="flex items-center space-x-2 pt-8">
-                  <Checkbox id="create-species" checked={isCreatingSpecies} onCheckedChange={(c) => setIsCreatingSpecies(!!c)} />
-                  <label htmlFor="create-species" className="text-sm font-medium">Add new species</label>
-                </div>
+                 <div className="md:col-span-2 space-y-2">
+                     <div className="flex items-center space-x-2">
+                        <Checkbox id="create-species" checked={isCreatingSpecies} onCheckedChange={(c) => setIsCreatingSpecies(!!c)} />
+                        <label htmlFor="create-species" className="text-sm font-medium">Add new species</label>
+                     </div>
+                     {isCreatingSpecies ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField control={form.control} name="newSpeciesName" render={({ field }) => (
+                                <FormItem><FormLabel>New Species Name</FormLabel><FormControl><Input placeholder="e.g., Quaker Parrot" {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={form.control} name="newSpeciesIncubation" render={({ field }) => (
+                                <FormItem><FormLabel>Incubation Period (days)</FormLabel><FormControl><Input type="number" placeholder="e.g., 24" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.valueAsNumber)} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                        </div>
+                     ) : (
+                        <FormField control={form.control} name="species" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Species</FormLabel>
+                                <GeneralCombobox field={field} options={allSpeciesOptions} placeholder="Select a species" disabled={isCreatingSpecies}/>
+                                <FormMessage />
+                            </FormItem>
+                         )} />
+                     )}
+                 </div>
 
-                {isCreatingSpecies && (
-                    <>
-                    <FormField control={form.control} name="newSpeciesName" render={({ field }) => (
-                        <FormItem><FormLabel>New Species Name</FormLabel><FormControl><Input placeholder="e.g., Quaker Parrot" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="newSpeciesIncubation" render={({ field }) => (
-                        <FormItem><FormLabel>Incubation Period (days)</FormLabel><FormControl><Input type="number" placeholder="e.g., 24" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.valueAsNumber)} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    </>
-                )}
-
-                <FormField control={form.control} name="subspecies" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subspecies</FormLabel>
-                    <GeneralCombobox field={field} options={subspeciesOptions} placeholder="Select subspecies" disabled={!watchedSpecies || isCreatingSpecies || isCreatingSubspecies} />
-                    <FormMessage />
-                  </FormItem>
-                )} />
-
-                {isCustomSpeciesSelected && (
-                    <div className="flex items-center space-x-2 pt-8">
-                        <Checkbox id="create-subspecies" checked={isCreatingSubspecies} onCheckedChange={(c) => setIsCreatingSubspecies(!!c)} />
-                        <label htmlFor="create-subspecies" className="text-sm font-medium">Add new subspecies</label>
-                    </div>
-                )}
-                
-                {isCreatingSubspecies && (
-                     <FormField control={form.control} name="newSubspeciesName" render={({ field }) => (
-                        <FormItem className="md:col-span-2"><FormLabel>New Subspecies Name</FormLabel><FormControl><Input placeholder="Enter name" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                )}
+                 <div className="md:col-span-2 space-y-2">
+                    {isCustomSpeciesSelected && (
+                        <div className="flex items-center space-x-2">
+                            <Checkbox id="create-subspecies" checked={isCreatingSubspecies} onCheckedChange={(c) => setIsCreatingSubspecies(!!c)} />
+                            <label htmlFor="create-subspecies" className="text-sm font-medium">Add new subspecies</label>
+                        </div>
+                    )}
+                    {isCreatingSubspecies ? (
+                        <FormField control={form.control} name="newSubspeciesName" render={({ field }) => (
+                            <FormItem><FormLabel>New Subspecies Name</FormLabel><FormControl><Input placeholder="Enter name" {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                    ) : (
+                        <FormField control={form.control} name="subspecies" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Subspecies</FormLabel>
+                                <GeneralCombobox field={field} options={subspeciesOptions} placeholder="Select subspecies" disabled={!watchedSpecies || isCreatingSpecies} />
+                                <FormMessage />
+                            </FormItem>
+                         )} />
+                    )}
+                 </div>
 
               <FormField control={form.control} name="ringNumber" render={({ field }) => (
                   <FormItem>

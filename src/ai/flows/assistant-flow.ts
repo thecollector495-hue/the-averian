@@ -167,10 +167,10 @@ Analyze the query and determine a list of actions. You can perform multiple acti
   - To add cages, use 'addCage'. Handle ranges like "cages 100 to 102" by creating an action for each cage name: ["100", "101", "102"].
   - To update a cage, use 'updateCage'. Find the cage's ID.
   - To add a transaction, use 'addTransaction'.
-  - To add a species, use 'addSpecies'. 
-    - **IMPORTANT**: Before creating an 'addSpecies' action, you MUST use the 'getSpeciesInfo' tool to look up the species by its common name. This tool will provide the correct incubation period and a list of subspecies.
-    - If the user asks to add a species and "all its subspecies", use the subspecies list returned by the 'getSpeciesInfo' tool.
-    - The tool output for subspecies must be used directly. Each subspecies string must be formatted as 'Common Name - Scientific Name'.
+  - To add a species, use 'addSpecies'.
+    - **CRITICAL RULE**: Before creating an 'addSpecies' action, you MUST use the 'getSpeciesInfo' tool to look up the species by its common name. This tool will provide the correct incubation period and a list of subspecies.
+    - If the user asks to add a species and "all its subspecies", you MUST use the subspecies list returned by the 'getSpeciesInfo' tool in the 'subspecies' field of the 'addSpecies' action.
+    - The tool output for subspecies MUST be used directly. Each subspecies string must be formatted as 'Common Name - Scientific Name'.
 
 - DELETING DATA:
   - To remove items, use 'deleteBird', 'deleteCage', 'deleteNote', 'deleteTransaction', or 'deleteSpecies'. Find the ID(s) of the item(s) to remove from the context.

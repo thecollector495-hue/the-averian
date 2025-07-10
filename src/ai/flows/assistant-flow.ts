@@ -75,8 +75,8 @@ const AddTransactionDataSchema = z.object({
 }).describe("The data required to add a new financial transaction.");
 
 const AddSpeciesDataSchema = z.object({
-    name: z.string().describe("The name of the new species."),
-    incubationPeriod: z.number().describe("The incubation period in days."),
+    name: z.string().describe("The name of the new species. This is a REQUIRED field."),
+    incubationPeriod: z.number().describe("The incubation period in days. This is a REQUIRED field."),
     subspecies: z.array(z.string()).optional().describe("An optional list of subspecies names. Each subspecies must be a string formatted as 'Common Name - Scientific Name'."),
 }).describe("The data required to add a new species.");
 
@@ -143,8 +143,8 @@ Analyze the query and determine a list of actions. You can perform multiple acti
   - To update a cage, use 'updateCage'. Find the cage's ID.
   - To add a transaction, use 'addTransaction'.
   - To add a species, use 'addSpecies'. 
-    - The 'incubationPeriod' field is REQUIRED. If the user does not provide an incubation period, you MUST use your knowledge of avian species to determine the correct incubation period in days and include it in the action.
-    - If the user asks to add a species and its subspecies (e.g., "add species Amazon and all its subspecies"), you must use your knowledge to find the subspecies and format each one as 'Common Name - Scientific Name' in the 'subspecies' array.
+    - The 'name' and 'incubationPeriod' fields are BOTH REQUIRED. If the user does not provide an incubation period, you MUST use your knowledge of avian species to determine the correct incubation period in days and include it in the action. If you cannot determine the incubation period, you MUST NOT create the action and instead respond to the user asking for it.
+    - If the user asks to add a species and its subspecies (e.g., "add species Amazon and all its subspecies"), you must use your knowledge to find the subspecies and format each one as 'Common Name - Scientific Name' in the 'subspecies' array of a single 'addSpecies' action.
 
 - DELETING DATA:
   - To remove items, use 'deleteBird', 'deleteCage', 'deleteNote', 'deleteTransaction', or 'deleteSpecies'. Find the ID(s) of the item(s) to remove from the context.

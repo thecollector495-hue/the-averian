@@ -236,6 +236,10 @@ export default function AIAssistantPage() {
         }
         case 'addSpecies': {
             const speciesData = action.data as any;
+            if (!speciesData.name || !speciesData.incubationPeriod) {
+                toast({ variant: 'destructive', title: 'Action Failed', description: 'Cannot add species without a name and incubation period.'});
+                continue;
+            }
             const newSpecies: CustomSpecies = {
                 id: `cs${Date.now()}`,
                 category: 'CustomSpecies',
@@ -273,19 +277,24 @@ export default function AIAssistantPage() {
     return actions.filter(a => a.action !== 'answer').map(action => {
       const { action: type, data } = action;
       switch (type) {
-        case 'addBird': return `Add Bird: ${data.species || 'Unknown'}`;
-        case 'updateBird': return `Update Bird (ID: ${data.id})`;
-        case 'addNote': return `Add Note: "${data.title}"`;
-        case 'updateNote': return `Update Note (ID: ${data.id})`;
-        case 'addCage': return `Add ${data.names?.length || 1} cage(s): ${data.names?.join(', ')}`;
-        case 'updateCage': return `Update Cage (ID: ${data.id})`;
-        case 'addTransaction': return `Add ${data.type} transaction for ${formatCurrency(data.amount)}`;
-        case 'addSpecies': return `Add Species: ${data.name} (${data.incubationPeriod} days)`;
-        case 'deleteBird': return `Delete ${data.ids?.length || 0} bird(s)`;
-        case 'deleteCage': return `Delete ${data.ids?.length || 0} cage(s)`;
-        case 'deleteNote': return `Delete ${data.ids?.length || 0} note(s)`;
-        case 'deleteTransaction': return `Delete ${data.ids?.length || 0} transaction(s)`;
-        case 'deleteSpecies': return `Delete ${data.ids?.length || 0} species`;
+        case 'addBird': return `Add Bird: ${data?.species || 'Unknown'}`;
+        case 'updateBird': return `Update Bird (ID: ${data?.id || 'N/A'})`;
+        case 'addNote': return `Add Note: "${data?.title || 'Untitled'}"`;
+        case 'updateNote': return `Update Note (ID: ${data?.id || 'N/A'})`;
+        case 'addCage': return `Add ${data?.names?.length || 1} cage(s): ${data?.names?.join(', ') || data?.name || ''}`;
+        case 'updateCage': return `Update Cage (ID: ${data?.id || 'N/A'})`;
+        case 'addTransaction': return `Add ${data?.type || ''} transaction for ${formatCurrency(data?.amount)}`;
+        case 'addSpecies': {
+            if (!data?.name && !data?.incubationPeriod) return "Add Species: Incomplete data from AI";
+            if (!data?.name) return `Add Species: missing name (${data.incubationPeriod} days)`;
+            if (!data?.incubationPeriod) return `Add Species: ${data.name} (missing incubation period)`;
+            return `Add Species: ${data.name} (${data.incubationPeriod} days)`;
+        }
+        case 'deleteBird': return `Delete ${data?.ids?.length || 0} bird(s)`;
+        case 'deleteCage': return `Delete ${data?.ids?.length || 0} cage(s)`;
+        case 'deleteNote': return `Delete ${data?.ids?.length || 0} note(s)`;
+        case 'deleteTransaction': return `Delete ${data?.ids?.length || 0} transaction(s)`;
+        case 'deleteSpecies': return `Delete ${data?.ids?.length || 0} species`;
         default: return `Perform action: ${type}`;
       }
     });

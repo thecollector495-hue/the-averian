@@ -1,9 +1,10 @@
+
 'use client';
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users2 } from 'lucide-react';
-import { Bird, Pair, speciesData, getBirdIdentifier } from '@/lib/data';
+import { Bird, Pair, getBirdIdentifier } from '@/lib/data';
 
 export function PairCard({ pair, allBirds, onBirdClick }: { pair: Pair, allBirds: Bird[], onBirdClick: (bird: Bird) => void }) {
     const male = allBirds.find(b => b.id === pair.maleId);
@@ -23,7 +24,7 @@ export function PairCard({ pair, allBirds, onBirdClick }: { pair: Pair, allBirds
             <CardHeader className="p-4">
                 <CardTitle>Breeding Pair</CardTitle>
                 <CardDescription>
-                  {male ? speciesData[male.species as keyof typeof speciesData]?.name || male.species : 'Pair'}
+                  {male ? male.species : 'Pair'}
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 p-4 pt-0">
@@ -45,3 +46,5 @@ export function PairCard({ pair, allBirds, onBirdClick }: { pair: Pair, allBirds
         </Card>
     );
 }
+
+    

@@ -1,7 +1,7 @@
 
 
-export const speciesData = {
-    'Cockatoo': {
+export const speciesData = [
+    {
         name: 'Cockatoo',
         incubationPeriod: 26,
         subspecies: [
@@ -13,7 +13,7 @@ export const speciesData = {
             'Moluccan Cockatoo - Cacatua moluccensis',
         ]
     },
-    'Macaw': {
+    {
         name: 'Macaw',
         incubationPeriod: 28,
         subspecies: [
@@ -25,7 +25,7 @@ export const speciesData = {
             'Severe Macaw - Ara severus',
         ]
     },
-    'Conure': {
+    {
         name: 'Conure',
         incubationPeriod: 24,
         subspecies: [
@@ -37,7 +37,7 @@ export const speciesData = {
             'Patagonian Conure - Cyanoliseus patagonus',
         ]
     },
-    'African Grey Parrot': {
+    {
         name: 'African Grey Parrot',
         incubationPeriod: 28,
         subspecies: [
@@ -45,7 +45,7 @@ export const speciesData = {
             'Timneh African Grey - Psittacus timneh',
         ]
     },
-    'Poicephalus': {
+    {
         name: 'Poicephalus',
         incubationPeriod: 26,
         subspecies: [
@@ -55,7 +55,7 @@ export const speciesData = {
             'Cape Parrot - Poicephalus robustus',
         ]
     },
-    'Lovebird': {
+    {
         name: 'Lovebird',
         incubationPeriod: 23,
         subspecies: [
@@ -65,7 +65,7 @@ export const speciesData = {
             'Nyasa Lovebird - Agapornis lilianae',
         ]
     },
-    'Amazon Parrot': {
+    {
         name: 'Amazon Parrot',
         incubationPeriod: 27,
         subspecies: [
@@ -76,7 +76,7 @@ export const speciesData = {
             'Lilac-crowned Amazon - Amazona finschi',
         ]
     },
-    'Lory & Lorikeet': {
+    {
         name: 'Lory & Lorikeet',
         incubationPeriod: 25,
         subspecies: [
@@ -86,7 +86,7 @@ export const speciesData = {
             'Red Lory - Eos bornea',
         ]
     },
-    'Australian Parakeet': {
+    {
         name: 'Australian Parakeet',
         incubationPeriod: 18,
         subspecies: [
@@ -96,7 +96,7 @@ export const speciesData = {
             'Red-rumped Parrot - Psephotus haematonotus',
         ]
     },
-    'Asiatic Parakeet': {
+    {
         name: 'Asiatic Parakeet',
         incubationPeriod: 23,
         subspecies: [
@@ -106,7 +106,7 @@ export const speciesData = {
             'Moustached Parakeet - Psittacula alexandri',
         ]
     },
-    'Eclectus Parrot': {
+    {
         name: 'Eclectus Parrot',
         incubationPeriod: 28,
         subspecies: [
@@ -115,7 +115,7 @@ export const speciesData = {
             'Red-sided Eclectus - Eclectus roratus polychloros',
         ]
     },
-    'Caique': {
+    {
         name: 'Caique',
         incubationPeriod: 26,
         subspecies: [
@@ -123,7 +123,7 @@ export const speciesData = {
             'White-bellied Caique - Pionites leucogaster',
         ]
     }
-};
+];
 
 export const mutationOptions = ['Opaline', 'Cinnamon', 'Lutino', 'Albino', 'Fallow', 'Spangle', 'Pied'] as const;
 
@@ -269,11 +269,15 @@ export type CollectionItem = Bird | Cage | Pair | BreedingRecord | NoteReminder 
 
 export const getBirdIdentifier = (bird: Bird) => {
     if (!bird) return 'N/A';
-    const speciesName = speciesData[bird.species as keyof typeof speciesData]?.name || bird.species;
     const identifier = bird.unbanded || !bird.ringNumber ? '(Unbanded)' : `(${bird.ringNumber})`;
-    return `${speciesName} ${identifier}`;
+    return `${bird.species} ${identifier}`;
 };
 
+const initialCustomSpecies: CustomSpecies[] = speciesData.map((s, i) => ({
+    ...s,
+    id: `cs_initial_${i}`,
+    category: 'CustomSpecies',
+}));
 
 export const initialBirds: Bird[] = [
   {
@@ -360,7 +364,6 @@ export const initialPermits: Permit[] = [
     { id: 'p2', category: 'Permit', permitNumber: 'ZA-GP-67890', issuingAuthority: 'GDARD', issueDate: '2023-07-15' }
 ];
 
-export const initialCustomSpecies: CustomSpecies[] = [];
 export const initialCustomMutations: CustomMutation[] = [];
 
 
@@ -375,3 +378,5 @@ export const initialItems: CollectionItem[] = [
     ...initialCustomSpecies,
     ...initialCustomMutations,
 ];
+
+    

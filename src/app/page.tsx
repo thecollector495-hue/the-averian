@@ -176,7 +176,7 @@ export default function HomePage() {
         const parentSpecies = allCustomSpecies.find(s => s.name === formData.species);
         if (parentSpecies) {
             const updatedSubspecies = [...parentSpecies.subspecies, formData.newSubspeciesName];
-            itemsToUpdate.push({ id: parentSpecies.id, subspecies: updatedSubspecies });
+            updateItem(parentSpecies.id, { subspecies: updatedSubspecies });
         }
     }
 
@@ -201,7 +201,7 @@ export default function HomePage() {
     }
 
     const birdToSave: Bird = {
-      species: finalSpecies,
+      species: finalSpecies!,
       subspecies: formData.subspecies,
       sex: formData.sex,
       ringNumber: formData.ringNumber,
@@ -544,3 +544,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    

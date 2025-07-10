@@ -8,7 +8,7 @@ import { useForm, ControllerRenderProps } from "react-hook-form";
 import { z } from "zod";
 import { format, parseISO } from 'date-fns';
 
-import { Bird, Cage, Permit, speciesData, mutationOptions, getBirdIdentifier, CustomSpecies, CustomMutation, AddMutationFormValues, inheritanceTypes } from '@/lib/data';
+import { Bird, Cage, Permit, mutationOptions, getBirdIdentifier, CustomSpecies, CustomMutation, AddMutationFormValues, inheritanceTypes } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { MultiSelectCombobox } from './multi-select-combobox';
 import { GeneralCombobox } from './general-combobox';
@@ -97,7 +97,7 @@ export type BirdFormValues = z.infer<typeof birdFormSchema>;
 
 export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, allCages, allPermits }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onSave: (data: BirdFormValues & { newCageName?: string }) => void, initialData: Bird | null, allBirds: Bird[], allCages: Cage[], allPermits: Permit[] }) {
   const { toast } = useToast();
-  const { items, addItem } = useItems();
+  const { items, addItem, updateItem } = useItems();
   const [isCreatingCage, setIsCreatingCage] = useState(false);
   const [isCreatingSpecies, setIsCreatingSpecies] = useState(false);
   const [isCreatingSubspecies, setIsCreatingSubspecies] = useState(false);
@@ -144,9 +144,9 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
   }, [initialData, form, isOpen, allCages]);
 
   const allSpeciesOptions = useMemo(() => {
-    const builtin = Object.entries(speciesData).map(([code, { name }]) => ({ value: name, label: name }));
-    const custom = customSpecies.map(s => ({ value: s.name, label: s.name }));
-    return [...builtin, ...custom].sort((a, b) => a.label.localeCompare(b.label));
+    return customSpecies
+      .map(s => ({ value: s.name, label: s.name }))
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [customSpecies]);
 
   const allMutationOptions = useMemo(() => {
@@ -163,18 +163,10 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
 
   const subspeciesOptions = useMemo(() => {
     if (!watchedSpecies) return [];
-    const builtinSpecies = Object.values(speciesData).find(s => s.name === watchedSpecies);
-    if (builtinSpecies?.subspecies) return builtinSpecies.subspecies.map(s => ({ value: s, label: s }));
-    const custom = customSpecies.find(s => s.name === watchedSpecies);
-    if (custom?.subspecies) return custom.subspecies.map(s => ({ value: s, label: s }));
+    const species = customSpecies.find(s => s.name === watchedSpecies);
+    if (species?.subspecies) return species.subspecies.map(s => ({ value: s, label: s }));
     return [];
   }, [watchedSpecies, customSpecies]);
-  
-  const isCustomSpeciesSelected = useMemo(() => {
-    if (!watchedSpecies) return false;
-    return customSpecies.some(s => s.name === watchedSpecies);
-  }, [watchedSpecies, customSpecies]);
-
 
   const relationshipOptions = useMemo(() => {
     if (!watchedSpecies && !isCreatingSpecies) return { father: [], mother: [], mate: [], offspring: [] };
@@ -194,8 +186,9 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
   useEffect(() => { if (unbanded) form.setValue("ringNumber", ""); }, [unbanded, form]);
   useEffect(() => { if (status !== 'Sold') { form.setValue('salePrice', undefined); form.setValue('saleDate', undefined); form.setValue('buyerInfo', ''); } }, [status, form]);
   useEffect(() => { if (isCreatingSpecies) { form.setValue('species', undefined); form.setValue('subspecies', undefined); setIsCreatingSubspecies(false); } else { form.setValue('newSpeciesName', ''); form.setValue('newSpeciesIncubation', undefined); } }, [isCreatingSpecies, form]);
-  useEffect(() => { if (!isCustomSpeciesSelected) setIsCreatingSubspecies(false); }, [isCustomSpeciesSelected]);
   useEffect(() => { if (isCreatingSubspecies) form.setValue('subspecies', undefined); else form.setValue('newSubspeciesName', ''); }, [isCreatingSubspecies, form]);
+  useEffect(() => { setIsCreatingSubspecies(false); form.setValue('subspecies', undefined); }, [watchedSpecies]);
+
 
   const handleSaveMutation = (data: AddMutationFormValues) => {
     const newMutation: CustomMutation = { ...data, id: `cm${Date.now()}`, category: 'CustomMutation' };
@@ -251,7 +244,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                  </div>
 
                  <div className="md:col-span-2 space-y-2">
-                    {isCustomSpeciesSelected && (
+                    {watchedSpecies && (
                         <div className="flex items-center space-x-2">
                             <Checkbox id="create-subspecies" checked={isCreatingSubspecies} onCheckedChange={(c) => setIsCreatingSubspecies(!!c)} />
                             <label htmlFor="create-subspecies" className="text-sm font-medium">Add new subspecies</label>
@@ -265,7 +258,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                         <FormField control={form.control} name="subspecies" render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Subspecies</FormLabel>
-                                <GeneralCombobox field={field} options={subspeciesOptions} placeholder="Select subspecies" disabled={!watchedSpecies || isCreatingSpecies} />
+                                <GeneralCombobox field={field} options={subspeciesOptions} placeholder="Select subspecies" disabled={!watchedSpecies || isCreatingSpecies || isCreatingSubspecies} />
                                 <FormMessage />
                             </FormItem>
                          )} />
@@ -438,3 +431,5 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
     </>
   );
 }
+
+    

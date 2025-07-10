@@ -6,9 +6,13 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Egg, StickyNote, Pencil } from "lucide-react";
 import { format, formatDistanceToNow, isFuture, parseISO } from 'date-fns';
-import { Bird, Pair, BreedingRecord, getBirdIdentifier } from '@/lib/data';
+import { Bird, Pair, BreedingRecord, getBirdIdentifier, CustomSpecies } from '@/lib/data';
+import { useItems } from '@/context/ItemsContext';
 
 export function BreedingRecordCard({ record, allBirds, allPairs, onBirdClick }: { record: BreedingRecord, allBirds: Bird[], allPairs: Pair[], onBirdClick: (bird: Bird) => void; }) {
+    const { items } = useItems();
+    const allCustomSpecies = items.filter((item): item is CustomSpecies => item.category === 'CustomSpecies');
+
     const [expandedSection, setExpandedSection] = useState<string | null>(null);
     const pair = allPairs.find(p => p.id === record.pairId);
     if (!pair) return <Card className="border-destructive"><CardHeader><CardTitle>Error: Pair not found</CardTitle></CardHeader></Card>;
@@ -94,3 +98,5 @@ export function BreedingRecordCard({ record, allBirds, allPairs, onBirdClick }: 
         </Card>
     )
 }
+
+    

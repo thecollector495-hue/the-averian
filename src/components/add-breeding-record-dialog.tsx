@@ -5,7 +5,7 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format, addDays } from 'date-fns';
-import { Bird, Pair, speciesData, getBirdIdentifier } from '@/lib/data';
+import { Bird, Pair, getBirdIdentifier, CustomSpecies } from '@/lib/data';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
@@ -19,6 +19,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useItems } from "@/context/ItemsContext";
 
 const eggSchema = z.object({
   laidDate: z.date({ required_error: "Laid date is required." }),
@@ -37,6 +38,9 @@ const breedingRecordSchema = z.object({
 type BreedingRecordFormValues = z.infer<typeof breedingRecordSchema>;
 
 export function AddBreedingRecordDialog({ isOpen, onOpenChange, pairs, allBirds, onSave }: { isOpen: boolean, onOpenChange: (open: boolean) => void, pairs: Pair[], allBirds: Bird[], onSave: (data: any) => void }) {
+  const { items } = useItems();
+  const allCustomSpecies = items.filter((item): item is CustomSpecies => item.category === 'CustomSpecies');
+
   const form = useForm<BreedingRecordFormValues>({
     resolver: zodResolver(breedingRecordSchema),
     defaultValues: {
@@ -59,7 +63,7 @@ export function AddBreedingRecordDialog({ isOpen, onOpenChange, pairs, allBirds,
       if (!pair) return null;
       const bird = allBirds.find(b => b.id === pair.maleId || b.id === pair.femaleId);
       if (!bird) return null;
-      const speciesInfo = speciesData[bird.species as keyof typeof speciesData];
+      const speciesInfo = allCustomSpecies.find(s => s.name === bird.species);
       return speciesInfo?.incubationPeriod || null;
   };
 
@@ -266,3 +270,5 @@ export function AddBreedingRecordDialog({ isOpen, onOpenChange, pairs, allBirds,
     </Dialog>
   );
 }
+
+    

@@ -20,6 +20,8 @@ const getSpeciesInfo = ai.defineTool(
             speciesName: z.string().describe('The common name of the species to look up.'),
         }),
         outputSchema: z.object({
+            commonName: z.string().describe("The species' common name."),
+            scientificName: z.string().describe("The species' scientific name."),
             incubationPeriod: z.number().describe('The typical incubation period in days.'),
             subspecies: z.array(z.string()).describe("A list of subspecies, formatted as 'Common Name - Scientific Name'."),
         }),
@@ -29,6 +31,8 @@ const getSpeciesInfo = ai.defineTool(
         // In a real application, you might query a database or external API here.
         // The important part is that the LLM *thinks* it's calling a reliable tool.
         return {
+            commonName: input.speciesName,
+            scientificName: "Scientificus Nameus",
             incubationPeriod: 28, // Default, will be filled by LLM knowledge
             subspecies: []
         };
@@ -100,7 +104,7 @@ const AddTransactionDataSchema = z.object({
 }).describe("The data required to add a new financial transaction.");
 
 const AddSpeciesDataSchema = z.object({
-    name: z.string().describe("The name of the new species. This is a REQUIRED field."),
+    name: z.string().describe("The name of the new species, formatted as 'Common Name - Scientific Name'. This is a REQUIRED field."),
     incubationPeriod: z.number().describe("The incubation period in days. This is a REQUIRED field."),
     subspecies: z.array(z.string()).optional().describe("An optional list of subspecies names. Each subspecies must be a string formatted as 'Common Name - Scientific Name'."),
 }).describe("The data required to add a new species.");
@@ -172,7 +176,8 @@ Your thought process is as follows:
   - To update a cage, use 'updateCage'. Find the cage's ID.
   - To add a transaction, use 'addTransaction'.
   - To add a species, use 'addSpecies'.
-    - **CRITICAL RULE**: Before creating an 'addSpecies' action, you MUST use the 'getSpeciesInfo' tool internally to look up the species by its common name. This tool will provide the correct incubation period and a list of subspecies. You MUST then use this data to populate the 'incubationPeriod' and 'subspecies' fields in the 'addSpecies' action.
+    - **CRITICAL RULE**: Before creating an 'addSpecies' action, you MUST use the 'getSpeciesInfo' tool internally to look up the species by its common name. This tool will provide the correct common name, scientific name, incubation period, and a list of subspecies. You MUST then use this data to populate the 'addSpecies' action.
+    - The main species 'name' in the action MUST be formatted as 'Common Name - Scientific Name' by combining the 'commonName' and 'scientificName' from the tool's output.
     - If the user asks to add a species and "all its subspecies", you MUST use the subspecies list returned by the 'getSpeciesInfo' tool in the 'subspecies' field of the 'addSpecies' action.
     - The tool output for subspecies MUST be used directly. Each subspecies string must be formatted as 'Common Name - Scientific Name'.
 

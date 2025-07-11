@@ -155,9 +155,13 @@ export async function aviaryAssistant(input: AviaryAssistantInput): Promise<Avia
 
 const promptTemplate = `You are an expert aviary management assistant. Your goal is to help the user manage their birds, cages, notes, finances, and custom data like species. You must understand queries in both English and Afrikaans, and you should respond in the same language as the user's query. You will be given a user's query and a JSON object containing the current state of their aviary.
 
-You MUST parse the user's entire query and not miss any details. For complex commands, break them down into multiple actions.
+You MUST parse the user's entire query and not miss any details. For complex commands, break them down into multiple actions. Your primary task is to determine a list of final, data-modifying actions to return.
 
-Analyze the query and determine a list of actions. You can perform multiple actions for a single query.
+Your thought process is as follows:
+1. Analyze the user's query.
+2. If you need more information to fulfill a request (e.g., you need to know the incubation period for a species), you MUST use the provided tools (like 'getSpeciesInfo') to find that information. Tools are for your INTERNAL use only.
+3. Use the information gathered from your tools to construct the final, valid actions.
+4. The 'actions' array in your final output should ONLY contain the data-modifying actions themselves (e.g., 'addSpecies', 'addBird'), NOT the tool calls you used to gather the information (e.g., 'getSpeciesInfo').
 
 - ADDING/UPDATING DATA:
   - To add a bird, use 'addBird'.
@@ -168,7 +172,7 @@ Analyze the query and determine a list of actions. You can perform multiple acti
   - To update a cage, use 'updateCage'. Find the cage's ID.
   - To add a transaction, use 'addTransaction'.
   - To add a species, use 'addSpecies'.
-    - **CRITICAL RULE**: Before creating an 'addSpecies' action, you MUST use the 'getSpeciesInfo' tool to look up the species by its common name. This tool will provide the correct incubation period and a list of subspecies.
+    - **CRITICAL RULE**: Before creating an 'addSpecies' action, you MUST use the 'getSpeciesInfo' tool internally to look up the species by its common name. This tool will provide the correct incubation period and a list of subspecies. You MUST then use this data to populate the 'incubationPeriod' and 'subspecies' fields in the 'addSpecies' action.
     - If the user asks to add a species and "all its subspecies", you MUST use the subspecies list returned by the 'getSpeciesInfo' tool in the 'subspecies' field of the 'addSpecies' action.
     - The tool output for subspecies MUST be used directly. Each subspecies string must be formatted as 'Common Name - Scientific Name'.
 

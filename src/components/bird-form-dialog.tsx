@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { format, parseISO, startOfYear, getYear } from 'date-fns';
+import imageCompression from 'browser-image-compression';
 
 import { Bird, Cage, Permit, getBirdIdentifier, CustomSpecies, CustomMutation, AddMutationFormValues } from '@/lib/data';
 import { cn } from '@/lib/utils';
@@ -24,7 +25,7 @@ import { Separator } from '@/components/ui/separator';
 import { Calendar } from "@/components/ui/calendar"
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar as CalendarIcon, PlusCircle, Upload, X } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Upload, X, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import Image from 'next/image';
@@ -119,6 +120,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
   const [isCreatingSubspecies, setIsCreatingSubspecies] = useState(false);
   const [isMutationDialogOpen, setIsMutationDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
   
   const customMutations = items.filter((item): item is CustomMutation => item.category === 'CustomMutation');
   const customSpecies = items.filter((item): item is CustomSpecies => item.category === 'CustomSpecies');
@@ -214,22 +216,39 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
   useEffect(() => { if (isCreatingSubspecies) form.setValue('subspecies', undefined); else form.setValue('newSubspeciesName', ''); }, [isCreatingSubspecies, form]);
   useEffect(() => { setIsCreatingSubspecies(false); form.setValue('subspecies', undefined); }, [watchedSpecies]);
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) { // 2MB limit
-        toast({
-          variant: 'destructive',
-          title: 'Image Too Large',
-          description: 'Please select an image smaller than 2MB.',
-        });
-        return;
-      }
+    if (!file) return;
+
+    const options = {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1920,
+      useWebWorker: true,
+    };
+
+    try {
+      setIsCompressing(true);
+      const compressedFile = await imageCompression(file, options);
+      
       const reader = new FileReader();
       reader.onload = (e) => {
         form.setValue('imageUrl', e.target?.result as string);
+        setIsCompressing(false);
       };
-      reader.readAsDataURL(file);
+      reader.onerror = () => {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not read the image file.'});
+        setIsCompressing(false);
+      };
+      reader.readAsDataURL(compressedFile);
+
+    } catch (error) {
+      console.error(error);
+      toast({
+        variant: 'destructive',
+        title: 'Image Compression Failed',
+        description: 'Could not process the image. Please try another one.',
+      });
+      setIsCompressing(false);
     }
   };
 
@@ -427,6 +446,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                             ref={fileInputRef}
                             onChange={handleImageUpload}
                             className="hidden"
+                            disabled={isCompressing}
                           />
                           {imageUrl ? (
                             <div className="relative w-48 h-48 border rounded-md">
@@ -437,6 +457,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                                 size="icon"
                                 className="absolute top-1 right-1 h-7 w-7"
                                 onClick={() => form.setValue('imageUrl', '')}
+                                disabled={isCompressing}
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -447,9 +468,19 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                               variant="outline"
                               onClick={() => fileInputRef.current?.click()}
                               className="h-24 w-full border-dashed"
+                              disabled={isCompressing}
                             >
-                              <Upload className="mr-2 h-5 w-5" />
-                              Upload Image
+                              {isCompressing ? (
+                                <>
+                                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                  Compressing...
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="mr-2 h-5 w-5" />
+                                  Upload Image
+                                </>
+                              )}
                             </Button>
                           )}
                         </div>

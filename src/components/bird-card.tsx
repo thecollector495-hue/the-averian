@@ -67,7 +67,7 @@ export function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecord
     <Card key={bird.id} className={cn("flex flex-col h-full overflow-hidden", (bird.status === 'Sold' || bird.status === 'Deceased') && "opacity-60")}>
       {bird.imageUrl && (
         <div className="aspect-video w-full relative cursor-pointer" onClick={() => onImageClick(bird.imageUrl!)}>
-          <Image src={bird.imageUrl} alt={getBirdIdentifier(bird)} fill className="object-cover" data-ai-hint={`${bird.species}`} />
+          <Image src={bird.imageUrl} alt={getBirdIdentifier(bird)} fill className="object-cover" />
         </div>
       )}
       <CardHeader className="flex flex-row items-start justify-between p-4 pb-2">

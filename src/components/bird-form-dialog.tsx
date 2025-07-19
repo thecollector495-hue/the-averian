@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -24,9 +24,10 @@ import { Separator } from '@/components/ui/separator';
 import { Calendar } from "@/components/ui/calendar"
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar as CalendarIcon, PlusCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Upload, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import Image from 'next/image';
 
 const AddMutationDialog = dynamic(() => import('@/components/add-mutation-dialog').then(mod => mod.AddMutationDialog), { ssr: false });
 
@@ -54,7 +55,7 @@ const birdFormSchema = z.object({
     z.coerce.number().int().min(1900, "Year must be after 1900").max(new Date().getFullYear(), "Year cannot be in the future").optional()
   ),
   
-  imageUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+  imageUrl: z.string().optional(),
 
   cageId: z.string().optional(),
   newCageName: z.string().optional(),
@@ -112,11 +113,12 @@ export type BirdFormValues = z.infer<typeof birdFormSchema>;
 
 export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allBirds, allCages, allPermits }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onSave: (data: BirdFormValues & { newCageName?: string }) => void, initialData: Bird | null, allBirds: Bird[], allCages: Cage[], allPermits: Permit[] }) {
   const { toast } = useToast();
-  const { items, addItem, updateItem, addItems, updateItems } = useItems();
+  const { items, addItem } = useItems();
   const [isCreatingCage, setIsCreatingCage] = useState(false);
   const [isCreatingSpecies, setIsCreatingSpecies] = useState(false);
   const [isCreatingSubspecies, setIsCreatingSubspecies] = useState(false);
   const [isMutationDialogOpen, setIsMutationDialogOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const customMutations = items.filter((item): item is CustomMutation => item.category === 'CustomMutation');
   const customSpecies = items.filter((item): item is CustomSpecies => item.category === 'CustomSpecies');
@@ -182,6 +184,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
   const status = form.watch("status");
   const watchedSex = form.watch("sex");
   const birthDateType = form.watch("birthDateType");
+  const imageUrl = form.watch("imageUrl");
 
   const subspeciesOptions = useMemo(() => {
     if (!watchedSpecies) return [];
@@ -211,6 +214,24 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
   useEffect(() => { if (isCreatingSubspecies) form.setValue('subspecies', undefined); else form.setValue('newSubspeciesName', ''); }, [isCreatingSubspecies, form]);
   useEffect(() => { setIsCreatingSubspecies(false); form.setValue('subspecies', undefined); }, [watchedSpecies]);
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        toast({
+          variant: 'destructive',
+          title: 'Image Too Large',
+          description: 'Please select an image smaller than 2MB.',
+        });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        form.setValue('imageUrl', e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSaveMutation = (data: AddMutationFormValues) => {
     const newMutation: CustomMutation = { ...data, id: `cm${Date.now()}`, category: 'CustomMutation' };
@@ -392,9 +413,51 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
 
              <Separator />
                <p className="text-base font-medium">Media</p>
-                <FormField control={form.control} name="imageUrl" render={({ field }) => (
-                    <FormItem><FormLabel>Image URL</FormLabel><FormControl><Input placeholder="https://example.com/bird.jpg" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="imageUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Image</FormLabel>
+                      <FormControl>
+                        <div>
+                          <Input
+                            type="file"
+                            accept="image/png, image/jpeg, image/gif"
+                            ref={fileInputRef}
+                            onChange={handleImageUpload}
+                            className="hidden"
+                          />
+                          {imageUrl ? (
+                            <div className="relative w-48 h-48 border rounded-md">
+                              <Image src={imageUrl} alt="Bird preview" fill className="object-cover rounded-md" />
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="absolute top-1 right-1 h-7 w-7"
+                                onClick={() => form.setValue('imageUrl', '')}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => fileInputRef.current?.click()}
+                              className="h-24 w-full border-dashed"
+                            >
+                              <Upload className="mr-2 h-5 w-5" />
+                              Upload Image
+                            </Button>
+                          )}
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
              <Separator />
               <p className="text-base font-medium">Housing</p>

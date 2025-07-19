@@ -285,16 +285,16 @@ const initialCustomSpecies: CustomSpecies[] = initialSpeciesData.map((s, i) => (
 
 export const initialBirds: Bird[] = [
   {
-    id: '1', species: 'Cockatoo', subspecies: 'Cockatiel - Nymphicus hollandicus', ringNumber: 'A123', unbanded: false, category: 'Bird', sex: 'male', birthDate: '2022-04-01', visualMutations: ['Lutino'], splitMutations: ['Cinnamon', 'Pied'], fatherId: undefined, motherId: undefined, mateId: '4', offspringIds: ['3'], paidPrice: 150, estimatedValue: 200, status: 'Available', permitId: 'p1', imageUrl: 'https://placehold.co/600x400.png'
+    id: '1', species: 'Cockatoo', subspecies: 'Cockatiel - Nymphicus hollandicus', ringNumber: 'A123', unbanded: false, category: 'Bird', sex: 'male', birthDate: '2022-04-01', visualMutations: ['Lutino'], splitMutations: ['Cinnamon', 'Pied'], fatherId: undefined, motherId: undefined, mateId: '4', offspringIds: ['3'], paidPrice: 150, estimatedValue: 200, status: 'Available', permitId: 'p1', imageUrl: ''
   },
   {
-    id: '2', species: 'African Grey Parrot', subspecies: 'Congo African Grey - Psittacus erithacus', ringNumber: 'B456', unbanded: false, category: 'Bird', sex: 'female', birthDate: '2021-06-15', visualMutations: [], splitMutations: ['Lutino'], fatherId: undefined, motherId: undefined, mateId: undefined, offspringIds: [], paidPrice: 80, estimatedValue: 120, status: 'Sold', saleDetails: { date: '2024-06-10', price: 150, buyer: 'John Doe' }, imageUrl: 'https://placehold.co/600x400.png'
+    id: '2', species: 'African Grey Parrot', subspecies: 'Congo African Grey - Psittacus erithacus', ringNumber: 'B456', unbanded: false, category: 'Bird', sex: 'female', birthDate: '2021-06-15', visualMutations: [], splitMutations: ['Lutino'], fatherId: undefined, motherId: undefined, mateId: undefined, offspringIds: [], paidPrice: 80, estimatedValue: 120, status: 'Sold', saleDetails: { date: '2024-06-10', price: 150, buyer: 'John Doe' }, imageUrl: ''
   },
   {
     id: '3', species: 'Cockatoo', subspecies: undefined, ringNumber: undefined, unbanded: true, category: 'Bird', sex: 'unsexed', birthDate: '2024-05-30', visualMutations: [], splitMutations: [], fatherId: '1', motherId: '4', mateId: undefined, offspringIds: [], paidPrice: 0, estimatedValue: 50, status: 'Hand-rearing'
   },
   {
-    id: '4', species: 'Cockatoo', subspecies: 'Galah / Rose-breasted Cockatoo - Eolophus roseicapilla', ringNumber: 'C789', unbanded: false, category: 'Bird', sex: 'female', birthDate: '2022-03-20', visualMutations: ['Cinnamon'], splitMutations: [], fatherId: undefined, motherId: undefined, mateId: '1', offspringIds: ['3'], paidPrice: 160, estimatedValue: 220, status: 'Available', imageUrl: 'https://placehold.co/600x400.png'
+    id: '4', species: 'Cockatoo', subspecies: 'Galah / Rose-breasted Cockatoo - Eolophus roseicapilla', ringNumber: 'C789', unbanded: false, category: 'Bird', sex: 'female', birthDate: '2022-03-20', visualMutations: ['Cinnamon'], splitMutations: [], fatherId: undefined, motherId: undefined, mateId: '1', offspringIds: ['3'], paidPrice: 160, estimatedValue: 220, status: 'Available', imageUrl: ''
   },
 ];
 

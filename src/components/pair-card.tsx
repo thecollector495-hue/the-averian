@@ -1,14 +1,16 @@
 
 'use client';
 
+import Image from 'next/image';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users2 } from 'lucide-react';
 import { Bird, Pair, getBirdIdentifier } from '@/lib/data';
 
-export function PairCard({ pair, allBirds, onBirdClick }: { pair: Pair, allBirds: Bird[], onBirdClick: (bird: Bird) => void }) {
+export function PairCard({ pair, allBirds, onBirdClick, onImageClick }: { pair: Pair, allBirds: Bird[], onBirdClick: (bird: Bird) => void, onImageClick: (imageUrl: string) => void }) {
     const male = allBirds.find(b => b.id === pair.maleId);
     const female = allBirds.find(b => b.id === pair.femaleId);
+    const displayImage = male?.imageUrl || female?.imageUrl;
 
     const BirdLink = ({ bird }: { bird: Bird | undefined }) => {
         if (!bird) return <span className="text-muted-foreground">Bird not found</span>;
@@ -20,7 +22,12 @@ export function PairCard({ pair, allBirds, onBirdClick }: { pair: Pair, allBirds
     }
     
     return (
-        <Card className="h-full">
+        <Card className="h-full overflow-hidden">
+             {displayImage && (
+                <div className="aspect-video w-full relative cursor-pointer" onClick={() => onImageClick(displayImage)}>
+                    <Image src={displayImage} alt="Breeding Pair" fill className="object-cover" />
+                </div>
+            )}
             <CardHeader className="p-4">
                 <CardTitle>Breeding Pair</CardTitle>
                 <CardDescription>
@@ -46,5 +53,3 @@ export function PairCard({ pair, allBirds, onBirdClick }: { pair: Pair, allBirds
         </Card>
     );
 }
-
-    

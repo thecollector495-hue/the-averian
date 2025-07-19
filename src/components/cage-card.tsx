@@ -3,11 +3,12 @@
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Bird, Cage, getBirdIdentifier } from '@/lib/data';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useCurrency } from '@/context/CurrencyContext';
 
-export function CageCard({ cage, allBirds, onBirdClick, onEditClick, onDeleteClick }: { cage: Cage, allBirds: Bird[], onBirdClick: (bird: Bird) => void, onEditClick: (cage: Cage) => void, onDeleteClick: (cageId: string) => void }) {
+export function CageCard({ cage, allBirds, onBirdClick, onEditClick, onDeleteClick, onImageClick }: { cage: Cage, allBirds: Bird[], onBirdClick: (bird: Bird) => void, onEditClick: (cage: Cage) => void, onDeleteClick: (cageId: string) => void, onImageClick: (imageUrl: string) => void }) {
     const birdsInCage = allBirds.filter(b => cage.birdIds.includes(b.id));
     const { formatCurrency } = useCurrency();
 
@@ -24,15 +25,19 @@ export function CageCard({ cage, allBirds, onBirdClick, onEditClick, onDeleteCli
                 <div className="space-y-3">
                     <h4 className="text-sm font-medium">Occupants</h4>
                     {birdsInCage.length > 0 ? (
-                        <ul className="list-disc pl-5 space-y-1">
+                        <div className="flex flex-wrap gap-2">
                             {birdsInCage.map(bird => (
-                                <li key={bird.id}>
-                                    <Button variant="link" className="p-0 h-auto font-normal text-base text-left" onClick={() => onBirdClick(bird)}>
-                                        {getBirdIdentifier(bird)}
-                                    </Button>
-                                </li>
+                                <div key={bird.id} className="flex flex-col items-center gap-1 text-center w-20">
+                                  <Avatar className="h-12 w-12 border-2 border-muted cursor-pointer" onClick={() => onBirdClick(bird)}>
+                                    <AvatarImage src={bird.imageUrl} alt={getBirdIdentifier(bird)} onClick={(e) => { e.stopPropagation(); if(bird.imageUrl) onImageClick(bird.imageUrl); }} data-ai-hint={`${bird.species}`} />
+                                    <AvatarFallback>{bird.species.substring(0,2)}</AvatarFallback>
+                                  </Avatar>
+                                  <Button variant="link" className="p-0 h-auto text-xs leading-tight text-center" onClick={() => onBirdClick(bird)}>
+                                    {getBirdIdentifier(bird)}
+                                  </Button>
+                                </div>
                             ))}
-                        </ul>
+                        </div>
                     ) : (
                         <p className="text-muted-foreground text-sm">This cage is empty.</p>
                     )}

@@ -53,6 +53,8 @@ const birdFormSchema = z.object({
     (val) => (val === "" ? undefined : val),
     z.coerce.number().int().min(1900, "Year must be after 1900").max(new Date().getFullYear(), "Year cannot be in the future").optional()
   ),
+  
+  imageUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
 
   cageId: z.string().optional(),
   newCageName: z.string().optional(),
@@ -123,7 +125,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
     resolver: zodResolver(birdFormSchema),
     defaultValues: {
       ringNumber: "", unbanded: false, visualMutations: [], splitMutations: [], offspringIds: [],
-      cageId: undefined, newCageName: "", addToExpenses: true, status: 'Available', birthDateType: 'date',
+      cageId: undefined, newCageName: "", addToExpenses: true, status: 'Available', birthDateType: 'date', imageUrl: ''
     },
   });
   
@@ -158,6 +160,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
         splitMutations: [], fatherId: undefined, motherId: undefined, mateId: undefined, offspringIds: [],
         paidPrice: undefined, estimatedValue: undefined, addToExpenses: true, status: 'Available',
         permitId: undefined, salePrice: undefined, saleDate: undefined, buyerInfo: "", createSaleTransaction: true,
+        imageUrl: "",
       });
     }
   }, [initialData, form, isOpen, allCages]);
@@ -386,6 +389,13 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                     </FormItem>
                   )} />
             </div>
+
+             <Separator />
+               <p className="text-base font-medium">Media</p>
+                <FormField control={form.control} name="imageUrl" render={({ field }) => (
+                    <FormItem><FormLabel>Image URL</FormLabel><FormControl><Input placeholder="https://example.com/bird.jpg" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                )} />
+
              <Separator />
               <p className="text-base font-medium">Housing</p>
                 {isCreatingCage ? (

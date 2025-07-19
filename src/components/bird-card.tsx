@@ -2,6 +2,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users2, Egg, Landmark, Pencil, ShieldCheck, Trash2 } from "lucide-react";
@@ -13,7 +14,7 @@ import { useCurrency } from '@/context/CurrencyContext';
 import { cn } from '@/lib/utils';
 import { format, parseISO, formatDistanceToNowStrict, getYear } from 'date-fns';
 
-export function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecords, allPermits, handleEditClick, handleDeleteClick, onBirdClick, onViewBreedingRecord }: { bird: Bird; allBirds: Bird[]; allCages: Cage[]; allPairs: Pair[], allBreedingRecords: BreedingRecord[], allPermits: Permit[], handleEditClick: (bird: Bird) => void; handleDeleteClick: (birdId: string) => void; onBirdClick: (bird: Bird) => void; onViewBreedingRecord: (record: BreedingRecord) => void; }) {
+export function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecords, allPermits, handleEditClick, handleDeleteClick, onBirdClick, onViewBreedingRecord, onImageClick }: { bird: Bird; allBirds: Bird[]; allCages: Cage[]; allPairs: Pair[], allBreedingRecords: BreedingRecord[], allPermits: Permit[], handleEditClick: (bird: Bird) => void; handleDeleteClick: (birdId: string) => void; onBirdClick: (bird: Bird) => void; onViewBreedingRecord: (record: BreedingRecord) => void; onImageClick: (imageUrl: string) => void; }) {
   const { formatCurrency } = useCurrency();
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
@@ -63,7 +64,12 @@ export function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecord
   }
 
   return (
-    <Card key={bird.id} className={cn("flex flex-col h-full", (bird.status === 'Sold' || bird.status === 'Deceased') && "opacity-60")}>
+    <Card key={bird.id} className={cn("flex flex-col h-full overflow-hidden", (bird.status === 'Sold' || bird.status === 'Deceased') && "opacity-60")}>
+      {bird.imageUrl && (
+        <div className="aspect-video w-full relative cursor-pointer" onClick={() => onImageClick(bird.imageUrl!)}>
+          <Image src={bird.imageUrl} alt={getBirdIdentifier(bird)} fill className="object-cover" data-ai-hint={`${bird.species}`} />
+        </div>
+      )}
       <CardHeader className="flex flex-row items-start justify-between p-4 pb-2">
         <div>
             <Badge variant={bird.sex === 'male' ? 'default' : bird.sex === 'female' ? 'destructive' : 'secondary'} className="capitalize">{bird.sex}</Badge>

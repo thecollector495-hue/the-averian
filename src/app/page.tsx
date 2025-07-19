@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useItems } from '@/context/ItemsContext';
 import { CageFormValues } from '@/components/add-cage-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { ImageLightbox } from '@/components/image-lightbox';
 
 const AddCageDialog = dynamic(() => import('@/components/add-cage-dialog').then(mod => mod.AddCageDialog), { ssr: false });
 const BirdFormDialog = dynamic(() => import('@/components/bird-form-dialog').then(mod => mod.BirdFormDialog), { ssr: false });
@@ -34,6 +35,7 @@ export default function HomePage() {
   const [editingCage, setEditingCage] = useState<Cage | null>(null);
   const [deletingBirdId, setDeletingBirdId] = useState<string | null>(null);
   const [deletingCageId, setDeletingCageId] = useState<string | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const { toast } = useToast();
   
   const {
@@ -215,6 +217,7 @@ export default function HomePage() {
       ringNumber: formData.ringNumber,
       unbanded: formData.unbanded,
       birthDate: birthDateToSave,
+      imageUrl: formData.imageUrl,
       visualMutations: formData.visualMutations,
       splitMutations: formData.splitMutations,
       fatherId: formData.fatherId,
@@ -422,6 +425,7 @@ export default function HomePage() {
 
   return (
     <div className="container mx-auto p-4 sm:p-6 md:p-8">
+      {lightboxImage && <ImageLightbox imageUrl={lightboxImage} onClose={() => setLightboxImage(null)} />}
       {isAddCageDialogOpen && <AddCageDialog
         isOpen={isAddCageDialogOpen}
         onOpenChange={setIsAddCageDialogOpen}
@@ -533,13 +537,13 @@ export default function HomePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredItems.map((item) => {
             if (item.category === 'Bird') {
-              return <BirdCard key={item.id} bird={item} allBirds={allBirds} allCages={allCages} allPairs={allPairs} allBreedingRecords={allBreedingRecords} allPermits={allPermits} handleEditClick={handleEditClick} handleDeleteClick={setDeletingBirdId} onBirdClick={handleViewBirdClick} onViewBreedingRecord={handleViewBreedingRecord} />
+              return <BirdCard key={item.id} bird={item} allBirds={allBirds} allCages={allCages} allPairs={allPairs} allBreedingRecords={allBreedingRecords} allPermits={allPermits} handleEditClick={handleEditClick} handleDeleteClick={setDeletingBirdId} onBirdClick={handleViewBirdClick} onViewBreedingRecord={handleViewBreedingRecord} onImageClick={setLightboxImage} />
             }
             if (item.category === 'Cage') {
-                return <CageCard key={item.id} cage={item} allBirds={allBirds} onBirdClick={handleViewBirdClick} onEditClick={handleEditCageClick} onDeleteClick={setDeletingCageId} />
+                return <CageCard key={item.id} cage={item} allBirds={allBirds} onBirdClick={handleViewBirdClick} onEditClick={handleEditCageClick} onDeleteClick={setDeletingCageId} onImageClick={setLightboxImage} />
             }
             if (item.category === 'Pair') {
-                return <PairCard key={item.id} pair={item} allBirds={allBirds} onBirdClick={handleViewBirdClick} />
+                return <PairCard key={item.id} pair={item} allBirds={allBirds} onBirdClick={handleViewBirdClick} onImageClick={setLightboxImage} />
             }
             return null;
           })}

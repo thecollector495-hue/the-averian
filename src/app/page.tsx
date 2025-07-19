@@ -18,16 +18,18 @@ import { useItems } from '@/context/ItemsContext';
 import { CageFormValues } from '@/components/add-cage-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ImageLightbox } from '@/components/image-lightbox';
+import { AddPairFormValues } from '@/components/add-pair-dialog';
 
 const AddCageDialog = dynamic(() => import('@/components/add-cage-dialog').then(mod => mod.AddCageDialog), { ssr: false });
 const BirdFormDialog = dynamic(() => import('@/components/bird-form-dialog').then(mod => mod.BirdFormDialog), { ssr: false });
+const AddPairDialog = dynamic(() => import('@/components/add-pair-dialog').then(mod => mod.AddPairDialog), { ssr: false });
 const BreedingRecordDetailsDialog = dynamic(() => import('@/components/breeding-record-details-dialog').then(mod => mod.BreedingRecordDetailsDialog), { ssr: false });
 
 export default function HomePage() {
   const { items, addItem, addItems, updateItem, updateItems, deleteItem, deleteBirdItem } = useItems();
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('Bird');
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isBirdFormOpen, setIsBirdFormOpen] = useState(false);
   const [editingBird, setEditingBird] = useState<Bird | null>(null);
   const [viewingBird, setViewingBird] = useState<Bird | null>(null);
   const [viewingBreedingRecord, setViewingBreedingRecord] = useState<BreedingRecord | null>(null);
@@ -36,6 +38,10 @@ export default function HomePage() {
   const [deletingBirdId, setDeletingBirdId] = useState<string | null>(null);
   const [deletingCageId, setDeletingCageId] = useState<string | null>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [isPairFormOpen, setIsPairFormOpen] = useState(false);
+  const [editingPair, setEditingPair] = useState<Pair | null>(null);
+  const [deletingPairId, setDeletingPairId] = useState<string | null>(null);
+
   const { toast } = useToast();
   
   const {
@@ -69,15 +75,31 @@ export default function HomePage() {
   const cageToDelete = useMemo(() =>
     deletingCageId ? allCages.find(c => c.id === deletingCageId) : null
   , [deletingCageId, allCages]);
+  
+  const pairToDelete = useMemo(() =>
+    deletingPairId ? allPairs.find(p => p.id === deletingPairId) : null
+  , [deletingPairId, allPairs]);
 
-  const handleAddClick = () => {
+
+  const handleAddBirdClick = () => {
     setEditingBird(null);
-    setIsFormOpen(true);
+    setIsBirdFormOpen(true);
   };
+  
+  const handleAddPairClick = () => {
+    setEditingPair(null);
+    setIsPairFormOpen(true);
+  };
+  
+  const handleEditPairClick = (pair: Pair) => {
+    setEditingPair(pair);
+    setIsPairFormOpen(true);
+  };
+
 
   const handleEditClick = (bird: Bird) => {
     setEditingBird(bird);
-    setIsFormOpen(true);
+    setIsBirdFormOpen(true);
   };
 
   const handleViewBirdClick = (bird: Bird) => {
@@ -395,6 +417,30 @@ export default function HomePage() {
       });
   };
 
+  const handleSavePair = (data: AddPairFormValues & { id?: string }) => {
+    const isEditing = !!data.id;
+    
+    if (isEditing) {
+        updateItem(data.id!, {
+            maleId: data.maleId,
+            femaleId: data.femaleId,
+            imageUrl: data.imageUrl,
+        });
+        toast({ title: "Pair updated", description: "The pair details have been saved." });
+    } else {
+        const newPair: Pair = {
+            id: `p${Date.now()}`,
+            category: 'Pair',
+            maleId: data.maleId,
+            femaleId: data.femaleId,
+            imageUrl: data.imageUrl,
+        }
+        addItem(newPair);
+        toast({ title: "Pair created", description: "The new pair has been saved." });
+    }
+  };
+
+
   const handleDeleteBird = () => {
     if (!birdToDelete) return;
     deleteBirdItem(birdToDelete.id);
@@ -408,6 +454,14 @@ export default function HomePage() {
     toast({ title: 'Cage Deleted', description: 'The cage has been removed.' });
     setDeletingCageId(null);
   };
+  
+  const handleDeletePair = () => {
+    if (!deletingPairId) return;
+    deleteItem(deletingPairId);
+    toast({ title: 'Pair Deleted', description: 'The pair has been removed.' });
+    setDeletingPairId(null);
+  };
+
 
   const filteredItems = useMemo(() => items.filter(item => {
     if (item.category !== filterCategory) return false;
@@ -432,14 +486,21 @@ export default function HomePage() {
         onSave={(data) => handleSaveCage(data)}
         initialData={editingCage}
        />}
-      {isFormOpen && <BirdFormDialog
-        isOpen={isFormOpen}
-        onOpenChange={setIsFormOpen}
+      {isBirdFormOpen && <BirdFormDialog
+        isOpen={isBirdFormOpen}
+        onOpenChange={setIsBirdFormOpen}
         onSave={handleSaveBird}
         initialData={editingBird}
         allBirds={allBirds}
         allCages={allCages}
         allPermits={allPermits}
+      />}
+       {isPairFormOpen && <AddPairDialog
+        isOpen={isPairFormOpen}
+        onOpenChange={setIsPairFormOpen}
+        onSave={handleSavePair}
+        initialData={editingPair}
+        allBirds={allBirds}
       />}
       <BirdDetailsDialog
         bird={viewingBird}
@@ -489,6 +550,20 @@ export default function HomePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <AlertDialog open={!!deletingPairId} onOpenChange={(open) => !open && setDeletingPairId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this pair. This does not delete the individual birds. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeletePair}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="flex flex-col gap-4 mb-8">
         <h1 className="text-4xl md:text-5xl font-bold font-headline text-center">My Aviary</h1>
@@ -518,7 +593,7 @@ export default function HomePage() {
               </SelectContent>
             </Select>
             {filterCategory === 'Bird' && (
-              <Button onClick={handleAddClick}>
+              <Button onClick={handleAddBirdClick}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Bird
               </Button>
@@ -527,6 +602,12 @@ export default function HomePage() {
               <Button onClick={handleAddCageClick}>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add Cage
+              </Button>
+            )}
+             {filterCategory === 'Pair' && (
+              <Button onClick={handleAddPairClick}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Pair
               </Button>
             )}
           </div>
@@ -543,7 +624,7 @@ export default function HomePage() {
                 return <CageCard key={item.id} cage={item} allBirds={allBirds} onBirdClick={handleViewBirdClick} onEditClick={handleEditCageClick} onDeleteClick={setDeletingCageId} onImageClick={setLightboxImage} />
             }
             if (item.category === 'Pair') {
-                return <PairCard key={item.id} pair={item} allBirds={allBirds} onBirdClick={handleViewBirdClick} onImageClick={setLightboxImage} />
+                return <PairCard key={item.id} pair={item} allBirds={allBirds} onBirdClick={handleViewBirdClick} onEditClick={handleEditPairClick} onDeleteClick={setDeletingPairId} onImageClick={setLightboxImage} />
             }
             return null;
           })}

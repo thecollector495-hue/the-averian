@@ -193,6 +193,7 @@ export type Pair = {
   category: 'Pair';
   maleId: string;
   femaleId: string;
+  imageUrl?: string;
 };
 
 export type Egg = {

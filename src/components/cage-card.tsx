@@ -25,17 +25,18 @@ export function CageCard({ cage, allBirds, onBirdClick, onEditClick, onDeleteCli
                 <div className="space-y-3">
                     <h4 className="text-sm font-medium">Occupants</h4>
                     {birdsInCage.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
+                        <div className="space-y-2">
                             {birdsInCage.map(bird => (
-                                <div key={bird.id} className="flex flex-col items-center gap-1 text-center w-20">
-                                  <Avatar className="h-12 w-12 border-2 border-muted cursor-pointer" onClick={() => onBirdClick(bird)}>
-                                    <AvatarImage src={bird.imageUrl} alt={getBirdIdentifier(bird)} onClick={(e) => { e.stopPropagation(); if(bird.imageUrl) onImageClick(bird.imageUrl); }} data-ai-hint={`${bird.species}`} />
-                                    <AvatarFallback>{bird.species.substring(0,2)}</AvatarFallback>
-                                  </Avatar>
-                                  <Button variant="link" className="p-0 h-auto text-xs leading-tight text-center" onClick={() => onBirdClick(bird)}>
-                                    {getBirdIdentifier(bird)}
-                                  </Button>
-                                </div>
+                                <Button key={bird.id} variant="secondary" className="w-full justify-start h-auto py-2" onClick={() => onBirdClick(bird)}>
+                                    <Avatar className="h-8 w-8 mr-3">
+                                        <AvatarImage src={bird.imageUrl} alt={getBirdIdentifier(bird)} onClick={(e) => { e.stopPropagation(); if(bird.imageUrl) onImageClick(bird.imageUrl); }} data-ai-hint={`${bird.species}`} />
+                                        <AvatarFallback>{bird.species.substring(0,1)}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="text-left">
+                                        <p className="font-semibold">{getBirdIdentifier(bird)}</p>
+                                        <p className="text-xs text-muted-foreground font-normal capitalize">{bird.sex}</p>
+                                    </div>
+                                </Button>
                             ))}
                         </div>
                     ) : (

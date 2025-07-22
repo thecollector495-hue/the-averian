@@ -11,35 +11,6 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 
-// Tool Definition
-const getSpeciesInfo = ai.defineTool(
-    {
-        name: 'getSpeciesInfo',
-        description: 'Get information about a bird species, including incubation period and subspecies.',
-        inputSchema: z.object({
-            speciesName: z.string().describe('The common name of the species to look up.'),
-        }),
-        outputSchema: z.object({
-            commonName: z.string().describe("The species' common name."),
-            scientificName: z.string().describe("The species' scientific name."),
-            incubationPeriod: z.number().describe('The typical incubation period in days.'),
-            subspecies: z.array(z.string()).describe("A list of subspecies, formatted as 'Common Name - Scientific Name'."),
-        }),
-    },
-    async (input) => {
-        // This is a placeholder for a real API call. The LLM will generate the data.
-        // In a real application, you might query a database or external API here.
-        // The important part is that the LLM *thinks* it's calling a reliable tool.
-        return {
-            commonName: input.speciesName,
-            scientificName: "Scientificus Nameus",
-            incubationPeriod: 28, // Default, will be filled by LLM knowledge
-            subspecies: []
-        };
-    }
-);
-
-
 const AviaryAssistantInputSchema = z.object({
   query: z.string().describe("The user's query or command."),
   context: z.string().describe("A JSON string of existing birds, notes, cages, and financial transactions to provide context for the query."),
@@ -175,12 +146,6 @@ const promptTemplate = `You are an expert aviary management assistant and avian 
 
 You MUST parse the user's entire query and not miss any details. For complex commands, break them down into multiple actions. Your primary task is to determine a list of final, data-modifying actions to return.
 
-Your thought process is as follows:
-1. Analyze the user's query.
-2. If you need more information to fulfill a request (e.g., you need to know the incubation period for a species), you MUST use the provided tools (like 'getSpeciesInfo') to find that information. Tools are for your INTERNAL use only.
-3. Use the information gathered from your tools to construct the final, valid actions.
-4. The 'actions' array in your final output should ONLY contain the data-modifying actions themselves (e.g., 'addSpecies', 'addBird', 'geneticsResult'), NOT the tool calls you used to gather the information (e.g., 'getSpeciesInfo').
-
 - GENETICS CALCULATOR:
   - If the user asks to calculate genetic outcomes (e.g., "Calculate genetics for..."), you MUST use the 'geneticsResult' action.
   - The data for this action MUST conform to the 'GeneticsResultDataSchema'.
@@ -198,10 +163,6 @@ Your thought process is as follows:
   - To update a cage, use 'updateCage'. Find the cage's ID.
   - To add a transaction, use 'addTransaction'.
   - To add a species, use 'addSpecies'.
-    - **CRITICAL RULE**: Before creating an 'addSpecies' action, you MUST use the 'getSpeciesInfo' tool internally to look up the species by its common name. This tool will provide the correct common name, scientific name, incubation period, and a list of subspecies. You MUST then use this data to populate the 'addSpecies' action. If the user only asks to add a species (e.g., "add Amazon"), you should still use the tool, but leave the 'subspecies' field in the 'addSpecies' action as an empty array []. Only include subspecies if the user explicitly asks for them (e.g., "add Amazon and all its subspecies").
-    - The main species 'name' in the action MUST be formatted as 'Common Name - Scientific Name' by combining the 'commonName' and 'scientificName' from the tool's output.
-    - If the user asks to add "all its subspecies", you MUST use the subspecies list returned by the 'getSpeciesInfo' tool in the 'subspecies' field of the 'addSpecies' action.
-    - The tool output for subspecies MUST be used directly. Each subspecies string must be formatted as 'Common Name - Scientific Name'.
 
 - DELETING DATA:
   - To remove items, use 'deleteBird', 'deleteCage', 'deleteNote', 'deleteTransaction', or 'deleteSpecies'. Find the ID(s) of the item(s) to remove from the context.
@@ -230,7 +191,6 @@ const prompt = ai.definePrompt({
   input: {schema: AviaryAssistantInputSchema},
   output: {schema: AviaryAssistantOutputSchema},
   prompt: promptTemplate,
-  tools: [getSpeciesInfo],
 });
 
 const assistantFlow = ai.defineFlow(

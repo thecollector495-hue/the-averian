@@ -149,9 +149,9 @@ You MUST parse the user's entire query and not miss any details. For complex com
 - GENETICS CALCULATOR:
   - If the user asks to calculate genetic outcomes (e.g., "Calculate genetics for..."), you MUST use the 'geneticsResult' action.
   - The data for this action MUST conform to the 'GeneticsResultDataSchema'.
-  - Summarize the parent birds' genetics in the 'pairing' object.
-  - Provide a list of all possible offspring outcomes in the 'outcomes' array, broken down by sex (male/female), with the percentage chance for each.
-  - For each outcome, list the visual mutations and any split-to mutations.
+  - The 'pairing' field MUST be an object with 'male' and 'female' string properties summarizing their genetics.
+  - For example, for "a visual Lutino male and a normal female", the pairing object would be: { "male": "visual Lutino", "female": "normal" }.
+  - The 'outcomes' field MUST be an array of objects. Each object must have 'sex', 'percentage', 'visuals' (array of strings), and 'splits' (array of strings).
   - The text 'response' field should be a simple confirmation like "Here are the calculated genetic outcomes." or a summary of the pairing.
 
 - ADDING/UPDATING DATA:

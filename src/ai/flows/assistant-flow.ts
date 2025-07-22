@@ -150,9 +150,10 @@ You MUST parse the user's entire query and not miss any details. For complex com
   - If the user asks to calculate genetic outcomes (e.g., "Calculate genetics for..."), you MUST use the 'geneticsResult' action.
   - The data for this action MUST conform to the 'GeneticsResultDataSchema'.
   - The 'pairing' field MUST be an object with 'male' and 'female' string properties summarizing their genetics.
-  - For example, for "a visual Lutino male and a normal female", the pairing object would be: { "male": "visual Lutino", "female": "normal" }.
+    - For example, for "a visual Lutino male and a normal female", the pairing object would be: { "male": "visual Lutino", "female": "normal" }.
   - The 'outcomes' field MUST be an array of objects. Each object must have 'sex', 'percentage', 'visuals' (array of strings), and 'splits' (array of strings).
   - The text 'response' field should be a simple confirmation like "Here are the calculated genetic outcomes." or a summary of the pairing.
+  - CRITICAL: The data for 'geneticsResult' MUST be a valid JSON object, not a stringified JSON. For example, the 'pairing' field MUST be a JSON object, not a string. The 'outcomes' field must be an array of JSON objects, not an array of strings.
 
 - ADDING/UPDATING DATA:
   - To add a bird, use 'addBird'.

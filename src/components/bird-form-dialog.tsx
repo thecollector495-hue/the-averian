@@ -133,7 +133,6 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
   const [isCreatingSpecies, setIsCreatingSpecies] = useState(false);
   const [isCreatingSubspecies, setIsCreatingSubspecies] = useState(false);
   const [isMutationDialogOpen, setIsMutationDialogOpen] = useState(false);
-  const [showMedical, setShowMedical] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isCompressing, setIsCompressing] = useState(false);
   
@@ -157,7 +156,6 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
       setIsCreatingCage(false);
       setIsCreatingSpecies(false);
       setIsCreatingSubspecies(false);
-      setShowMedical(false);
   };
 
   useEffect(() => {
@@ -178,9 +176,6 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
         salePrice: initialData.saleDetails?.price, buyerInfo: initialData.saleDetails?.buyer,
         medicalRecords: (initialData.medicalRecords || []).map(r => ({...r, date: parseISO(r.date)})),
       });
-      if (initialData.medicalRecords && initialData.medicalRecords.length > 0) {
-        setShowMedical(true);
-      }
     } else {
       form.reset({
         species: undefined, subspecies: undefined, sex: undefined, ringNumber: "",
@@ -637,91 +632,86 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
 
               {/* Medical Records Section */}
               <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="show-medical" checked={showMedical} onCheckedChange={(checked) => setShowMedical(!!checked)} />
-                  <label htmlFor="show-medical" className="text-lg font-semibold tracking-tight">Medical Records</label>
-                </div>
+                <h3 className="text-lg font-semibold tracking-tight">Medical Records</h3>
 
-                {showMedical && (
-                  <div className="pl-2 space-y-4">
-                     <div>
-                      <Button
+                <div className="space-y-4">
+                    <div>
+                    <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => appendMedical({ id: `mr_${Date.now()}`, date: new Date(), type: 'Note', details: '' })}
-                      >
+                    >
                         <PlusCircle className="mr-2 h-4 w-4" /> Add Medical Record
-                      </Button>
+                    </Button>
                     </div>
                     {medicalFields.map((field, index) => (
-                      <div key={field.id} className="p-4 border rounded-md space-y-4 relative">
+                    <div key={field.id} className="p-4 border rounded-md space-y-4 relative">
                         <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="absolute top-2 right-2 h-7 w-7"
-                          onClick={() => removeMedical(index)}
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2 h-7 w-7"
+                        onClick={() => removeMedical(index)}
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                        <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <FormField
+                        <FormField
                             control={form.control}
                             name={`medicalRecords.${index}.date`}
                             render={({ field: dateField }) => (
-                              <FormItem><FormLabel>Date</FormLabel>
+                            <FormItem><FormLabel>Date</FormLabel>
                                 <Popover><PopoverTrigger asChild><FormControl>
-                                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dateField.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{dateField.value ? format(dateField.value, "PPP") : "Pick a date"}</Button>
+                                <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dateField.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{dateField.value ? format(dateField.value, "PPP") : "Pick a date"}</Button>
                                 </FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={dateField.value} onSelect={dateField.onChange} initialFocus /></PopoverContent></Popover>
                                 <FormMessage />
-                              </FormItem>
+                            </FormItem>
                             )}
-                          />
-                           <FormField
+                        />
+                        <FormField
                             control={form.control}
                             name={`medicalRecords.${index}.type`}
                             render={({ field: typeField }) => (
-                              <FormItem><FormLabel>Type</FormLabel>
+                            <FormItem><FormLabel>Type</FormLabel>
                                 <Select onValueChange={typeField.onChange} defaultValue={typeField.value}>
-                                  <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                                  <SelectContent>
+                                <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                <SelectContent>
                                     <SelectItem value="Vet Visit">Vet Visit</SelectItem>
                                     <SelectItem value="Medication">Medication</SelectItem>
                                     <SelectItem value="Health Check">Health Check</SelectItem>
                                     <SelectItem value="Note">Note</SelectItem>
-                                  </SelectContent>
+                                </SelectContent>
                                 </Select>
                                 <FormMessage />
-                              </FormItem>
+                            </FormItem>
                             )}
-                          />
+                        />
                         </div>
                         <FormField
-                          control={form.control}
-                          name={`medicalRecords.${index}.details`}
-                          render={({ field: detailsField }) => (
+                        control={form.control}
+                        name={`medicalRecords.${index}.details`}
+                        render={({ field: detailsField }) => (
                             <FormItem><FormLabel>Details</FormLabel>
-                              <FormControl><Textarea placeholder="Enter details..." {...detailsField} /></FormControl>
-                              <FormMessage />
+                            <FormControl><Textarea placeholder="Enter details..." {...detailsField} /></FormControl>
+                            <FormMessage />
                             </FormItem>
-                          )}
+                        )}
                         />
-                         <FormField
-                          control={form.control}
-                          name={`medicalRecords.${index}.cost`}
-                          render={({ field: costField }) => (
+                        <FormField
+                        control={form.control}
+                        name={`medicalRecords.${index}.cost`}
+                        render={({ field: costField }) => (
                             <FormItem><FormLabel>Cost (optional)</FormLabel>
-                              <FormControl><Input type="number" step="0.01" placeholder="e.g. 50.00" {...costField} value={costField.value ?? ''} onChange={e => costField.onChange(e.target.valueAsNumber)} /></FormControl>
-                              <FormMessage />
+                            <FormControl><Input type="number" step="0.01" placeholder="e.g. 50.00" {...costField} value={costField.value ?? ''} onChange={e => costField.onChange(e.target.valueAsNumber)} /></FormControl>
+                            <FormMessage />
                             </FormItem>
-                          )}
+                        )}
                         />
-                      </div>
+                    </div>
                     ))}
                     {medicalFields.length === 0 && <p className="text-sm text-center text-muted-foreground py-4">No medical records yet.</p>}
-                  </div>
-                )}
+                </div>
               </div>
 
             </div>

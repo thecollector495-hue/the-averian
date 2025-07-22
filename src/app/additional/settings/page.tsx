@@ -19,6 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { AddMutationFormValues } from '@/components/add-mutation-dialog';
 import { AddSpeciesFormValues } from '@/components/add-species-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useTheme } from 'next-themes';
 
 const AddMutationDialog = dynamic(() => import('@/components/add-mutation-dialog').then(mod => mod.AddMutationDialog), { ssr: false });
 const AddSpeciesDialog = dynamic(() => import('@/components/add-species-dialog').then(mod => mod.AddSpeciesDialog), { ssr: false });
@@ -28,6 +29,9 @@ export default function SettingsPage() {
   const { currency, setCurrency } = useCurrency();
   const { items, addItem, deleteItem } = useItems();
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
+  const [isMounted, setIsMounted] = useState(false);
+
 
   const [trialEndDate, setTrialEndDate] = useState<Date | null>(null);
   const [isMutationDialogOpen, setIsMutationDialogOpen] = useState(false);
@@ -40,6 +44,7 @@ export default function SettingsPage() {
   const itemToDelete = deletingItemId ? items.find(i => i.id === deletingItemId) : null;
 
   useEffect(() => {
+    setIsMounted(true);
     const trialStartDateStr = localStorage.getItem('app_trial_start_date');
     let startDate: Date;
 
@@ -91,6 +96,10 @@ export default function SettingsPage() {
     setDeletingItemId(null);
   };
 
+  if (!isMounted) {
+    return null;
+  }
+
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
@@ -127,7 +136,11 @@ export default function SettingsPage() {
                 <CardContent className="space-y-6">
                     <div className="flex items-center justify-between">
                         <Label htmlFor="dark-mode" className="text-base">Dark Mode</Label>
-                        <Switch id="dark-mode" defaultChecked disabled />
+                        <Switch
+                          id="dark-mode"
+                          checked={theme === 'dark'}
+                          onCheckedChange={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                        />
                     </div>
                     <div className="flex items-center justify-between">
                         <Label htmlFor="notifications" className="text-base">Enable Notifications</Label>

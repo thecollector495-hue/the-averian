@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Wallet, BarChart3, Settings, ChevronRight, ShieldCheck, AreaChart } from 'lucide-react';
+import { Wallet, BarChart3, Settings, ChevronRight, ShieldCheck } from 'lucide-react';
 
 const additionalLinks = [
   {
@@ -17,12 +17,6 @@ const additionalLinks = [
     title: 'Reports',
     description: 'View financial summaries and charts.',
     icon: BarChart3,
-  },
-  {
-    href: '/additional/analytics',
-    title: 'Analytics',
-    description: 'View charts on species, status, and population.',
-    icon: AreaChart,
   },
    {
     href: '/additional/permits',

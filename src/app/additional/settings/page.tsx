@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from '@/components/ui/button';
-import { Crown, Star, Check, PlusCircle, Trash2, LogIn, LogOut } from 'lucide-react';
+import { Crown, Star, Check, PlusCircle, Trash2, LogIn, LogOut, Send } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurrency, currencies } from "@/context/CurrencyContext";
 import { addDays, format, isFuture, isPast } from 'date-fns';
@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useTheme } from 'next-themes';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
+import { usePushNotifications } from '@/hooks/use-push-notifications';
 
 const AddMutationDialog = dynamic(() => import('@/components/add-mutation-dialog').then(mod => mod.AddMutationDialog), { ssr: false });
 const AddSpeciesDialog = dynamic(() => import('@/components/add-species-dialog').then(mod => mod.AddSpeciesDialog), { ssr: false });
@@ -34,6 +35,12 @@ export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const [isMounted, setIsMounted] = useState(false);
   const { user, logout, isReadOnly } = useAuth();
+  const {
+    isSubscribed,
+    isSubscriptionLoading,
+    handleSubscriptionChange,
+    sendTestNotification,
+  } = usePushNotifications();
 
 
   const [trialEndDate, setTrialEndDate] = useState<Date | null>(null);
@@ -160,9 +167,25 @@ export default function SettingsPage() {
                         />
                     </div>
                     <div className="flex items-center justify-between">
-                        <Label htmlFor="notifications" className="text-base">Enable Notifications</Label>
-                        <Switch id="notifications" />
+                        <div className='flex flex-col gap-1'>
+                            <Label htmlFor="notifications" className="text-base">Enable Notifications</Label>
+                            <FormDescription>Receive reminders for hatch dates, etc.</FormDescription>
+                        </div>
+                        <Switch
+                          id="notifications"
+                          checked={isSubscribed}
+                          onCheckedChange={handleSubscriptionChange}
+                          disabled={isSubscriptionLoading}
+                        />
                     </div>
+                    {isSubscribed && (
+                        <div className='flex justify-end'>
+                            <Button variant="outline" size="sm" onClick={sendTestNotification}>
+                                <Send className="mr-2 h-4 w-4"/>
+                                Send Test Notification
+                            </Button>
+                        </div>
+                    )}
                     <div className="flex items-center justify-between">
                         <Label htmlFor="currency-select" className="text-base">Currency</Label>
                         <Select value={currency.code} onValueChange={setCurrency}>

@@ -5,7 +5,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useRouter } from 'next/navigation';
 import { FullPageLoader } from '@/components/full-page-loader';
 
-export type UserType = 'admin' | 'monthly' | 'trial' | 'none';
+export type UserType = 'admin' | 'monthly' | 'trial' | 'expired';
 
 interface User {
   uid: string;
@@ -18,6 +18,7 @@ interface AuthContextType {
   loading: boolean;
   login: (userType: UserType) => Promise<void>;
   logout: () => void;
+  isReadOnly: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,7 +27,7 @@ const mockUsers: Record<UserType, User> = {
     admin: { uid: 'admin123', email: 'admin@example.com', subscriptionStatus: 'admin' },
     monthly: { uid: 'monthly123', email: 'monthly@example.com', subscriptionStatus: 'monthly' },
     trial: { uid: 'trial123', email: 'trial@example.com', subscriptionStatus: 'trial' },
-    none: { uid: 'none123', email: 'guest@example.com', subscriptionStatus: 'none' },
+    expired: { uid: 'expired123', email: 'expired@example.com', subscriptionStatus: 'expired' },
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -59,12 +60,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     sessionStorage.removeItem('auth-user');
     router.push('/login');
   };
+  
+  const isReadOnly = user?.subscriptionStatus === 'expired';
 
   const value = {
     user,
     loading,
     login,
     logout,
+    isReadOnly,
   };
 
   return (

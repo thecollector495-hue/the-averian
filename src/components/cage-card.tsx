@@ -7,10 +7,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Bird, Cage, getBirdIdentifier } from '@/lib/data';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useCurrency } from '@/context/CurrencyContext';
+import { useAuth } from "@/context/AuthContext";
 
 export function CageCard({ cage, allBirds, onBirdClick, onEditClick, onDeleteClick, onImageClick }: { cage: Cage, allBirds: Bird[], onBirdClick: (bird: Bird) => void, onEditClick: (cage: Cage) => void, onDeleteClick: (cageId: string) => void, onImageClick: (imageUrl: string) => void }) {
     const birdsInCage = allBirds.filter(b => cage.birdIds.includes(b.id));
     const { formatCurrency } = useCurrency();
+    const { isReadOnly } = useAuth();
 
     return (
         <Card className="flex flex-col h-full">
@@ -45,11 +47,11 @@ export function CageCard({ cage, allBirds, onBirdClick, onEditClick, onDeleteCli
                 </div>
             </CardContent>
              <CardFooter className="p-4 pt-0 mt-auto flex justify-end gap-2">
-                <Button variant="outline" size="sm" onClick={() => onEditClick(cage)}>
+                <Button variant="outline" size="sm" onClick={() => onEditClick(cage)} disabled={isReadOnly}>
                     <Pencil className="h-4 w-4 mr-2" />
                     Edit
                 </Button>
-                <Button variant="destructive" size="sm" onClick={() => onDeleteClick(cage.id)}>
+                <Button variant="destructive" size="sm" onClick={() => onDeleteClick(cage.id)} disabled={isReadOnly}>
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete
                 </Button>

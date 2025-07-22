@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useAuth, UserType } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { Loader2, UserPlus, Shield, Crown, Calendar, User as UserIcon } from 'lucide-react';
+import { Loader2, UserPlus, Shield, Crown, Calendar, CalendarX } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
@@ -40,7 +40,7 @@ export default function LoginPage() {
       { type: 'admin', label: 'Admin', icon: Shield },
       { type: 'monthly', label: 'Monthly Subscriber', icon: Crown },
       { type: 'trial', label: '7-Day Trial', icon: Calendar },
-      { type: 'none', label: 'Not Subscribed', icon: UserIcon },
+      { type: 'expired', label: 'Expired Trial', icon: CalendarX },
   ];
 
   return (

@@ -12,12 +12,14 @@ import { PermitFormValues } from '@/components/add-permit-dialog';
 import { useItems } from '@/context/ItemsContext';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
 
 const AddPermitDialog = dynamic(() => import('@/components/add-permit-dialog').then(mod => mod.AddPermitDialog), { ssr: false });
 
 export default function PermitsPage() {
   const { items, addItem, deleteItem, updateItems } = useItems();
   const { toast } = useToast();
+  const { isReadOnly } = useAuth();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [deletingPermitId, setDeletingPermitId] = useState<string | null>(null);
 
@@ -84,7 +86,7 @@ export default function PermitsPage() {
 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Permits</h1>
-        <Button onClick={() => setIsAddDialogOpen(true)}>
+        <Button onClick={() => setIsAddDialogOpen(true)} disabled={isReadOnly}>
           <PlusCircle className="mr-2 h-4 w-4"/>
           Add Permit
         </Button>
@@ -98,7 +100,7 @@ export default function PermitsPage() {
                   <CardTitle className="flex items-center gap-2"><ShieldCheck className="text-primary"/>{p.permitNumber}</CardTitle>
                   <CardDescription>{p.issuingAuthority}</CardDescription>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => setDeletingPermitId(p.id)}>
+                <Button variant="ghost" size="icon" onClick={() => setDeletingPermitId(p.id)} disabled={isReadOnly}>
                     <Trash2 className="h-4 w-4 text-destructive" />
                     <span className="sr-only">Delete Permit</span>
                 </Button>

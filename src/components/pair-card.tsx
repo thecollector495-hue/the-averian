@@ -6,10 +6,12 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Users2, Pencil, Trash2 } from 'lucide-react';
 import { Bird, Pair, getBirdIdentifier } from '@/lib/data';
+import { useAuth } from '@/context/AuthContext';
 
 export function PairCard({ pair, allBirds, onBirdClick, onImageClick, onEditClick, onDeleteClick }: { pair: Pair, allBirds: Bird[], onBirdClick: (bird: Bird) => void, onImageClick: (imageUrl: string) => void, onEditClick: (pair: Pair) => void, onDeleteClick: (pairId: string) => void }) {
     const male = allBirds.find(b => b.id === pair.maleId);
     const female = allBirds.find(b => b.id === pair.femaleId);
+    const { isReadOnly } = useAuth();
     
     // Use pair image first, then fall back to male or female image
     const displayImage = pair.imageUrl || male?.imageUrl || female?.imageUrl;
@@ -53,11 +55,11 @@ export function PairCard({ pair, allBirds, onBirdClick, onImageClick, onEditClic
                 </div>
             </CardContent>
             <CardFooter className="p-4 pt-0 mt-auto flex justify-end gap-2">
-                 <Button variant="outline" size="sm" onClick={() => onEditClick(pair)}>
+                 <Button variant="outline" size="sm" onClick={() => onEditClick(pair)} disabled={isReadOnly}>
                     <Pencil className="h-4 w-4 mr-2" />
                     Edit
                  </Button>
-                 <Button variant="destructive" size="icon" onClick={() => onDeleteClick(pair.id)}>
+                 <Button variant="destructive" size="icon" onClick={() => onDeleteClick(pair.id)} disabled={isReadOnly}>
                     <Trash2 className="h-4 w-4" />
                     <span className="sr-only">Delete</span>
                  </Button>

@@ -13,12 +13,14 @@ import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { NoteFormValues } from '@/components/add-note-dialog';
 import { format } from 'date-fns';
+import { useAuth } from '@/context/AuthContext';
 
 const AddNoteDialog = dynamic(() => import('@/components/add-note-dialog').then(mod => mod.AddNoteDialog), { ssr: false });
 
 export default function NotesPage() {
     const { items, addItem, updateItem, deleteItem } = useItems();
     const { toast } = useToast();
+    const { isReadOnly } = useAuth();
 
     const { allBirds, allCages, notes } = useMemo(() => ({
       allBirds: items.filter((item): item is Bird => item.category === 'Bird'),
@@ -121,7 +123,7 @@ export default function NotesPage() {
 
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-4xl font-bold">Notes &amp; Reminders</h1>
-                <Button onClick={handleAddNoteClick}>
+                <Button onClick={handleAddNoteClick} disabled={isReadOnly}>
                     <PlusCircle className="mr-2 h-4 w-4"/>
                     Add Note
                 </Button>

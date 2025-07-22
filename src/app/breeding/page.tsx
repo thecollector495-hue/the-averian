@@ -11,11 +11,13 @@ import { BreedingRecordCard } from '@/components/breeding-record-card';
 import { useItems } from '@/context/ItemsContext';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { useAuth } from '@/context/AuthContext';
 
 const AddBreedingRecordDialog = dynamic(() => import('@/components/add-breeding-record-dialog').then(mod => mod.AddBreedingRecordDialog), { ssr: false });
 
 export default function BreedingPage() {
     const { items, addItem, addItems } = useItems();
+    const { isReadOnly } = useAuth();
     const { toast } = useToast();
     
     const { allBirds, allCages, allPairs, records } = useMemo(() => ({
@@ -94,7 +96,7 @@ export default function BreedingPage() {
 
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-4xl font-bold">Breeding Records</h1>
-                <Button onClick={() => setIsAddDialogOpen(true)}>
+                <Button onClick={() => setIsAddDialogOpen(true)} disabled={isReadOnly}>
                     <PlusCircle className="mr-2 h-4 w-4"/>
                     Add Record
                 </Button>

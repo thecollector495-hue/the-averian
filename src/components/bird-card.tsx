@@ -13,9 +13,11 @@ import { Bird, Cage, Pair, BreedingRecord, Permit, getBirdIdentifier } from '@/l
 import { useCurrency } from '@/context/CurrencyContext';
 import { cn } from '@/lib/utils';
 import { format, parseISO, formatDistanceToNowStrict, getYear } from 'date-fns';
+import { useAuth } from '@/context/AuthContext';
 
 export function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecords, allPermits, handleEditClick, handleDeleteClick, onBirdClick, onViewBreedingRecord, onImageClick }: { bird: Bird; allBirds: Bird[]; allCages: Cage[]; allPairs: Pair[], allBreedingRecords: BreedingRecord[], allPermits: Permit[], handleEditClick: (bird: Bird) => void; handleDeleteClick: (birdId: string) => void; onBirdClick: (bird: Bird) => void; onViewBreedingRecord: (record: BreedingRecord) => void; onImageClick: (imageUrl: string) => void; }) {
   const { formatCurrency } = useCurrency();
+  const { isReadOnly } = useAuth();
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   const toggleSection = (section: string) => {
@@ -123,11 +125,11 @@ export function BirdCard({ bird, allBirds, allCages, allPairs, allBreedingRecord
                 </Button>
             </div>
             <div className="flex items-center gap-1">
-                 <Button variant="outline" size="sm" onClick={() => handleEditClick(bird)}>
+                 <Button variant="outline" size="sm" onClick={() => handleEditClick(bird)} disabled={isReadOnly}>
                     <Pencil className="h-4 w-4 mr-2" />
                     Edit
                  </Button>
-                 <Button variant="destructive" size="icon" onClick={() => handleDeleteClick(bird.id)}>
+                 <Button variant="destructive" size="icon" onClick={() => handleDeleteClick(bird.id)} disabled={isReadOnly}>
                     <Trash2 className="h-4 w-4" />
                     <span className="sr-only">Delete</span>
                  </Button>

@@ -18,11 +18,13 @@ import { BirdDetailsDialog } from '@/components/bird-details-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useItems } from '@/context/ItemsContext';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 
 const AddTransactionDialog = dynamic(() => import('@/components/add-transaction-dialog').then(mod => mod.AddTransactionDialog), { ssr: false });
 
 export default function TransactionsPage() {
   const { items, updateItem, addItem, deleteItem } = useItems();
+  const { isReadOnly } = useAuth();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
@@ -125,7 +127,7 @@ export default function TransactionsPage() {
                     onChange={(e) => setSearch(e.target.value)}
                 />
             </div>
-            <Button onClick={handleAddClick}>
+            <Button onClick={handleAddClick} disabled={isReadOnly}>
                 <PlusCircle className="mr-2 h-4 w-4"/>
                 Add
             </Button>
@@ -173,11 +175,11 @@ export default function TransactionsPage() {
                           {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => handleEditClick(t)}>
+                          <Button variant="ghost" size="icon" onClick={() => handleEditClick(t)} disabled={isReadOnly}>
                             <Pencil className="h-4 w-4" />
                             <span className="sr-only">Edit</span>
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => setDeletingTransactionId(t.id)}>
+                          <Button variant="ghost" size="icon" onClick={() => setDeletingTransactionId(t.id)} disabled={isReadOnly}>
                             <Trash2 className="h-4 w-4 text-destructive" />
                             <span className="sr-only">Delete</span>
                           </Button>
@@ -232,11 +234,11 @@ export default function TransactionsPage() {
                                             </div>
                                         )}
                                         <div className="flex justify-end gap-2">
-                                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleEditClick(t); }}>
+                                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleEditClick(t); }} disabled={isReadOnly}>
                                                 <Pencil className="h-4 w-4 mr-2" />
                                                 Edit
                                             </Button>
-                                            <Button variant="destructive" size="sm" onClick={(e) => { e.stopPropagation(); setDeletingTransactionId(t.id); }}>
+                                            <Button variant="destructive" size="sm" onClick={(e) => { e.stopPropagation(); setDeletingTransactionId(t.id); }} disabled={isReadOnly}>
                                                 <Trash2 className="h-4 w-4 mr-2" />
                                                 Delete
                                             </Button>

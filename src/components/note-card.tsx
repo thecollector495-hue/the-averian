@@ -9,10 +9,12 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useAuth } from "@/context/AuthContext";
 
 export function NoteCard({ note, allBirds, onUpdate, onBirdClick, onDelete, onEdit }: { note: NoteReminder, allBirds: Bird[], onUpdate: (updatedNote: NoteReminder) => void, onBirdClick: (bird: Bird) => void, onDelete: () => void, onEdit: (note: NoteReminder) => void }) {
-
+    const { isReadOnly } = useAuth();
     const handleSubTaskToggle = (taskId: string, completed: boolean) => {
+        if (isReadOnly) return;
         const updatedSubTasks = note.subTasks.map(task => 
             task.id === taskId ? { ...task, completed } : task
         );
@@ -20,6 +22,7 @@ export function NoteCard({ note, allBirds, onUpdate, onBirdClick, onDelete, onEd
     };
     
     const handleNoteCompletionToggle = (completed: boolean) => {
+        if (isReadOnly) return;
         onUpdate({ ...note, completed });
     }
     
@@ -30,7 +33,7 @@ export function NoteCard({ note, allBirds, onUpdate, onBirdClick, onDelete, onEd
             <CardHeader>
                 <CardTitle className="flex justify-between items-start">
                     <span className={cn("flex-grow", note.completed && "line-through text-muted-foreground")}>{note.title}</span>
-                    <Checkbox checked={note.completed} onCheckedChange={handleNoteCompletionToggle} className="h-5 w-5 ml-4 flex-shrink-0"/>
+                    <Checkbox checked={note.completed} onCheckedChange={handleNoteCompletionToggle} className="h-5 w-5 ml-4 flex-shrink-0" disabled={isReadOnly}/>
                 </CardTitle>
                  {note.isReminder && note.reminderDate && (
                     <CardDescription className="flex items-center gap-2 pt-1">
@@ -64,7 +67,7 @@ export function NoteCard({ note, allBirds, onUpdate, onBirdClick, onDelete, onEd
                              return (
                                 <div key={task.id} className="p-2.5 border rounded-md space-y-2 bg-background/50">
                                     <div className="flex items-center space-x-3">
-                                        <Checkbox id={task.id} checked={task.completed} onCheckedChange={(checked) => handleSubTaskToggle(task.id, !!checked)} />
+                                        <Checkbox id={task.id} checked={task.completed} onCheckedChange={(checked) => handleSubTaskToggle(task.id, !!checked)} disabled={isReadOnly} />
                                         <label htmlFor={task.id} className={cn("text-sm flex-grow", task.completed && "line-through text-muted-foreground")}>{task.text}</label>
                                     </div>
                                     {subTaskBirds.length > 0 && (
@@ -84,11 +87,11 @@ export function NoteCard({ note, allBirds, onUpdate, onBirdClick, onDelete, onEd
 
             </CardContent>
             <CardFooter className="flex justify-between items-center">
-                 <Button variant="outline" size="sm" onClick={() => onEdit(note)}>
+                 <Button variant="outline" size="sm" onClick={() => onEdit(note)} disabled={isReadOnly}>
                   <Pencil className="h-4 w-4 mr-2" />
                   Edit
                 </Button>
-                <Button variant="destructive" size="sm" onClick={onDelete}>
+                <Button variant="destructive" size="sm" onClick={onDelete} disabled={isReadOnly}>
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete
                 </Button>

@@ -19,6 +19,7 @@ import { CageFormValues } from '@/components/add-cage-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ImageLightbox } from '@/components/image-lightbox';
 import { AddPairFormValues } from '@/components/add-pair-dialog';
+import { useAuth } from '@/context/AuthContext';
 
 const AddCageDialog = dynamic(() => import('@/components/add-cage-dialog').then(mod => mod.AddCageDialog), { ssr: false });
 const BirdFormDialog = dynamic(() => import('@/components/bird-form-dialog').then(mod => mod.BirdFormDialog), { ssr: false });
@@ -27,6 +28,7 @@ const BreedingRecordDetailsDialog = dynamic(() => import('@/components/breeding-
 
 export default function HomePage() {
   const { items, addItem, addItems, updateItem, updateItems, deleteItem, deleteBirdItem } = useItems();
+  const { isReadOnly } = useAuth();
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('Bird');
   const [isBirdFormOpen, setIsBirdFormOpen] = useState(false);
@@ -593,19 +595,19 @@ export default function HomePage() {
               </SelectContent>
             </Select>
             {filterCategory === 'Bird' && (
-              <Button onClick={handleAddBirdClick}>
+              <Button onClick={handleAddBirdClick} disabled={isReadOnly}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Bird
               </Button>
             )}
             {filterCategory === 'Cage' && (
-              <Button onClick={handleAddCageClick}>
+              <Button onClick={handleAddCageClick} disabled={isReadOnly}>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add Cage
               </Button>
             )}
              {filterCategory === 'Pair' && (
-              <Button onClick={handleAddPairClick}>
+              <Button onClick={handleAddPairClick} disabled={isReadOnly}>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add Pair
               </Button>

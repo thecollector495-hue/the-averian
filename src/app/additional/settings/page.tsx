@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Crown, Star, Check, PlusCircle, Trash2, LogIn, LogOut } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurrency, currencies } from "@/context/CurrencyContext";
-import { addDays, format, isFuture } from 'date-fns';
+import { addDays, format, isFuture, isPast } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { useItems } from '@/context/ItemsContext';
 import { CustomMutation, CustomSpecies, inheritanceTypes } from '@/lib/data';
@@ -33,7 +33,7 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
   const [isMounted, setIsMounted] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, logout, isReadOnly } = useAuth();
 
 
   const [trialEndDate, setTrialEndDate] = useState<Date | null>(null);
@@ -62,7 +62,7 @@ export default function SettingsPage() {
     setTrialEndDate(addDays(startDate, 7));
   }, []);
 
-  const isTrialActive = trialEndDate && isFuture(trialEndDate);
+  const isTrialActive = user?.subscriptionStatus === 'trial' && trialEndDate && isFuture(trialEndDate);
   
   const premiumFeatures = [
     "Unlimited bird, cage, and pair entries",
@@ -104,6 +104,19 @@ export default function SettingsPage() {
     return null;
   }
 
+  const getBadgeVariant = () => {
+    switch (user?.subscriptionStatus) {
+      case 'admin':
+      case 'monthly':
+        return 'default';
+      case 'trial':
+        return 'secondary';
+      case 'expired':
+        return 'destructive';
+      default:
+        return 'outline';
+    }
+  }
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
@@ -183,7 +196,7 @@ export default function SettingsPage() {
             <Card>
                 <CardHeader className="flex-row items-center justify-between">
                     <CardTitle>Custom Mutations</CardTitle>
-                    <Button size="sm" onClick={() => setIsMutationDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/>Add Mutation</Button>
+                    <Button size="sm" onClick={() => setIsMutationDialogOpen(true)} disabled={isReadOnly}><PlusCircle className="mr-2 h-4 w-4"/>Add Mutation</Button>
                 </CardHeader>
                 <CardContent>
                     {customMutations.length > 0 ? (
@@ -194,7 +207,7 @@ export default function SettingsPage() {
                                        <p className="font-medium">{m.name}</p>
                                        <p className="text-sm text-muted-foreground">{m.inheritance}</p>
                                    </div>
-                                   <Button variant="ghost" size="icon" onClick={() => setDeletingItemId(m.id)}>
+                                   <Button variant="ghost" size="icon" onClick={() => setDeletingItemId(m.id)} disabled={isReadOnly}>
                                        <Trash2 className="h-4 w-4 text-destructive"/>
                                    </Button>
                                </li>
@@ -206,7 +219,7 @@ export default function SettingsPage() {
              <Card>
                 <CardHeader className="flex-row items-center justify-between">
                     <CardTitle>Custom Species</CardTitle>
-                    <Button size="sm" onClick={() => setIsSpeciesDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/>Add Species</Button>
+                    <Button size="sm" onClick={() => setIsSpeciesDialogOpen(true)} disabled={isReadOnly}><PlusCircle className="mr-2 h-4 w-4"/>Add Species</Button>
                 </CardHeader>
                 <CardContent>
                      {customSpecies.length > 0 ? (
@@ -217,7 +230,7 @@ export default function SettingsPage() {
                                        <p className="font-medium">{s.name}</p>
                                        <p className="text-sm text-muted-foreground">Incubation: {s.incubationPeriod} days. Subspecies: {s.subspecies.length}</p>
                                    </div>
-                                    <Button variant="ghost" size="icon" onClick={() => setDeletingItemId(s.id)}>
+                                    <Button variant="ghost" size="icon" onClick={() => setDeletingItemId(s.id)} disabled={isReadOnly}>
                                        <Trash2 className="h-4 w-4 text-destructive"/>
                                    </Button>
                                </li>
@@ -239,11 +252,16 @@ export default function SettingsPage() {
                         <h3 className="font-semibold mb-2">Current Plan</h3>
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <Badge variant="default" className="capitalize">{user?.subscriptionStatus || 'None'}</Badge>
+                                <Badge variant={getBadgeVariant()} className="capitalize">{user?.subscriptionStatus || 'None'}</Badge>
                             </div>
-                             {user?.subscriptionStatus === 'trial' && isTrialActive && trialEndDate && (
+                             {isTrialActive && trialEndDate && (
                                 <p className="text-sm text-muted-foreground">
                                     Trial ends on {format(trialEndDate, 'PPP')}
+                                </p>
+                             )}
+                             {user?.subscriptionStatus === 'expired' && (
+                                <p className="text-sm font-semibold text-destructive">
+                                    Your trial has expired.
                                 </p>
                              )}
                         </div>

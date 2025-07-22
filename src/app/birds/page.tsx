@@ -17,6 +17,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useCurrency } from '@/context/CurrencyContext';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import dynamic from 'next/dynamic';
+import { useAuth } from '@/context/AuthContext';
 
 type Message = {
   id: string;
@@ -38,6 +39,7 @@ export default function AIAssistantPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { items, addItems, updateItem, updateItems, deleteItem, deleteBirdItem } = useItems();
+  const { isReadOnly } = useAuth();
   const { formatCurrency } = useCurrency();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -404,7 +406,7 @@ export default function AIAssistantPage() {
                 <Textarea
                     ref={textareaRef}
                     rows={1}
-                    placeholder="e.g., Add a male cockatiel to a new cage named 'Flight 1'"
+                    placeholder={isReadOnly ? "Subscribe to use the AI Assistant" : "e.g., Add a male cockatiel to a new cage named 'Flight 1'"}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => {
@@ -413,10 +415,10 @@ export default function AIAssistantPage() {
                             if (!isLoading) handleSend({ query: input });
                         }
                     }}
-                    disabled={isLoading}
+                    disabled={isLoading || isReadOnly}
                     className="flex-1 resize-none max-h-48 text-base"
                 />
-                <Button onClick={() => handleSend({ query: input })} disabled={isLoading || !input.trim()} size="lg">
+                <Button onClick={() => handleSend({ query: input })} disabled={isLoading || !input.trim() || isReadOnly} size="lg">
                     {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                     <span className="sr-only">Send</span>
                 </Button>

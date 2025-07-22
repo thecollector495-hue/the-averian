@@ -5,20 +5,29 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useRouter } from 'next/navigation';
 import { FullPageLoader } from '@/components/full-page-loader';
 
-// This is a placeholder user type. It will be replaced by Firebase's User type.
+export type UserType = 'admin' | 'monthly' | 'trial' | 'none';
+
 interface User {
   uid: string;
   email: string;
+  subscriptionStatus: UserType;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, pass: string) => Promise<void>;
+  login: (userType: UserType) => Promise<void>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const mockUsers: Record<UserType, User> = {
+    admin: { uid: 'admin123', email: 'admin@example.com', subscriptionStatus: 'admin' },
+    monthly: { uid: 'monthly123', email: 'monthly@example.com', subscriptionStatus: 'monthly' },
+    trial: { uid: 'trial123', email: 'trial@example.com', subscriptionStatus: 'trial' },
+    none: { uid: 'none123', email: 'guest@example.com', subscriptionStatus: 'none' },
+};
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -26,8 +35,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
-    // In a real app, you'd check for a saved session or token here.
-    // For this placeholder, we just simulate a loading state.
+    // Check for a saved session in sessionStorage
     const sessionUser = sessionStorage.getItem('auth-user');
     if (sessionUser) {
       setUser(JSON.parse(sessionUser));
@@ -35,20 +43,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(false);
   }, []);
 
-  const login = async (email: string, pass: string) => {
-    // Placeholder login logic. In a real app, this would be an API call to Firebase.
-    return new Promise<void>((resolve, reject) => {
+  const login = async (userType: UserType) => {
+    return new Promise<void>((resolve) => {
       setTimeout(() => {
-        // Dummy validation
-        if (email === 'admin@example.com' && pass === 'password') {
-          const mockUser: User = { uid: '123', email: 'admin@example.com' };
-          setUser(mockUser);
-          sessionStorage.setItem('auth-user', JSON.stringify(mockUser));
-          resolve();
-        } else {
-          reject(new Error('Invalid email or password.'));
-        }
-      }, 1000);
+        const mockUser = mockUsers[userType];
+        setUser(mockUser);
+        sessionStorage.setItem('auth-user', JSON.stringify(mockUser));
+        resolve();
+      }, 500);
     });
   };
 

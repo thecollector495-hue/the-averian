@@ -3,74 +3,74 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useAuth } from '@/context/AuthContext';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { useAuth, UserType } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { Loader2, UserPlus, Shield, Crown, Calendar, User as UserIcon } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState<UserType | null>(null);
   const { login } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
+  const handleLogin = async (userType: UserType) => {
+    setIsLoading(userType);
     
-    // Placeholder login logic
     try {
-      await login(email, password);
-      router.push('/dashboard');
+      await login(userType);
+      toast({
+        title: "Login Successful",
+        description: `You are now logged in as: ${userType}.`,
+      });
+      router.push(userType === 'admin' ? '/dashboard' : '/');
     } catch (err: any) {
-      setError(err.message);
-      setIsLoading(false);
+      toast({
+        variant: 'destructive',
+        title: "Login Failed",
+        description: err.message,
+      });
+      setIsLoading(null);
     }
   };
+  
+  const loginOptions: { type: UserType; label: string; icon: React.ElementType }[] = [
+      { type: 'admin', label: 'Admin', icon: Shield },
+      { type: 'monthly', label: 'Monthly Subscriber', icon: Crown },
+      { type: 'trial', label: '7-Day Trial', icon: Calendar },
+      { type: 'none', label: 'Not Subscribed', icon: UserIcon },
+  ];
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-2xl">Admin Login</CardTitle>
-          <CardDescription>Enter your credentials to access the admin dashboard.</CardDescription>
+          <CardTitle className="text-2xl">Login / Register</CardTitle>
+          <CardDescription>Select a user profile to simulate login.</CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="admin@example.com"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="********"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            {error && <p className="text-sm font-medium text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Login
-            </Button>
-          </form>
+        <CardContent className="grid gap-4">
+            {loginOptions.map(({ type, label, icon: Icon }) => (
+                 <Button key={type} onClick={() => handleLogin(type)} disabled={!!isLoading} className="w-full justify-start h-12 text-base">
+                    {isLoading === type ? (
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    ) : (
+                        <Icon className="mr-3 h-5 w-5" />
+                    )}
+                    <span>Login as {label}</span>
+                </Button>
+            ))}
         </CardContent>
+         <CardFooter className="flex-col items-start gap-4">
+          <div className="text-sm text-center w-full text-muted-foreground">
+            Or, create a new account.
+          </div>
+          <Button variant="outline" className="w-full">
+            <UserPlus className="mr-2 h-5 w-5" />
+            Register (Placeholder)
+          </Button>
+        </CardFooter>
       </Card>
     </div>
   );

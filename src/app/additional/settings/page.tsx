@@ -48,6 +48,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setIsMounted(true);
+    // In a real app, trial date would be tied to the user account
     const trialStartDateStr = localStorage.getItem('app_trial_start_date');
     let startDate: Date;
 
@@ -159,7 +160,7 @@ export default function SettingsPage() {
                         </Select>
                     </div>
                     <div className="flex items-center justify-between">
-                        <Label className="text-base">Admin Access</Label>
+                         <Label className="text-base">Account</Label>
                         {user ? (
                           <Button variant="outline" onClick={logout}>
                             <LogOut className="mr-2 h-4 w-4" />
@@ -169,7 +170,7 @@ export default function SettingsPage() {
                           <Button asChild variant="outline">
                             <Link href="/login">
                               <LogIn className="mr-2 h-4 w-4" />
-                              Admin Login
+                              Login or Register
                             </Link>
                           </Button>
                         )}
@@ -238,11 +239,13 @@ export default function SettingsPage() {
                         <h3 className="font-semibold mb-2">Current Plan</h3>
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <Badge variant="default">7-day Free Trial</Badge>
+                                <Badge variant="default" className="capitalize">{user?.subscriptionStatus || 'None'}</Badge>
                             </div>
-                             <p className="text-sm text-muted-foreground">
-                                {isTrialActive ? `Trial ends on ${format(trialEndDate!, 'PPP')}` : 'Your trial has ended.'}
-                             </p>
+                             {user?.subscriptionStatus === 'trial' && isTrialActive && (
+                                <p className="text-sm text-muted-foreground">
+                                    Trial ends on {format(trialEndDate!, 'PPP')}
+                                </p>
+                             )}
                         </div>
                     </div>
 

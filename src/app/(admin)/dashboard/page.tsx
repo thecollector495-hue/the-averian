@@ -37,15 +37,15 @@ const calculateMetrics = (subscriptions: Subscription[]) => {
   const totalExpenses = 0; 
   const netProfitThisMonth = totalIncomeThisMonth - totalExpenses;
   
-  // Monthly Recurring Revenue (MRR)
-  const mrr = (activeMonthlySubs.length * MONTHLY_PRICE) + (activeYearlySubs.length * YEARLY_PRICE / 12);
+  // Estimated income for next month from monthly subs
+  const nextMonthEstimated = activeMonthlySubs.length * MONTHLY_PRICE;
 
   return {
     monthlySubCount: activeMonthlySubs.length,
     yearlySubCount: activeYearlySubs.length,
     totalIncomeThisMonth: totalIncomeThisMonth.toFixed(2),
     netProfitThisMonth: netProfitThisMonth.toFixed(2),
-    mrr: mrr.toFixed(2)
+    nextMonthEstimated: nextMonthEstimated.toFixed(2)
   };
 };
 
@@ -110,11 +110,11 @@ export default function DashboardPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>MRR</CardTitle>
-            <CardDescription>Estimated monthly revenue</CardDescription>
+            <CardTitle>Next Month's Est. Income</CardTitle>
+            <CardDescription>From monthly subs only</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-4xl font-bold">R{metrics.mrr}</p>
+            <p className="text-4xl font-bold">R{metrics.nextMonthEstimated}</p>
           </CardContent>
         </Card>
          <Card>

@@ -38,7 +38,7 @@ export function GeneticsCalculatorDialog({ isOpen, onOpenChange, onCalculate, cu
     },
   });
 
-  const allMutationOptions = customMutations.map(m => ({ value: m.name, label: m.name })).sort((a,b) => a.label.localeCompare(b.label));
+  const allMutationOptions = customMutations.map(m => ({ value: m.name, label: `${m.name} (${m.inheritance})` })).sort((a,b) => a.label.localeCompare(b.label));
 
   function onSubmit(data: GeneticsCalculatorFormValues) {
     const buildBirdString = (sex: 'male' | 'female', visual: string[], split: string[]) => {
@@ -141,5 +141,3 @@ export function GeneticsCalculatorDialog({ isOpen, onOpenChange, onCalculate, cu
     </Dialog>
   );
 }
-
-    

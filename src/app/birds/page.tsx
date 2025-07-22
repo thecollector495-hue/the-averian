@@ -18,9 +18,6 @@ import { useCurrency } from '@/context/CurrencyContext';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import dynamic from 'next/dynamic';
 
-const GeneticsCalculatorDialog = dynamic(() => import('@/components/genetics-calculator-dialog').then(mod => mod.GeneticsCalculatorDialog), { ssr: false });
-
-
 type Message = {
   id: string;
   role: 'user' | 'assistant';
@@ -34,7 +31,7 @@ export default function AIAssistantPage() {
     {
       id: 'assistant-init',
       role: 'assistant',
-      text: "Hello! How can I help you manage your aviary today? You can ask me to calculate genetic outcomes by typing 'Calculate genetics'."
+      text: "Hello! How can I help you manage your aviary today?"
     }
   ]);
   const [input, setInput] = useState('');
@@ -46,9 +43,6 @@ export default function AIAssistantPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [pendingActions, setPendingActions] = useState<any[] | null>(null);
   const [selectedActionIndices, setSelectedActionIndices] = useState<Set<number>>(new Set());
-  const [isGeneticsDialogOpen, setIsGeneticsDialogOpen] = useState(false);
-  
-  const customMutations = items.filter((item): item is CustomMutation => item.category === 'CustomMutation');
   
   useEffect(() => {
     if (pendingActions) {
@@ -77,12 +71,6 @@ export default function AIAssistantPage() {
   const handleSend = async (options: { query: string; isRetry?: boolean }) => {
     const { query, isRetry } = options;
     if (!query.trim()) return;
-
-    if (query.trim().toLowerCase() === 'calculate genetics') {
-      setIsGeneticsDialogOpen(true);
-      setInput('');
-      return;
-    }
 
     setIsLoading(true);
     setMessages(prev => prev.filter(m => !m.isError));
@@ -302,14 +290,6 @@ export default function AIAssistantPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh_-_4rem)]">
-        {isGeneticsDialogOpen && (
-          <GeneticsCalculatorDialog
-            isOpen={isGeneticsDialogOpen}
-            onOpenChange={setIsGeneticsDialogOpen}
-            onCalculate={(query) => handleSend({ query })}
-            customMutations={customMutations}
-          />
-        )}
         {pendingActions && (
             <AlertDialog open={!!pendingActions} onOpenChange={(open) => !open && setPendingActions(null)}>
                 <AlertDialogContent>

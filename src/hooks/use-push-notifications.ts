@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from './use-toast';
+import { saveSubscription, removeSubscription, sendTestNotification as sendTestNotificationAction } from '@/app/actions/send-notification';
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
@@ -77,8 +78,8 @@ export function usePushNotifications() {
       try {
         const subscription = await serviceWorkerRegistration.pushManager.getSubscription();
         if (subscription) {
+          await removeSubscription(subscription);
           await subscription.unsubscribe();
-          // In a real app, you would also send a request to your server to remove the subscription.
         }
         setIsSubscribed(false);
         toast({ title: 'Unsubscribed', description: 'You will no longer receive notifications.' });
@@ -96,31 +97,41 @@ export function usePushNotifications() {
           applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
         });
         
-        // In a real app, you would send this subscription object to your server to store.
-        console.log('New push subscription:', JSON.stringify(subscription));
+        await saveSubscription(subscription);
 
         setIsSubscribed(true);
         toast({ title: 'Subscribed!', description: 'You will now receive notifications.' });
       } catch (error) {
         console.error('Failed to subscribe:', error);
-        toast({ variant: 'destructive', title: 'Subscription Failed' });
+        toast({ variant: 'destructive', title: 'Subscription Failed', description: (error as Error).message });
       } finally {
         setSubscriptionLoading(false);
       }
     }
   };
   
-  const sendTestNotification = () => {
-    if ('serviceWorker' in navigator && serviceWorkerRegistration?.active) {
-       serviceWorkerRegistration.active.postMessage({
-           type: 'show-test-notification'
-       });
-    } else {
+  const sendTestNotification = async () => {
+     if (!serviceWorkerRegistration || !isSubscribed) {
         toast({
             variant: 'destructive',
-            title: 'Could not send notification',
-            description: 'The service worker is not active.'
-        })
+            title: 'Not Subscribed',
+            description: 'You must be subscribed to receive test notifications.'
+        });
+        return;
+    }
+    try {
+        await sendTestNotificationAction();
+        toast({
+            title: 'Test Notification Sent',
+            description: 'You should receive a notification shortly.'
+        });
+    } catch (error) {
+        console.error('Failed to send test notification:', error);
+        toast({
+            variant: 'destructive',
+            title: 'Failed to Send',
+            description: 'Could not send the test notification.'
+        });
     }
   }
 

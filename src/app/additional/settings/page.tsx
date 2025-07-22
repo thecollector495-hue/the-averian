@@ -232,7 +232,7 @@ export default function SettingsPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Manage Subscription</CardTitle>
-                    <CardDescription>Choose a plan that works for you.</CardDescription>
+                    <CardDescription>All new accounts start with a free 7-day trial. Choose a plan that works for you.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                     <div className="p-4 rounded-lg border bg-secondary/50">
@@ -241,9 +241,9 @@ export default function SettingsPage() {
                             <div className="flex items-center gap-2">
                                 <Badge variant="default" className="capitalize">{user?.subscriptionStatus || 'None'}</Badge>
                             </div>
-                             {user?.subscriptionStatus === 'trial' && isTrialActive && (
+                             {user?.subscriptionStatus === 'trial' && isTrialActive && trialEndDate && (
                                 <p className="text-sm text-muted-foreground">
-                                    Trial ends on {format(trialEndDate!, 'PPP')}
+                                    Trial ends on {format(trialEndDate, 'PPP')}
                                 </p>
                              )}
                         </div>

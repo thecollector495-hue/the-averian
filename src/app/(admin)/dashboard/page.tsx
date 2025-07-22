@@ -17,7 +17,9 @@ const YEARLY_PRICE = 300;
 // Helper function to calculate metrics
 const calculateMetrics = (subscriptions: Subscription[]) => {
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
   const activeMonthlySubs = subscriptions.filter(s => s.plan === 'monthly' && s.status === 'active');
   const activeYearlySubs = subscriptions.filter(s => s.plan === 'yearly' && s.status === 'active');
@@ -25,8 +27,23 @@ const calculateMetrics = (subscriptions: Subscription[]) => {
   const newYearlySubsThisMonth = subscriptions.filter(s => 
     s.plan === 'yearly' && 
     s.status === 'active' &&
-    new Date(s.startDate) >= startOfMonth
+    new Date(s.startDate) >= startOfThisMonth
   );
+  
+  const monthlySubsActiveLastMonth = subscriptions.filter(s =>
+    s.plan === 'monthly' &&
+    new Date(s.startDate) < endOfLastMonth
+  );
+
+  const newYearlySubsLastMonth = subscriptions.filter(s =>
+    s.plan === 'yearly' &&
+    new Date(s.startDate) >= startOfLastMonth &&
+    new Date(s.startDate) <= endOfLastMonth
+  );
+  
+  const lastMonthMonthlyIncome = monthlySubsActiveLastMonth.length * MONTHLY_PRICE;
+  const lastMonthYearlyIncome = newYearlySubsLastMonth.length * YEARLY_PRICE;
+  const lastMonthTotalIncome = lastMonthMonthlyIncome + lastMonthYearlyIncome;
 
   // Actual cash flow this month
   const monthlyIncomeThisMonth = activeMonthlySubs.length * MONTHLY_PRICE;
@@ -45,7 +62,10 @@ const calculateMetrics = (subscriptions: Subscription[]) => {
     yearlySubCount: activeYearlySubs.length,
     totalIncomeThisMonth: totalIncomeThisMonth.toFixed(2),
     netProfitThisMonth: netProfitThisMonth.toFixed(2),
-    nextMonthEstimated: nextMonthEstimated.toFixed(2)
+    nextMonthEstimated: nextMonthEstimated.toFixed(2),
+    lastMonthMonthlyIncome: lastMonthMonthlyIncome.toFixed(2),
+    lastMonthYearlyIncome: lastMonthYearlyIncome.toFixed(2),
+    lastMonthTotalIncome: lastMonthTotalIncome.toFixed(2),
   };
 };
 
@@ -80,7 +100,7 @@ export default function DashboardPage() {
         <p className="text-muted-foreground">Welcome back, {user?.email || 'Admin'}!</p>
       </div>
       
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5 mb-6">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-6">
         <Card>
           <CardHeader>
             <CardTitle>Monthly Subs</CardTitle>
@@ -117,13 +137,26 @@ export default function DashboardPage() {
             <p className="text-4xl font-bold">R{metrics.nextMonthEstimated}</p>
           </CardContent>
         </Card>
-         <Card>
+        <Card>
           <CardHeader>
             <CardTitle>Net Profit (Month)</CardTitle>
             <CardDescription>Income minus expenses</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-bold text-green-500">R{metrics.netProfitThisMonth}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Previous Month Income</CardTitle>
+            <CardDescription>Breakdown of last month's revenue</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-3xl font-bold">R{metrics.lastMonthTotalIncome}</p>
+            <p className="text-sm text-muted-foreground">
+                Monthly: R{metrics.lastMonthMonthlyIncome}<br/>
+                Yearly: R{metrics.lastMonthYearlyIncome}
+            </p>
           </CardContent>
         </Card>
       </div>

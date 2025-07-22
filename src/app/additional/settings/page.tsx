@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from '@/components/ui/button';
-import { Crown, Star, Check, PlusCircle, Trash2 } from 'lucide-react';
+import { Crown, Star, Check, PlusCircle, Trash2, LogIn, LogOut } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurrency, currencies } from "@/context/CurrencyContext";
 import { addDays, format, isFuture } from 'date-fns';
@@ -20,6 +20,8 @@ import { AddMutationFormValues } from '@/components/add-mutation-dialog';
 import { AddSpeciesFormValues } from '@/components/add-species-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from 'next-themes';
+import { useAuth } from '@/context/AuthContext';
+import Link from 'next/link';
 
 const AddMutationDialog = dynamic(() => import('@/components/add-mutation-dialog').then(mod => mod.AddMutationDialog), { ssr: false });
 const AddSpeciesDialog = dynamic(() => import('@/components/add-species-dialog').then(mod => mod.AddSpeciesDialog), { ssr: false });
@@ -31,6 +33,7 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
   const [isMounted, setIsMounted] = useState(false);
+  const { user, logout } = useAuth();
 
 
   const [trialEndDate, setTrialEndDate] = useState<Date | null>(null);
@@ -154,6 +157,22 @@ export default function SettingsPage() {
                                 {currencies.map((c) => (<SelectItem key={c.code} value={c.code}>{c.name} ({c.code})</SelectItem>))}
                             </SelectContent>
                         </Select>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <Label className="text-base">Admin Access</Label>
+                        {user ? (
+                          <Button variant="outline" onClick={logout}>
+                            <LogOut className="mr-2 h-4 w-4" />
+                            Logout
+                          </Button>
+                        ) : (
+                          <Button asChild variant="outline">
+                            <Link href="/login">
+                              <LogIn className="mr-2 h-4 w-4" />
+                              Admin Login
+                            </Link>
+                          </Button>
+                        )}
                     </div>
                 </CardContent>
             </Card>

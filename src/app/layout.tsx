@@ -6,6 +6,8 @@ import { BottomNavigation } from '@/components/bottom-navigation';
 import { CurrencyProvider } from '@/context/CurrencyContext';
 import { ItemsProvider } from '@/context/ItemsContext';
 import { ThemeProvider } from '@/context/ThemeProvider';
+import { AuthProvider } from '@/context/AuthContext';
+import { AppContent } from '@/components/app-content';
 
 export const metadata: Metadata = {
   title: 'The Avarian',
@@ -31,15 +33,16 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
         >
-          <ItemsProvider>
-            <CurrencyProvider>
-              <div className="relative flex min-h-screen flex-col bg-background">
-                <main className="flex-1 pb-16">{children}</main>
-                <BottomNavigation />
-              </div>
-              <Toaster />
-            </CurrencyProvider>
-          </ItemsProvider>
+          <AuthProvider>
+            <ItemsProvider>
+              <CurrencyProvider>
+                <AppContent>
+                  {children}
+                </AppContent>
+                <Toaster />
+              </CurrencyProvider>
+            </ItemsProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -18,47 +18,42 @@ const YEARLY_PRICE = 300;
 const calculateMetrics = (subscriptions: Subscription[]) => {
   const now = new Date();
   const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
+  // --- Current & Future Metrics ---
   const activeMonthlySubs = subscriptions.filter(s => s.plan === 'monthly' && s.status === 'active');
   const activeYearlySubs = subscriptions.filter(s => s.plan === 'yearly' && s.status === 'active');
+  const nextMonthEstimated = activeMonthlySubs.length * MONTHLY_PRICE;
 
-  // New yearly subs this month for cash flow calculation
   const newYearlySubsThisMonth = subscriptions.filter(s => 
     s.plan === 'yearly' && 
     new Date(s.startDate) >= startOfThisMonth &&
     new Date(s.startDate) <= now
   );
-  
-  // To calculate last month's income, we need to know who was active then.
-  // A monthly sub was active last month if it started before the end of last month AND is still active now (a simplification for this mock data)
+
+  const totalIncomeThisMonth = (activeMonthlySubs.length * MONTHLY_PRICE) + (newYearlySubsThisMonth.length * YEARLY_PRICE);
+  const netProfitThisMonth = totalIncomeThisMonth; // Assuming expenses are 0 for now
+
+  // --- Previous Month Metrics ---
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const startOfLastMonth = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1);
+  const endOfLastMonth = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
+
   const monthlySubsActiveLastMonth = subscriptions.filter(s => {
     const startDate = new Date(s.startDate);
+    // Was active last month if it's a monthly plan AND it started before the end of last month AND its status is currently active (a simplification for this mock data)
     return s.plan === 'monthly' && startDate <= endOfLastMonth && s.status === 'active';
   });
 
-  const newYearlySubsLastMonth = subscriptions.filter(s =>
-    s.plan === 'yearly' &&
-    new Date(s.startDate) >= startOfLastMonth &&
-    new Date(s.startDate) <= endOfLastMonth
-  );
-  
+  const newYearlySubsLastMonth = subscriptions.filter(s => {
+      const startDate = new Date(s.startDate);
+      // Was a new yearly sub last month if it started within last month's interval
+      return s.plan === 'yearly' && startDate >= startOfLastMonth && startDate <= endOfLastMonth;
+  });
+
   const lastMonthMonthlyIncome = monthlySubsActiveLastMonth.length * MONTHLY_PRICE;
   const lastMonthYearlyIncome = newYearlySubsLastMonth.length * YEARLY_PRICE;
   const lastMonthTotalIncome = lastMonthMonthlyIncome + lastMonthYearlyIncome;
-
-  // Actual cash flow this month
-  const monthlyIncomeThisMonth = activeMonthlySubs.length * MONTHLY_PRICE;
-  const yearlyIncomeThisMonth = newYearlySubsThisMonth.length * YEARLY_PRICE;
-  const totalIncomeThisMonth = monthlyIncomeThisMonth + yearlyIncomeThisMonth;
   
-  // Placeholder for expenses
-  const totalExpenses = 0; 
-  const netProfitThisMonth = totalIncomeThisMonth - totalExpenses;
-  
-  // Estimated income for next month from monthly subs
-  const nextMonthEstimated = activeMonthlySubs.length * MONTHLY_PRICE;
 
   return {
     monthlySubCount: activeMonthlySubs.length,

@@ -19,8 +19,8 @@ const calculateMetrics = (subscriptions: Subscription[]) => {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const monthlySubs = subscriptions.filter(s => s.plan === 'monthly' && s.status === 'active');
-  const yearlySubs = subscriptions.filter(s => s.plan === 'yearly' && s.status === 'active');
+  const activeMonthlySubs = subscriptions.filter(s => s.plan === 'monthly' && s.status === 'active');
+  const activeYearlySubs = subscriptions.filter(s => s.plan === 'yearly' && s.status === 'active');
 
   const newYearlySubsThisMonth = subscriptions.filter(s => 
     s.plan === 'yearly' && 
@@ -28,20 +28,24 @@ const calculateMetrics = (subscriptions: Subscription[]) => {
     new Date(s.startDate) >= startOfMonth
   );
 
-  const monthlyIncome = monthlySubs.length * MONTHLY_PRICE;
+  // Actual cash flow this month
+  const monthlyIncomeThisMonth = activeMonthlySubs.length * MONTHLY_PRICE;
   const yearlyIncomeThisMonth = newYearlySubsThisMonth.length * YEARLY_PRICE;
-  const totalIncome = monthlyIncome + yearlyIncomeThisMonth;
+  const totalIncomeThisMonth = monthlyIncomeThisMonth + yearlyIncomeThisMonth;
   
   // Placeholder for expenses
   const totalExpenses = 0; 
-  const netProfit = totalIncome - totalExpenses;
+  const netProfitThisMonth = totalIncomeThisMonth - totalExpenses;
+  
+  // Monthly Recurring Revenue (MRR)
+  const mrr = (activeMonthlySubs.length * MONTHLY_PRICE) + (activeYearlySubs.length * YEARLY_PRICE / 12);
 
   return {
-    monthlySubCount: monthlySubs.length,
-    yearlySubCount: yearlySubs.length,
-    totalIncome: totalIncome.toFixed(2),
-    netProfit: netProfit.toFixed(2),
-    mrr: ((monthlySubs.length * MONTHLY_PRICE) + (yearlySubs.length * YEARLY_PRICE / 12)).toFixed(2)
+    monthlySubCount: activeMonthlySubs.length,
+    yearlySubCount: activeYearlySubs.length,
+    totalIncomeThisMonth: totalIncomeThisMonth.toFixed(2),
+    netProfitThisMonth: netProfitThisMonth.toFixed(2),
+    mrr: mrr.toFixed(2)
   };
 };
 
@@ -76,7 +80,7 @@ export default function DashboardPage() {
         <p className="text-muted-foreground">Welcome back, {user?.email || 'Admin'}!</p>
       </div>
       
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5 mb-6">
         <Card>
           <CardHeader>
             <CardTitle>Monthly Subs</CardTitle>
@@ -97,11 +101,20 @@ export default function DashboardPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Total Income (Month)</CardTitle>
-            <CardDescription>Revenue from all plans this month</CardDescription>
+            <CardTitle>Income (This Month)</CardTitle>
+            <CardDescription>Actual cash flow this month</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-4xl font-bold">R{metrics.totalIncome}</p>
+            <p className="text-4xl font-bold">R{metrics.totalIncomeThisMonth}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>MRR</CardTitle>
+            <CardDescription>Estimated monthly revenue</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-4xl font-bold">R{metrics.mrr}</p>
           </CardContent>
         </Card>
          <Card>
@@ -110,7 +123,7 @@ export default function DashboardPage() {
             <CardDescription>Income minus expenses</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-4xl font-bold text-green-500">R{metrics.netProfit}</p>
+            <p className="text-4xl font-bold text-green-500">R{metrics.netProfitThisMonth}</p>
           </CardContent>
         </Card>
       </div>

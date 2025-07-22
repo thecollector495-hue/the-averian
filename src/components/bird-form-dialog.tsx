@@ -30,7 +30,6 @@ import { useToast } from '@/hooks/use-toast';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import Image from 'next/image';
 import { Textarea } from './ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 const AddMutationDialog = dynamic(() => import('@/components/add-mutation-dialog').then(mod => mod.AddMutationDialog), { ssr: false });
@@ -134,6 +133,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
   const [isCreatingSpecies, setIsCreatingSpecies] = useState(false);
   const [isCreatingSubspecies, setIsCreatingSubspecies] = useState(false);
   const [isMutationDialogOpen, setIsMutationDialogOpen] = useState(false);
+  const [showMedical, setShowMedical] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isCompressing, setIsCompressing] = useState(false);
   
@@ -157,6 +157,7 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
       setIsCreatingCage(false);
       setIsCreatingSpecies(false);
       setIsCreatingSubspecies(false);
+      setShowMedical(false);
   };
 
   useEffect(() => {
@@ -177,6 +178,9 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
         salePrice: initialData.saleDetails?.price, buyerInfo: initialData.saleDetails?.buyer,
         medicalRecords: (initialData.medicalRecords || []).map(r => ({...r, date: parseISO(r.date)})),
       });
+      if (initialData.medicalRecords && initialData.medicalRecords.length > 0) {
+        setShowMedical(true);
+      }
     } else {
       form.reset({
         species: undefined, subspecies: undefined, sex: undefined, ringNumber: "",
@@ -302,236 +306,193 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <Tabs defaultValue="details" className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="details">Details</TabsTrigger>
-                <TabsTrigger value="media">Media</TabsTrigger>
-                <TabsTrigger value="genetics">Genetics</TabsTrigger>
-                <TabsTrigger value="relationships">Relationships</TabsTrigger>
-                <TabsTrigger value="medical">Medical</TabsTrigger>
-              </TabsList>
-              <div className="max-h-[60vh] overflow-y-auto p-4">
-                <TabsContent value="details" className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="md:col-span-2 space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox id="create-species" checked={isCreatingSpecies} onCheckedChange={(c) => setIsCreatingSpecies(!!c)} />
-                            <label htmlFor="create-species" className="text-sm font-medium">Add new species</label>
-                          </div>
-                          {isCreatingSpecies ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField control={form.control} name="newSpeciesName" render={({ field }) => (
-                                    <FormItem><FormLabel>New Species Name</FormLabel><FormControl><Input placeholder="e.g., Quaker Parrot" {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <FormField control={form.control} name="newSpeciesIncubation" render={({ field }) => (
-                                    <FormItem><FormLabel>Incubation Period (days)</FormLabel><FormControl><Input type="number" placeholder="e.g., 24" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.valueAsNumber)} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                            </div>
-                          ) : (
-                            <FormField control={form.control} name="species" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Species</FormLabel>
-                                    <GeneralCombobox field={field} options={allSpeciesOptions} placeholder="Select a species" disabled={isCreatingSpecies}/>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                          )}
-                      </div>
+            <div className="max-h-[70vh] overflow-y-auto p-1 pr-4 space-y-6">
 
-                      <div className="md:col-span-2 space-y-2">
-                        {watchedSpecies && (
-                            <div className="flex items-center space-x-2">
-                                <Checkbox id="create-subspecies" checked={isCreatingSubspecies} onCheckedChange={(c) => setIsCreatingSubspecies(!!c)} />
-                                <label htmlFor="create-subspecies" className="text-sm font-medium">Add new subspecies</label>
-                            </div>
-                        )}
-                        {isCreatingSubspecies ? (
-                            <FormField control={form.control} name="newSubspeciesName" render={({ field }) => (
-                                <FormItem><FormLabel>New Subspecies Name</FormLabel><FormControl><Input placeholder="Enter name" {...field} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                        ) : (
-                            <FormField control={form.control} name="subspecies" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Subspecies</FormLabel>
-                                    <GeneralCombobox field={field} options={subspeciesOptions} placeholder="Select subspecies" disabled={!watchedSpecies || isCreatingSpecies || isCreatingSubspecies} />
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                        )}
-                      </div>
-
-                  <FormField control={form.control} name="ringNumber" render={({ field }) => (
-                      <FormItem>
-                        <div className="flex items-center justify-between">
-                          <FormLabel>Ring Number</FormLabel>
-                          <FormField control={form.control} name="unbanded" render={({ field: unbandedField }) => (
-                              <div className="flex flex-row items-center space-x-2">
-                                <FormControl><Checkbox checked={unbandedField.value} onCheckedChange={unbandedField.onChange} /></FormControl>
-                                <Label className="font-normal cursor-pointer">Unbanded</Label>
-                              </div>
-                          )} />
-                        </div>
-                        <FormControl><Input placeholder="e.g., USAU-12345" {...field} value={field.value ?? ''} disabled={unbanded} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                  )} />
-                  <div className="flex items-end gap-4">
-                    <FormField control={form.control} name="sex" render={({ field }) => (
-                        <FormItem className="flex-grow">
-                          <FormLabel>Sex</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Select sex" /></SelectTrigger></FormControl>
-                            <SelectContent>
-                              <SelectItem value="male">Male</SelectItem>
-                              <SelectItem value="female">Female</SelectItem>
-                              <SelectItem value="unsexed">Unsexed</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                    <div className="flex-grow">
-                        <FormField
-                            control={form.control}
-                            name="birthDateType"
-                            render={({ field }) => (
-                            <FormItem className="space-y-2">
-                                <FormLabel>Age</FormLabel>
-                                <FormControl>
-                                    <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex">
-                                    <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="date" id="r-date"/></FormControl><FormLabel htmlFor="r-date" className="font-normal">Full Date</FormLabel></FormItem>
-                                    <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="year" id="r-year"/></FormControl><FormLabel htmlFor="r-year" className="font-normal">Year Only</FormLabel></FormItem>
-                                    </RadioGroup>
-                                </FormControl>
-                            </FormItem>
-                        )}/>
-                    </div>
-                  </div>
-                  <div className="md:col-span-2">
-                    {birthDateType === 'date' ? (
-                        <FormField control={form.control} name="birthDate" render={({ field }) => (
-                            <FormItem className="flex flex-col"><FormLabel>Birth Date</FormLabel>
-                              <Popover><PopoverTrigger asChild><FormControl>
-                                <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                  {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl></PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                    mode="single"
-                                    captionLayout="dropdown-buttons"
-                                    fromYear={1980}
-                                    toYear={new Date().getFullYear()}
-                                    selected={field.value}
-                                    onSelect={field.onChange}
-                                    disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                                    initialFocus />
-                                </PopoverContent>
-                              </Popover><FormMessage />
-                            </FormItem>
-                        )} />
-                    ) : (
-                        <FormField control={form.control} name="birthYear" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Birth Year</FormLabel>
-                                <FormControl>
-                                    <Input type="number" placeholder={`e.g., ${new Date().getFullYear() - 2}`} {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.valueAsNumber)} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}/>
-                    )}
-                  </div>
-                  <FormField control={form.control} name="status" render={({ field }) => (
-                        <FormItem><FormLabel>Status</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                            <SelectContent>
-                              <SelectItem value="Available">Available</SelectItem>
-                              <SelectItem value="Hand-rearing">Hand-rearing</SelectItem>
-                              <SelectItem value="Sold">Sold</SelectItem>
-                              <SelectItem value="Deceased">Deceased</SelectItem>
-                            </SelectContent>
-                          </Select><FormMessage />
-                        </FormItem>
-                      )} />
-                    <FormField control={form.control} name="permitId" render={({ field }) => (
-                        <FormItem><FormLabel>Permit</FormLabel>
-                          <GeneralCombobox field={field} options={permitOptions} placeholder="Assign a permit" /><FormMessage />
-                        </FormItem>
-                      )} />
-                    
+              {/* Core Details Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold tracking-tight">Core Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-2 space-y-2">
-                       <p className="font-medium">Housing</p>
-                        {isCreatingCage ? (
-                          <FormField control={form.control} name="newCageName" render={({ field }) => (
-                              <FormItem><FormLabel>New Cage Name</FormLabel><FormControl><Input placeholder="Enter name for the new cage" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                          )} />
+                        <div className="flex items-center space-x-2">
+                          <Checkbox id="create-species" checked={isCreatingSpecies} onCheckedChange={(c) => setIsCreatingSpecies(!!c)} />
+                          <label htmlFor="create-species" className="text-sm font-medium">Add new species</label>
+                        </div>
+                        {isCreatingSpecies ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <FormField control={form.control} name="newSpeciesName" render={({ field }) => (
+                                  <FormItem><FormLabel>New Species Name</FormLabel><FormControl><Input placeholder="e.g., Quaker Parrot" {...field} /></FormControl><FormMessage /></FormItem>
+                              )} />
+                              <FormField control={form.control} name="newSpeciesIncubation" render={({ field }) => (
+                                  <FormItem><FormLabel>Incubation Period (days)</FormLabel><FormControl><Input type="number" placeholder="e.g., 24" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.valueAsNumber)} /></FormControl><FormMessage /></FormItem>
+                              )} />
+                          </div>
                         ) : (
-                          <FormField control={form.control} name="cageId" render={({ field }) => (
-                              <FormItem className="flex flex-col"><FormLabel>Cage</FormLabel>
-                                <GeneralCombobox field={field} options={allCages.map(c => ({value: c.id, label: c.name}))} placeholder="Select a cage" />
-                                <FormMessage />
+                          <FormField control={form.control} name="species" render={({ field }) => (
+                              <FormItem>
+                                  <FormLabel>Species</FormLabel>
+                                  <GeneralCombobox field={field} options={allSpeciesOptions} placeholder="Select a species" disabled={isCreatingSpecies}/>
+                                  <FormMessage />
                               </FormItem>
                           )} />
                         )}
-                        <div className="flex items-center space-x-2">
-                          <Checkbox id="create-cage" checked={isCreatingCage} onCheckedChange={(c) => { setIsCreatingCage(!!c); if (c) form.setValue('cageId', undefined); else form.setValue('newCageName', ''); }} />
-                          <label htmlFor="create-cage" className="text-sm font-medium leading-none">Create a new cage</label>
-                        </div>
                     </div>
-                </div>
-                 
-                <p className="text-base font-medium">Financials</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="paidPrice" render={({field}) => (
-                        <FormItem><FormLabel>Paid Price</FormLabel><FormControl><Input type="number" placeholder="e.g., 100" {...field} value={field.value ?? ''} onChange={event => field.onChange(event.target.value === '' ? undefined : event.target.valueAsNumber)} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="estimatedValue" render={({field}) => (
-                        <FormItem><FormLabel>Estimated Value</FormLabel><FormControl><Input type="number" placeholder="e.g., 150" {...field} value={field.value ?? ''} onChange={event => field.onChange(event.target.value === '' ? undefined : event.target.valueAsNumber)} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                </div>
-                  {paidPrice !== undefined && paidPrice > 0 && !isEditMode && (
-                  <FormField control={form.control} name="addToExpenses" render={({ field }) => (
-                      <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
-                        <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                        <div className="space-y-1 leading-none"><FormLabel>Add purchase to expenses</FormLabel><FormDescription>This will create an expense entry for this bird's purchase price.</FormDescription></div>
-                      </FormItem>
-                  )} />
-                )}
-                {status === 'Sold' && (
-                    <>
-                        <Separator />
-                        <p className="text-base font-medium">Sale Details</p>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField control={form.control} name="salePrice" render={({ field }) => (
-                                <FormItem><FormLabel>Sale Price</FormLabel><FormControl><Input type="number" placeholder="e.g., 200" {...field} value={field.value ?? ''} onChange={event => field.onChange(event.target.value === '' ? undefined : event.target.valueAsNumber)}/></FormControl><FormMessage /></FormItem>
-                            )} />
-                              <FormField control={form.control} name="saleDate" render={({ field }) => (
-                              <FormItem className="flex flex-col"><FormLabel>Sale Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}><> {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
-                            )} />
-                            <FormField control={form.control} name="buyerInfo" render={({ field }) => (
-                                <FormItem className="md:col-span-2"><FormLabel>Buyer Info</FormLabel><FormControl><Input placeholder="Buyer's name or details" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+
+                    <div className="md:col-span-2 space-y-2">
+                      {watchedSpecies && (
+                          <div className="flex items-center space-x-2">
+                              <Checkbox id="create-subspecies" checked={isCreatingSubspecies} onCheckedChange={(c) => setIsCreatingSubspecies(!!c)} />
+                              <label htmlFor="create-subspecies" className="text-sm font-medium">Add new subspecies</label>
+                          </div>
+                      )}
+                      {isCreatingSubspecies ? (
+                          <FormField control={form.control} name="newSubspeciesName" render={({ field }) => (
+                              <FormItem><FormLabel>New Subspecies Name</FormLabel><FormControl><Input placeholder="Enter name" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                      ) : (
+                          <FormField control={form.control} name="subspecies" render={({ field }) => (
+                              <FormItem>
+                                  <FormLabel>Subspecies</FormLabel>
+                                  <GeneralCombobox field={field} options={subspeciesOptions} placeholder="Select subspecies" disabled={!watchedSpecies || isCreatingSpecies || isCreatingSubspecies} />
+                                  <FormMessage />
+                              </FormItem>
+                          )} />
+                      )}
+                    </div>
+
+                    <FormField control={form.control} name="ringNumber" render={({ field }) => (
+                        <FormItem>
+                          <div className="flex items-center justify-between">
+                            <FormLabel>Ring Number</FormLabel>
+                            <FormField control={form.control} name="unbanded" render={({ field: unbandedField }) => (
+                                <div className="flex flex-row items-center space-x-2">
+                                  <FormControl><Checkbox checked={unbandedField.value} onCheckedChange={unbandedField.onChange} /></FormControl>
+                                  <Label className="font-normal cursor-pointer">Unbanded</Label>
+                                </div>
                             )} />
                           </div>
-                        <FormField control={form.control} name="createSaleTransaction" render={({ field }) => (
-                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
-                                <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                                <div className="space-y-1 leading-none"><FormLabel>Create income transaction</FormLabel><FormDescription>This will create an income entry for this bird's sale price.</FormDescription></div>
-                            </FormItem>
+                          <FormControl><Input placeholder="e.g., USAU-12345" {...field} value={field.value ?? ''} disabled={unbanded} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                    )} />
+                    <div className="flex items-end gap-4">
+                      <FormField control={form.control} name="sex" render={({ field }) => (
+                          <FormItem className="flex-grow">
+                            <FormLabel>Sex</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl><SelectTrigger><SelectValue placeholder="Select sex" /></SelectTrigger></FormControl>
+                              <SelectContent>
+                                <SelectItem value="male">Male</SelectItem>
+                                <SelectItem value="female">Female</SelectItem>
+                                <SelectItem value="unsexed">Unsexed</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
                         )} />
-                    </>
-                )}
-                </TabsContent>
-                
-                <TabsContent value="media">
+                      <div className="flex-grow">
+                          <FormField
+                              control={form.control}
+                              name="birthDateType"
+                              render={({ field }) => (
+                              <FormItem className="space-y-2">
+                                  <FormLabel>Age</FormLabel>
+                                  <FormControl>
+                                      <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex">
+                                      <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="date" id="r-date"/></FormControl><FormLabel htmlFor="r-date" className="font-normal">Full Date</FormLabel></FormItem>
+                                      <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="year" id="r-year"/></FormControl><FormLabel htmlFor="r-year" className="font-normal">Year Only</FormLabel></FormItem>
+                                      </RadioGroup>
+                                  </FormControl>
+                              </FormItem>
+                          )}/>
+                      </div>
+                    </div>
+                    <div className="md:col-span-2">
+                      {birthDateType === 'date' ? (
+                          <FormField control={form.control} name="birthDate" render={({ field }) => (
+                              <FormItem className="flex flex-col"><FormLabel>Birth Date</FormLabel>
+                                <Popover><PopoverTrigger asChild><FormControl>
+                                  <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
+                                </FormControl></PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar
+                                      mode="single"
+                                      captionLayout="dropdown-buttons"
+                                      fromYear={1980}
+                                      toYear={new Date().getFullYear()}
+                                      selected={field.value}
+                                      onSelect={field.onChange}
+                                      disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                                      initialFocus />
+                                  </PopoverContent>
+                                </Popover><FormMessage />
+                              </FormItem>
+                          )} />
+                      ) : (
+                          <FormField control={form.control} name="birthYear" render={({ field }) => (
+                              <FormItem>
+                                  <FormLabel>Birth Year</FormLabel>
+                                  <FormControl>
+                                      <Input type="number" placeholder={`e.g., ${new Date().getFullYear() - 2}`} {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                                  </FormControl>
+                                  <FormMessage />
+                              </FormItem>
+                          )}/>
+                      )}
+                    </div>
+                    <FormField control={form.control} name="status" render={({ field }) => (
+                          <FormItem><FormLabel>Status</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                              <SelectContent>
+                                <SelectItem value="Available">Available</SelectItem>
+                                <SelectItem value="Hand-rearing">Hand-rearing</SelectItem>
+                                <SelectItem value="Sold">Sold</SelectItem>
+                                <SelectItem value="Deceased">Deceased</SelectItem>
+                              </SelectContent>
+                            </Select><FormMessage />
+                          </FormItem>
+                        )} />
+                      <FormField control={form.control} name="permitId" render={({ field }) => (
+                          <FormItem><FormLabel>Permit</FormLabel>
+                            <GeneralCombobox field={field} options={permitOptions} placeholder="Assign a permit" /><FormMessage />
+                          </FormItem>
+                        )} />
+                      
+                      <div className="md:col-span-2 space-y-2">
+                         <p className="font-medium text-sm">Housing</p>
+                          {isCreatingCage ? (
+                            <FormField control={form.control} name="newCageName" render={({ field }) => (
+                                <FormItem><FormLabel>New Cage Name</FormLabel><FormControl><Input placeholder="Enter name for the new cage" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                          ) : (
+                            <FormField control={form.control} name="cageId" render={({ field }) => (
+                                <FormItem className="flex flex-col"><FormLabel>Cage</FormLabel>
+                                  <GeneralCombobox field={field} options={allCages.map(c => ({value: c.id, label: c.name}))} placeholder="Select a cage" />
+                                  <FormMessage />
+                                </FormItem>
+                            )} />
+                          )}
+                          <div className="flex items-center space-x-2 pt-2">
+                            <Checkbox id="create-cage" checked={isCreatingCage} onCheckedChange={(c) => { setIsCreatingCage(!!c); if (c) form.setValue('cageId', undefined); else form.setValue('newCageName', ''); }} />
+                            <label htmlFor="create-cage" className="text-sm font-medium leading-none">Create a new cage for this bird</label>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+
+              <Separator />
+
+              {/* Media Section */}
+              <div className="space-y-4">
+                  <h3 className="text-lg font-semibold tracking-tight">Image</h3>
                   <FormField
                     control={form.control}
                     name="imageUrl"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Image</FormLabel>
                         <FormControl>
                           <div>
                             <Input
@@ -583,10 +544,14 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                       </FormItem>
                     )}
                   />
-                </TabsContent>
-                
-                <TabsContent value="genetics" className="space-y-4">
-                  <FormField control={form.control} name="visualMutations" render={({ field }) => (
+              </div>
+
+              <Separator />
+
+              {/* Genetics Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold tracking-tight">Genetics</h3>
+                 <FormField control={form.control} name="visualMutations" render={({ field }) => (
                     <FormItem>
                       <div className="flex items-center gap-2 mb-2"><FormLabel>Visual Mutations</FormLabel><Button type="button" size="icon" variant="ghost" className="h-6 w-6" onClick={() => setIsMutationDialogOpen(true)}><PlusCircle className="h-4 w-4" /></Button></div>
                       <MultiSelectCombobox field={field} options={allMutationOptions} placeholder="Select visual mutations" />
@@ -600,27 +565,86 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                       <FormMessage />
                     </FormItem>
                   )} />
-                </TabsContent>
-                
-                <TabsContent value="relationships" className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField control={form.control} name="fatherId" render={({field}) => (
-                        <FormItem><FormLabel>Father</FormLabel><GeneralCombobox field={field} options={relationshipOptions.father} placeholder={watchedSpecies || isCreatingSpecies ? "Select father" : "Select species first"} /><FormMessage /></FormItem>
+              </div>
+
+              <Separator />
+
+              {/* Relationships Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold tracking-tight">Relationships</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="fatherId" render={({field}) => (
+                      <FormItem><FormLabel>Father</FormLabel><GeneralCombobox field={field} options={relationshipOptions.father} placeholder={watchedSpecies || isCreatingSpecies ? "Select father" : "Select species first"} /><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="motherId" render={({field}) => (
+                      <FormItem><FormLabel>Mother</FormLabel><GeneralCombobox field={field} options={relationshipOptions.mother} placeholder={watchedSpecies || isCreatingSpecies ? "Select mother" : "Select species first"} /><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="mateId" render={({field}) => (
+                      <FormItem><FormLabel>Mate</FormLabel><GeneralCombobox field={field} options={relationshipOptions.mate} placeholder={watchedSpecies || isCreatingSpecies ? "Select mate" : "Select species first"} disabled={watchedSex === 'unsexed'} /><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="offspringIds" render={({field}) => (
+                      <FormItem><FormLabel>Offspring</FormLabel><MultiSelectCombobox field={field} options={relationshipOptions.offspring} placeholder={watchedSpecies || isCreatingSpecies ? "Select offspring" : "Select species first"} /><FormMessage /></FormItem>
+                    )} />
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Financials Section */}
+              <div className="space-y-4">
+                  <h3 className="text-lg font-semibold tracking-tight">Financials</h3>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField control={form.control} name="paidPrice" render={({field}) => (
+                          <FormItem><FormLabel>Paid Price</FormLabel><FormControl><Input type="number" placeholder="e.g., 100" {...field} value={field.value ?? ''} onChange={event => field.onChange(event.target.value === '' ? undefined : event.target.valueAsNumber)} /></FormControl><FormMessage /></FormItem>
                       )} />
-                      <FormField control={form.control} name="motherId" render={({field}) => (
-                        <FormItem><FormLabel>Mother</FormLabel><GeneralCombobox field={field} options={relationshipOptions.mother} placeholder={watchedSpecies || isCreatingSpecies ? "Select mother" : "Select species first"} /><FormMessage /></FormItem>
-                      )} />
-                      <FormField control={form.control} name="mateId" render={({field}) => (
-                        <FormItem><FormLabel>Mate</FormLabel><GeneralCombobox field={field} options={relationshipOptions.mate} placeholder={watchedSpecies || isCreatingSpecies ? "Select mate" : "Select species first"} disabled={watchedSex === 'unsexed'} /><FormMessage /></FormItem>
-                      )} />
-                      <FormField control={form.control} name="offspringIds" render={({field}) => (
-                        <FormItem><FormLabel>Offspring</FormLabel><MultiSelectCombobox field={field} options={relationshipOptions.offspring} placeholder={watchedSpecies || isCreatingSpecies ? "Select offspring" : "Select species first"} /><FormMessage /></FormItem>
+                      <FormField control={form.control} name="estimatedValue" render={({field}) => (
+                          <FormItem><FormLabel>Estimated Value</FormLabel><FormControl><Input type="number" placeholder="e.g., 150" {...field} value={field.value ?? ''} onChange={event => field.onChange(event.target.value === '' ? undefined : event.target.valueAsNumber)} /></FormControl><FormMessage /></FormItem>
                       )} />
                   </div>
-                </TabsContent>
+                    {paidPrice !== undefined && paidPrice > 0 && !isEditMode && (
+                    <FormField control={form.control} name="addToExpenses" render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                          <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                          <div className="space-y-1 leading-none"><FormLabel>Add purchase to expenses</FormLabel><FormDescription>This will create an expense entry for this bird's purchase price.</FormDescription></div>
+                        </FormItem>
+                    )} />
+                  )}
+                  {status === 'Sold' && (
+                      <>
+                          <p className="text-base font-medium">Sale Details</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <FormField control={form.control} name="salePrice" render={({ field }) => (
+                                  <FormItem><FormLabel>Sale Price</FormLabel><FormControl><Input type="number" placeholder="e.g., 200" {...field} value={field.value ?? ''} onChange={event => field.onChange(event.target.value === '' ? undefined : event.target.valueAsNumber)}/></FormControl><FormMessage /></FormItem>
+                              )} />
+                                <FormField control={form.control} name="saleDate" render={({ field }) => (
+                                <FormItem className="flex flex-col"><FormLabel>Sale Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}><> {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
+                              )} />
+                              <FormField control={form.control} name="buyerInfo" render={({ field }) => (
+                                  <FormItem className="md:col-span-2"><FormLabel>Buyer Info</FormLabel><FormControl><Input placeholder="Buyer's name or details" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                              )} />
+                            </div>
+                          <FormField control={form.control} name="createSaleTransaction" render={({ field }) => (
+                              <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                                  <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                                  <div className="space-y-1 leading-none"><FormLabel>Create income transaction</FormLabel><FormDescription>This will create an income entry for this bird's sale price.</FormDescription></div>
+                              </FormItem>
+                          )} />
+                      </>
+                  )}
+              </div>
+              
+              <Separator />
 
-                <TabsContent value="medical" className="space-y-4">
-                    <div>
+              {/* Medical Records Section */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="show-medical" checked={showMedical} onCheckedChange={(checked) => setShowMedical(!!checked)} />
+                  <label htmlFor="show-medical" className="text-lg font-semibold tracking-tight">Medical Records</label>
+                </div>
+
+                {showMedical && (
+                  <div className="pl-2 space-y-4">
+                     <div>
                       <Button
                         type="button"
                         variant="outline"
@@ -696,10 +720,11 @@ export function BirdFormDialog({ isOpen, onOpenChange, onSave, initialData, allB
                       </div>
                     ))}
                     {medicalFields.length === 0 && <p className="text-sm text-center text-muted-foreground py-4">No medical records yet.</p>}
-                </TabsContent>
-
+                  </div>
+                )}
               </div>
-            </Tabs>
+
+            </div>
             <DialogFooter className="pt-4 mt-4 border-t">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit">{isEditMode ? 'Save Changes' : 'Add Bird'}</Button>

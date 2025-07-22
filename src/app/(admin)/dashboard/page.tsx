@@ -24,16 +24,19 @@ const calculateMetrics = (subscriptions: Subscription[]) => {
   const activeMonthlySubs = subscriptions.filter(s => s.plan === 'monthly' && s.status === 'active');
   const activeYearlySubs = subscriptions.filter(s => s.plan === 'yearly' && s.status === 'active');
 
+  // New yearly subs this month for cash flow calculation
   const newYearlySubsThisMonth = subscriptions.filter(s => 
     s.plan === 'yearly' && 
-    s.status === 'active' &&
-    new Date(s.startDate) >= startOfThisMonth
+    new Date(s.startDate) >= startOfThisMonth &&
+    new Date(s.startDate) <= now
   );
   
-  const monthlySubsActiveLastMonth = subscriptions.filter(s =>
-    s.plan === 'monthly' &&
-    new Date(s.startDate) < endOfLastMonth
-  );
+  // To calculate last month's income, we need to know who was active then.
+  // A monthly sub was active last month if it started before the end of last month AND is still active now (a simplification for this mock data)
+  const monthlySubsActiveLastMonth = subscriptions.filter(s => {
+    const startDate = new Date(s.startDate);
+    return s.plan === 'monthly' && startDate <= endOfLastMonth && s.status === 'active';
+  });
 
   const newYearlySubsLastMonth = subscriptions.filter(s =>
     s.plan === 'yearly' &&

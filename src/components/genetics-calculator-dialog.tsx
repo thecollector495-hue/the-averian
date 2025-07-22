@@ -141,3 +141,5 @@ export function GeneticsCalculatorDialog({ isOpen, onOpenChange, onCalculate, cu
     </Dialog>
   );
 }
+
+    

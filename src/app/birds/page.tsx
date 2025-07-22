@@ -4,7 +4,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Sparkles, Send, Bot, User, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Loader2, Sparkles, Send, Bot, User, RefreshCw, AlertTriangle, Atom } from 'lucide-react';
 import { aviaryAssistant } from '@/ai/flows/assistant-flow';
 import { useItems } from '@/context/ItemsContext';
 import { Bird, NoteReminder, Cage, getBirdIdentifier, CollectionItem, Transaction, Pair, CustomSpecies, CustomMutation, inheritanceTypes } from '@/lib/data';
@@ -18,6 +18,9 @@ import { useCurrency } from '@/context/CurrencyContext';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/context/AuthContext';
+import { GeneticsCalculatorDialog } from '@/components/genetics-calculator-dialog';
+
+const AddBreedingRecordDialog = dynamic(() => import('@/components/add-breeding-record-dialog').then(mod => mod.AddBreedingRecordDialog), { ssr: false });
 
 type Message = {
   id: string;
@@ -45,6 +48,9 @@ export default function AIAssistantPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [pendingActions, setPendingActions] = useState<any[] | null>(null);
   const [selectedActionIndices, setSelectedActionIndices] = useState<Set<number>>(new Set());
+  const [isGeneticsDialogOpen, setIsGeneticsDialogOpen] = useState(false);
+
+  const customMutations = items.filter((item): item is CustomMutation => item.category === 'CustomMutation');
   
   useEffect(() => {
     if (pendingActions) {
@@ -292,6 +298,12 @@ export default function AIAssistantPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh_-_4rem)]">
+        {isGeneticsDialogOpen && <GeneticsCalculatorDialog
+            isOpen={isGeneticsDialogOpen}
+            onOpenChange={setIsGeneticsDialogOpen}
+            onCalculate={(query) => handleSend({ query })}
+            customMutations={customMutations}
+        />}
         {pendingActions && (
             <AlertDialog open={!!pendingActions} onOpenChange={(open) => !open && setPendingActions(null)}>
                 <AlertDialogContent>
@@ -403,6 +415,10 @@ export default function AIAssistantPage() {
 
         <div className="shrink-0 border-t p-4 bg-background">
             <div className="max-w-3xl mx-auto flex items-end gap-2">
+                <Button variant="outline" size="icon" className="h-12 w-12 flex-shrink-0" onClick={() => setIsGeneticsDialogOpen(true)} disabled={isLoading || isReadOnly}>
+                    <Atom className="h-6 w-6" />
+                    <span className="sr-only">Genetics Calculator</span>
+                </Button>
                 <Textarea
                     ref={textareaRef}
                     rows={1}
@@ -427,3 +443,5 @@ export default function AIAssistantPage() {
     </div>
   );
 }
+
+    

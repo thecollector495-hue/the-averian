@@ -18,8 +18,6 @@ import { useCurrency } from '@/context/CurrencyContext';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/context/AuthContext';
-import { GeneticsCalculatorDialog } from '@/components/genetics-calculator-dialog';
-import { GeneticsResult } from '@/components/genetics-result';
 
 const AddBreedingRecordDialog = dynamic(() => import('@/components/add-breeding-record-dialog').then(mod => mod.AddBreedingRecordDialog), { ssr: false });
 
@@ -49,7 +47,6 @@ export default function AIAssistantPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [pendingActions, setPendingActions] = useState<AviaryAssistantOutput['actions'] | null>(null);
   const [selectedActionIndices, setSelectedActionIndices] = useState<Set<number>>(new Set());
-  const [isGeneticsDialogOpen, setIsGeneticsDialogOpen] = useState(false);
 
   const customMutations = items.filter((item): item is CustomMutation => item.category === 'CustomMutation');
   
@@ -118,13 +115,8 @@ export default function AIAssistantPage() {
         });
     } else {
         const hasDataActions = assistantResponse.actions && assistantResponse.actions.some(a => a.action !== 'answer');
-        const geneticsResultAction = assistantResponse.actions?.find(a => a.action === 'geneticsResult');
         
         let assistantContent: React.ReactNode = assistantResponse.response;
-
-        if (geneticsResultAction && geneticsResultAction.data) {
-            assistantContent = <GeneticsResult response={assistantResponse} />
-        }
 
         const newAssistantMessage: Message = { 
             id: `assistant-${Date.now()}`, 
@@ -133,7 +125,7 @@ export default function AIAssistantPage() {
         };
         setMessages(prev => [...prev, newAssistantMessage]);
 
-        if (hasDataActions && !geneticsResultAction) {
+        if (hasDataActions) {
             setPendingActions(assistantResponse.actions);
         }
     }
@@ -164,6 +156,7 @@ export default function AIAssistantPage() {
             splitMutations: [],
             offspringIds: [],
             status: "Available",
+            medicalRecords: [],
             ...birdData,
             id: newBirdId,
             category: 'Bird',
@@ -282,7 +275,7 @@ export default function AIAssistantPage() {
 
   const generateActionSummary = (actions: any[] | null): string[] => {
     if (!actions) return [];
-    return actions.filter(a => a.action !== 'answer' && a.action !== 'geneticsResult').map(action => {
+    return actions.filter(a => a.action !== 'answer').map(action => {
       const { action: type, data } = action;
       switch (type) {
         case 'addBird': return `Add Bird: ${data?.species || 'Unknown'}`;
@@ -310,12 +303,6 @@ export default function AIAssistantPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh_-_4rem)]">
-        {isGeneticsDialogOpen && <GeneticsCalculatorDialog
-            isOpen={isGeneticsDialogOpen}
-            onOpenChange={setIsGeneticsDialogOpen}
-            onCalculate={(query) => handleSend({ query })}
-            customMutations={customMutations}
-        />}
         {pendingActions && (
             <AlertDialog open={!!pendingActions} onOpenChange={(open) => !open && setPendingActions(null)}>
                 <AlertDialogContent>
@@ -427,10 +414,6 @@ export default function AIAssistantPage() {
 
         <div className="shrink-0 border-t p-4 bg-background">
             <div className="max-w-3xl mx-auto flex items-end gap-2">
-                <Button variant="outline" size="icon" className="h-12 w-12 flex-shrink-0" onClick={() => setIsGeneticsDialogOpen(true)} disabled={isLoading || isReadOnly}>
-                    <Atom className="h-6 w-6" />
-                    <span className="sr-only">Genetics Calculator</span>
-                </Button>
                 <Textarea
                     ref={textareaRef}
                     rows={1}

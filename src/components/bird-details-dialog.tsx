@@ -3,11 +3,13 @@
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Bird, Cage, getBirdIdentifier, Permit } from '@/lib/data';
+import { Bird, Cage, getBirdIdentifier, Permit, MedicalRecord } from '@/lib/data';
 import { useCurrency } from '@/context/CurrencyContext';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, Stethoscope } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { format, parseISO, formatDistanceToNowStrict } from 'date-fns';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { Badge } from "./ui/badge";
 
 // This is a helper component to avoid code duplication.
 const BirdLink = ({ bird, onBirdClick }: { bird: Bird | undefined, onBirdClick: (bird: Bird) => void }) => {
@@ -94,6 +96,34 @@ export function BirdDetailsDialog({ bird, allBirds, allCages, allPermits, onClos
                 ) : <span className="font-semibold ml-2">N/A</span>}
             </div>
           </div>
+
+          <div className="space-y-2 rounded-lg border p-3">
+            <h4 className="font-medium text-base flex items-center gap-2"><Stethoscope className="h-4 w-4" /> Medical History</h4>
+            {bird.medicalRecords && bird.medicalRecords.length > 0 ? (
+                 <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Details</TableHead>
+                            <TableHead className="text-right">Cost</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {bird.medicalRecords.map(record => (
+                            <TableRow key={record.id}>
+                                <TableCell>{format(parseISO(record.date), 'PPP')}</TableCell>
+                                <TableCell><Badge variant="secondary">{record.type}</Badge></TableCell>
+                                <TableCell className="whitespace-pre-wrap">{record.details}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(record.cost)}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                 </Table>
+            ) : (
+                <p className="text-muted-foreground text-center py-2">No medical records found.</p>
+            )}
+           </div>
            
            <div className="space-y-2 rounded-lg border p-3">
             <h4 className="font-medium text-base">Financials</h4>

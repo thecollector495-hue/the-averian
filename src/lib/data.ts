@@ -1,5 +1,13 @@
 
 
+export type MedicalRecord = {
+  id: string;
+  date: string; // YYYY-MM-DD
+  type: 'Vet Visit' | 'Medication' | 'Health Check' | 'Note';
+  details: string;
+  cost?: number;
+};
+
 export const initialSpeciesData = [
     {
         name: 'Cockatoo',
@@ -166,6 +174,7 @@ export type BirdFormValues = {
   buyerInfo?: string;
   addToExpenses?: boolean;
   createSaleTransaction?: boolean;
+  medicalRecords: MedicalRecord[];
 };
 
 export type Bird = Omit<BirdFormValues, 'cageId' | 'addToExpenses' | 'createSaleTransaction' | 'saleDate' | 'salePrice' | 'buyerInfo' | 'birthDate' | 'birthYear' | 'birthDateType'> & { 
@@ -286,16 +295,16 @@ const initialCustomSpecies: CustomSpecies[] = initialSpeciesData.map((s, i) => (
 
 export const initialBirds: Bird[] = [
   {
-    id: '1', species: 'Cockatoo', subspecies: 'Cockatiel - Nymphicus hollandicus', ringNumber: 'A123', unbanded: false, category: 'Bird', sex: 'male', birthDate: '2022-04-01', visualMutations: ['Lutino'], splitMutations: ['Cinnamon', 'Pied'], fatherId: undefined, motherId: undefined, mateId: '4', offspringIds: ['3'], paidPrice: 150, estimatedValue: 200, status: 'Available', permitId: 'p1', imageUrl: ''
+    id: '1', species: 'Cockatoo', subspecies: 'Cockatiel - Nymphicus hollandicus', ringNumber: 'A123', unbanded: false, category: 'Bird', sex: 'male', birthDate: '2022-04-01', visualMutations: ['Lutino'], splitMutations: ['Cinnamon', 'Pied'], fatherId: undefined, motherId: undefined, mateId: '4', offspringIds: ['3'], paidPrice: 150, estimatedValue: 200, status: 'Available', permitId: 'p1', imageUrl: '', medicalRecords: [{id: 'mr1', date: '2024-06-01', type: 'Vet Visit', details: 'Annual checkup, all clear.'}]
   },
   {
-    id: '2', species: 'African Grey Parrot', subspecies: 'Congo African Grey - Psittacus erithacus', ringNumber: 'B456', unbanded: false, category: 'Bird', sex: 'female', birthDate: '2021-06-15', visualMutations: [], splitMutations: ['Lutino'], fatherId: undefined, motherId: undefined, mateId: undefined, offspringIds: [], paidPrice: 80, estimatedValue: 120, status: 'Sold', saleDetails: { date: '2024-06-10', price: 150, buyer: 'John Doe' }, imageUrl: ''
+    id: '2', species: 'African Grey Parrot', subspecies: 'Congo African Grey - Psittacus erithacus', ringNumber: 'B456', unbanded: false, category: 'Bird', sex: 'female', birthDate: '2021-06-15', visualMutations: [], splitMutations: ['Lutino'], fatherId: undefined, motherId: undefined, mateId: undefined, offspringIds: [], paidPrice: 80, estimatedValue: 120, status: 'Sold', saleDetails: { date: '2024-06-10', price: 150, buyer: 'John Doe' }, imageUrl: '', medicalRecords: []
   },
   {
-    id: '3', species: 'Cockatoo', subspecies: undefined, ringNumber: undefined, unbanded: true, category: 'Bird', sex: 'unsexed', birthDate: '2024-05-30', visualMutations: [], splitMutations: [], fatherId: '1', motherId: '4', mateId: undefined, offspringIds: [], paidPrice: 0, estimatedValue: 50, status: 'Hand-rearing'
+    id: '3', species: 'Cockatoo', subspecies: undefined, ringNumber: undefined, unbanded: true, category: 'Bird', sex: 'unsexed', birthDate: '2024-05-30', visualMutations: [], splitMutations: [], fatherId: '1', motherId: '4', mateId: undefined, offspringIds: [], paidPrice: 0, estimatedValue: 50, status: 'Hand-rearing', medicalRecords: []
   },
   {
-    id: '4', species: 'Cockatoo', subspecies: 'Galah / Rose-breasted Cockatoo - Eolophus roseicapilla', ringNumber: 'C789', unbanded: false, category: 'Bird', sex: 'female', birthDate: '2022-03-20', visualMutations: ['Cinnamon'], splitMutations: [], fatherId: undefined, motherId: undefined, mateId: '1', offspringIds: ['3'], paidPrice: 160, estimatedValue: 220, status: 'Available', imageUrl: ''
+    id: '4', species: 'Cockatoo', subspecies: 'Galah / Rose-breasted Cockatoo - Eolophus roseicapilla', ringNumber: 'C789', unbanded: false, category: 'Bird', sex: 'female', birthDate: '2022-03-20', visualMutations: ['Cinnamon'], splitMutations: [], fatherId: undefined, motherId: undefined, mateId: '1', offspringIds: ['3'], paidPrice: 160, estimatedValue: 220, status: 'Available', imageUrl: '', medicalRecords: []
   },
 ];
 

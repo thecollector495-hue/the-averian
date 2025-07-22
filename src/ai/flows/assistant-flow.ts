@@ -80,20 +80,6 @@ const AddSpeciesDataSchema = z.object({
     subspecies: z.array(z.string()).optional().describe("An optional list of subspecies names. Each subspecies must be a string formatted as 'Common Name - Scientific Name'."),
 }).describe("The data required to add a new species.");
 
-const GeneticsResultDataSchema = z.object({
-    pairing: z.object({
-        male: z.string().describe("A summary of the male parent's genetics."),
-        female: z.string().describe("A summary of the female parent's genetics."),
-    }),
-    outcomes: z.array(z.object({
-        sex: z.enum(['male', 'female', 'any']),
-        percentage: z.number().describe("The statistical probability of this outcome, as a percentage."),
-        visuals: z.array(z.string()).describe("A list of visual mutations for this outcome."),
-        splits: z.array(z.string()).describe("A list of split mutations for this outcome."),
-    })).describe("The calculated genetic outcomes for the offspring."),
-}).describe("The structured result of a genetics calculation.");
-
-
 const ActionSchema = z.object({
     action: z.enum([
         'addBird', 'updateBird', 'deleteBird',
@@ -101,7 +87,7 @@ const ActionSchema = z.object({
         'addNote', 'updateNote', 'deleteNote',
         'addTransaction', 'deleteTransaction',
         'addSpecies', 'deleteSpecies',
-        'geneticsResult', 'answer'
+        'answer'
     ]).describe("The action the assistant should take."),
     data: z.union([
         AddBirdDataSchema, UpdateBirdDataSchema,
@@ -110,7 +96,6 @@ const ActionSchema = z.object({
         AddTransactionDataSchema,
         AddSpeciesDataSchema,
         DeleteDataSchema,
-        GeneticsResultDataSchema,
         z.null()
     ]).describe("The data associated with the action. This should be null for 'answer' actions."),
 });
@@ -142,18 +127,9 @@ export async function aviaryAssistant(input: AviaryAssistantInput): Promise<Avia
   }
 }
 
-const promptTemplate = `You are an expert aviary management assistant and avian genetics calculator. Your goal is to help the user manage their birds, cages, notes, finances, and custom data like species. You must understand queries in both English and Afrikaans, and you should respond in the same language as the user's query. You will be given a user's query and a JSON object containing the current state of their aviary.
+const promptTemplate = `You are an expert aviary management assistant. Your goal is to help the user manage their birds, cages, notes, finances, and custom data like species. You must understand queries in both English and Afrikaans, and you should respond in the same language as the user's query. You will be given a user's query and a JSON object containing the current state of their aviary.
 
 You MUST parse the user's entire query and not miss any details. For complex commands, break them down into multiple actions. Your primary task is to determine a list of final, data-modifying actions to return.
-
-- GENETICS CALCULATOR:
-  - If the user asks to calculate genetic outcomes (e.g., "Calculate genetics for..."), you MUST use the 'geneticsResult' action.
-  - The data for this action MUST conform to the 'GeneticsResultDataSchema'.
-  - The 'pairing' field MUST be an object with 'male' and 'female' string properties summarizing their genetics.
-    - For example, for "a visual Lutino male and a normal female", the pairing object would be: { "male": "visual Lutino", "female": "normal" }.
-  - The 'outcomes' field MUST be an array of objects. Each object must have 'sex', 'percentage', 'visuals' (array of strings), and 'splits' (array of strings).
-  - The text 'response' field should be a simple confirmation like "Here are the calculated genetic outcomes." or a summary of the pairing.
-  - CRITICAL: The data for 'geneticsResult' MUST be a valid JSON object, not a stringified JSON. For example, the 'pairing' field MUST be a JSON object, not a string. The 'outcomes' field must be an array of JSON objects, not an array of strings.
 
 - ADDING/UPDATING DATA:
   - To add a bird, use 'addBird'.
@@ -166,7 +142,7 @@ You MUST parse the user's entire query and not miss any details. For complex com
   - To add a species, use 'addSpecies'.
 
 - DELETING DATA:
-  - To remove items, use 'deleteBird', 'deleteCage', 'deleteNote', 'deleteTransaction', or 'deleteSpecies'. Find the ID(s) of the item(s) to remove from the context.
+  - To remove items, use 'deleteBird', 'deleteCage', 'deleteNote', 'deleteTransaction', 'deleteSpecies'. Find the ID(s) of the item(s) to remove from the context.
 
 - SPECIAL INSTRUCTIONS:
   - **SELLING A BIRD**: If a user asks to sell a bird (e.g., "sell bird A123 for 500 to John"), you must generate TWO actions:
@@ -175,8 +151,7 @@ You MUST parse the user's entire query and not miss any details. For complex com
   - **ADDING CAGE WITH COST**: If a user adds cages with a cost, generate an 'addCage' action AND an 'addTransaction' action of type 'expense' for each cage.
 
 - CONFIRMATION & RESPONSE:
-  - For any actions that will change data (except 'geneticsResult'), your text 'response' should clearly state what you are about to do and ask for confirmation.
-  - For 'geneticsResult', the response should be brief. The detailed data will be in the 'data' field.
+  - For any actions that will change data, your text 'response' should clearly state what you are about to do and ask for confirmation.
   - Always provide a friendly confirmation message in the 'response' field that summarizes all actions taken or answers the user's question.
   - If the user is just asking a question or having a conversation, use the 'answer' action and provide a helpful text response. The data field should be null for 'answer' actions.
 

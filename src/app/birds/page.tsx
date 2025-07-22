@@ -5,7 +5,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Sparkles, Send, Bot, User, RefreshCw, AlertTriangle, Atom } from 'lucide-react';
-import { aviaryAssistant } from '@/ai/flows/assistant-flow';
+import { aviaryAssistant, AviaryAssistantOutput } from '@/ai/flows/assistant-flow';
 import { useItems } from '@/context/ItemsContext';
 import { Bird, NoteReminder, Cage, getBirdIdentifier, CollectionItem, Transaction, Pair, CustomSpecies, CustomMutation, inheritanceTypes } from '@/lib/data';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -19,13 +19,14 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/context/AuthContext';
 import { GeneticsCalculatorDialog } from '@/components/genetics-calculator-dialog';
+import { GeneticsResult } from '@/components/genetics-result';
 
 const AddBreedingRecordDialog = dynamic(() => import('@/components/add-breeding-record-dialog').then(mod => mod.AddBreedingRecordDialog), { ssr: false });
 
 type Message = {
   id: string;
   role: 'user' | 'assistant';
-  text: string;
+  content: React.ReactNode;
   isError?: boolean;
   onRetry?: () => void;
 };
@@ -35,7 +36,7 @@ export default function AIAssistantPage() {
     {
       id: 'assistant-init',
       role: 'assistant',
-      text: "Hello! How can I help you manage your aviary today?"
+      content: "Hello! How can I help you manage your aviary today?"
     }
   ]);
   const [input, setInput] = useState('');
@@ -46,7 +47,7 @@ export default function AIAssistantPage() {
   const { formatCurrency } = useCurrency();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [pendingActions, setPendingActions] = useState<any[] | null>(null);
+  const [pendingActions, setPendingActions] = useState<AviaryAssistantOutput['actions'] | null>(null);
   const [selectedActionIndices, setSelectedActionIndices] = useState<Set<number>>(new Set());
   const [isGeneticsDialogOpen, setIsGeneticsDialogOpen] = useState(false);
 
@@ -84,7 +85,7 @@ export default function AIAssistantPage() {
     setMessages(prev => prev.filter(m => !m.isError));
 
     if (!isRetry) {
-      const newUserMessage: Message = { id: `user-${Date.now()}`, role: 'user', text: query };
+      const newUserMessage: Message = { id: `user-${Date.now()}`, role: 'user', content: query };
       setMessages(prev => [...prev, newUserMessage]);
       setInput('');
     }
@@ -105,7 +106,7 @@ export default function AIAssistantPage() {
         const newErrorMessage: Message = {
             id: `assistant-err-${Date.now()}`,
             role: 'assistant',
-            text: errorMessageText,
+            content: errorMessageText,
             isError: true,
             onRetry: () => handleSend({ query: query, isRetry: true }),
         };
@@ -116,12 +117,23 @@ export default function AIAssistantPage() {
             description: errorText,
         });
     } else {
-        const newAssistantMessage: Message = { id: `assistant-${Date.now()}`, role: 'assistant', text: assistantResponse.response };
+        const hasDataActions = assistantResponse.actions && assistantResponse.actions.some(a => a.action !== 'answer');
+        const geneticsResultAction = assistantResponse.actions?.find(a => a.action === 'geneticsResult');
+        
+        let assistantContent: React.ReactNode = assistantResponse.response;
+
+        if (geneticsResultAction && geneticsResultAction.data) {
+            assistantContent = <GeneticsResult response={assistantResponse} />
+        }
+
+        const newAssistantMessage: Message = { 
+            id: `assistant-${Date.now()}`, 
+            role: 'assistant', 
+            content: assistantContent
+        };
         setMessages(prev => [...prev, newAssistantMessage]);
 
-        const hasDataActions = assistantResponse.actions && assistantResponse.actions.some(a => a.action !== 'answer');
-
-        if (hasDataActions) {
+        if (hasDataActions && !geneticsResultAction) {
             setPendingActions(assistantResponse.actions);
         }
     }
@@ -270,7 +282,7 @@ export default function AIAssistantPage() {
 
   const generateActionSummary = (actions: any[] | null): string[] => {
     if (!actions) return [];
-    return actions.filter(a => a.action !== 'answer').map(action => {
+    return actions.filter(a => a.action !== 'answer' && a.action !== 'geneticsResult').map(action => {
       const { action: type, data } = action;
       switch (type) {
         case 'addBird': return `Add Bird: ${data?.species || 'Unknown'}`;
@@ -381,7 +393,7 @@ export default function AIAssistantPage() {
                      <div className={cn("rounded-lg px-4 py-3 max-w-[85%] shadow-sm", message.role === 'user' ? "bg-muted" : "bg-card", message.isError && "bg-destructive/10 border border-destructive/20")}>
                         {message.isError ? (
                           <div className="flex flex-col items-start gap-2">
-                            <p className="text-sm whitespace-pre-wrap text-destructive">{message.text}</p>
+                            <p className="text-sm whitespace-pre-wrap text-destructive">{message.content}</p>
                             {message.onRetry && (
                               <Button variant="outline" size="sm" onClick={message.onRetry}>
                                 <RefreshCw className="mr-2 h-4 w-4" />
@@ -390,7 +402,7 @@ export default function AIAssistantPage() {
                             )}
                           </div>
                         ) : (
-                          <p className="text-sm whitespace-pre-wrap">{message.text}</p>
+                          <div className="text-sm whitespace-pre-wrap">{message.content}</div>
                         )}
                      </div>
                      {message.role === 'user' && (
@@ -443,5 +455,3 @@ export default function AIAssistantPage() {
     </div>
   );
 }
-
-    

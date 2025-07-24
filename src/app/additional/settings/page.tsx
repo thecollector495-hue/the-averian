@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from '@/components/ui/button';
-import { Crown, Star, Check, PlusCircle, Trash2, LogIn, LogOut, Send, Github } from 'lucide-react';
+import { Crown, Star, Check, PlusCircle, Trash2, LogIn, LogOut, Send } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurrency, currencies } from "@/context/CurrencyContext";
 import { addDays, format, isFuture, isPast } from 'date-fns';
@@ -210,20 +210,6 @@ export default function SettingsPage() {
                           </Button>
                         )}
                     </div>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Source Code</CardTitle>
-                    <CardDescription>This application is open-source. You can view, clone, or download the complete source code from the GitHub repository.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <a href="https://github.com/your-username/feathered-ledger" target="_blank" rel="noopener noreferrer">
-                        <Button variant="outline" className="w-full">
-                            <Github className="mr-2 h-4 w-4" />
-                            View Source on GitHub
-                        </Button>
-                    </a>
                 </CardContent>
             </Card>
         </TabsContent>

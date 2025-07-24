@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from '@/components/ui/button';
-import { Crown, Star, Check, PlusCircle, Trash2, LogIn, LogOut, Send } from 'lucide-react';
+import { Crown, Star, Check, PlusCircle, Trash2, LogIn, LogOut, Send, Github } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurrency, currencies } from "@/context/CurrencyContext";
 import { addDays, format, isFuture, isPast } from 'date-fns';
@@ -23,6 +23,7 @@ import { useTheme } from 'next-themes';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
+import { analyzePdfForMutations } from '@/ai/flows/analyze-pdf-flow';
 
 const AddMutationDialog = dynamic(() => import('@/components/add-mutation-dialog').then(mod => mod.AddMutationDialog), { ssr: false });
 const AddSpeciesDialog = dynamic(() => import('@/components/add-species-dialog').then(mod => mod.AddSpeciesDialog), { ssr: false });
@@ -30,7 +31,7 @@ const AddSpeciesDialog = dynamic(() => import('@/components/add-species-dialog')
 
 export default function SettingsPage() {
   const { currency, setCurrency } = useCurrency();
-  const { items, addItem, deleteItem } = useItems();
+  const { items, addItem, deleteItem, addItems } = useItems();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
   const [isMounted, setIsMounted] = useState(false);
@@ -41,6 +42,12 @@ export default function SettingsPage() {
     handleSubscriptionChange,
     sendTestNotification,
   } = usePushNotifications();
+
+  const [pdfUrl, setPdfUrl] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isAnalysisDialogOpen, setIsAnalysisDialogOpen] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<{ name: string; inheritance: string; }[] | null>(null);
+  const [selectedMutations, setSelectedMutations] = useState<Set<number>>(new Set());
 
 
   const [trialEndDate, setTrialEndDate] = useState<Date | null>(null);
@@ -68,6 +75,12 @@ export default function SettingsPage() {
     
     setTrialEndDate(addDays(startDate, 7));
   }, []);
+  
+    useEffect(() => {
+    if (analysisResult) {
+      setSelectedMutations(new Set(analysisResult.map((_, i) => i)));
+    }
+  }, [analysisResult]);
 
   const isTrialActive = user?.subscriptionStatus === 'trial' && trialEndDate && isFuture(trialEndDate);
   
@@ -106,6 +119,47 @@ export default function SettingsPage() {
     toast({ title: "Item Deleted", description: "The custom data has been removed." });
     setDeletingItemId(null);
   };
+  
+  const handleAnalyzePdf = async () => {
+    if (!pdfUrl) {
+      toast({ variant: 'destructive', title: 'URL Required', description: 'Please enter a URL for the PDF.' });
+      return;
+    }
+    setIsAnalyzing(true);
+    try {
+      const result = await analyzePdfForMutations({ pdfUrl });
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      setAnalysisResult(result.mutations);
+      setIsAnalysisDialogOpen(true);
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Analysis Failed', description: error.message || 'Could not analyze the PDF.' });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+  
+  const handleAddAnalyzedMutations = () => {
+    if (!analysisResult) return;
+
+    const mutationsToAdd = analysisResult
+      .filter((_, index) => selectedMutations.has(index))
+      .map(m => ({
+        id: `cm${Date.now()}${Math.random()}`,
+        category: 'CustomMutation',
+        name: m.name,
+        // @ts-ignore - Validating that the inheritance type is one of the allowed values
+        inheritance: inheritanceTypes.includes(m.inheritance) ? m.inheritance : 'Autosomal Recessive',
+      }));
+
+    addItems(mutationsToAdd);
+    toast({ title: 'Mutations Added', description: `${mutationsToAdd.length} new mutations have been added.` });
+    setIsAnalysisDialogOpen(false);
+    setAnalysisResult(null);
+    setPdfUrl('');
+  };
+
 
   if (!isMounted) {
     return null;
@@ -144,6 +198,44 @@ export default function SettingsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <AlertDialog open={isAnalysisDialogOpen} onOpenChange={setIsAnalysisDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm PDF Analysis Results</AlertDialogTitle>
+            <AlertDialogDescription>
+              Select the mutations found in the PDF that you want to add to your list.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+           <div className="max-h-60 overflow-y-auto space-y-2 p-1">
+             {analysisResult?.map((m, index) => (
+                <div key={index} className="flex items-start space-x-3 rounded-md border p-3">
+                  <Switch
+                    id={`mutation-${index}`}
+                    checked={selectedMutations.has(index)}
+                    onCheckedChange={(checked) => {
+                      setSelectedMutations(current => {
+                        const newSet = new Set(current);
+                        if (checked) newSet.add(index);
+                        else newSet.delete(index);
+                        return newSet;
+                      })
+                    }}
+                  />
+                   <div className="flex-grow">
+                      <Label htmlFor={`mutation-${index}`} className="font-medium">{m.name}</Label>
+                      <p className="text-sm text-muted-foreground">{m.inheritance}</p>
+                   </div>
+                </div>
+             ))}
+           </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setAnalysisResult(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleAddAnalyzedMutations}>Add Selected ({selectedMutations.size})</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       <h1 className="text-3xl font-bold mb-6">Settings</h1>
       
@@ -154,7 +246,7 @@ export default function SettingsPage() {
           <TabsTrigger value="subscription">Subscription</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="general" className="mt-6">
+        <TabsContent value="general" className="mt-6 space-y-6">
             <Card>
                 <CardHeader><CardTitle>Application Settings</CardTitle></CardHeader>
                 <CardContent className="space-y-6">
@@ -211,6 +303,20 @@ export default function SettingsPage() {
                           </Button>
                         )}
                     </div>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Source Code</CardTitle>
+                    <CardDescription>This application is open-source. You can view, clone, or download the complete source code from the GitHub repository.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <a href="https://github.com/your-username/feathered-ledger" target="_blank" rel="noopener noreferrer">
+                        <Button variant="outline" className="w-full">
+                            <Github className="mr-2 h-4 w-4" />
+                            View Source on GitHub
+                        </Button>
+                    </a>
                 </CardContent>
             </Card>
         </TabsContent>

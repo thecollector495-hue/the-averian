@@ -19,10 +19,11 @@ export default function DeveloperPage() {
         {
             title: "Step 1: Get the Source Code",
             items: [
-                "Clone the repository from GitHub using the following command in your terminal:",
-                "```bash\ngit clone https://github.com/your-username/feathered-ledger.git\n```",
+                "First, you need to create your own repository on [GitHub](https://github.com/new). Once created, you can push the project source code to it.",
+                "Clone your repository to your local machine using the following command in your terminal (replace the URL with your own):",
+                "```bash\ngit clone https://github.com/your-username/your-repository-name.git\n```",
                 "Navigate into the project directory:",
-                "```bash\ncd feathered-ledger\n```"
+                "```bash\ncd your-repository-name\n```"
             ]
         },
         {
@@ -38,7 +39,7 @@ export default function DeveloperPage() {
             title: "Step 3: Set Up Environment Variables",
             items: [
                 "In the root of the project, create a new file named `.env`.",
-                "Copy the contents of the `.env.example` file (if one exists) or add the necessary keys. For this project, you need VAPID keys for push notifications. You can generate them online or use a tool. For local testing, the file can look like this:",
+                "Copy the necessary keys for this project. For local testing, the file should look like this (replace with your actual keys):",
                 "```\nNEXT_PUBLIC_VAPID_PUBLIC_KEY=YourPublicKeyHere\nVAPID_PRIVATE_KEY=YourPrivateKeyHere\nVAPID_SUBJECT=mailto:your-email@example.com\n```"
             ]
         },
@@ -63,13 +64,13 @@ export default function DeveloperPage() {
         <Card>
             <CardHeader>
                 <CardTitle>Source Code</CardTitle>
-                <CardDescription>This application is open-source. You can view, clone, or download the complete source code from the GitHub repository.</CardDescription>
+                <CardDescription>This application is open-source. Once you host the code on GitHub, you can link to it here for easy access.</CardDescription>
             </CardHeader>
             <CardContent>
-                <a href="https://github.com/your-username/feathered-ledger" target="_blank" rel="noopener noreferrer">
+                <a href="https://github.com/your-username/your-repository-name" target="_blank" rel="noopener noreferrer">
                     <Button variant="outline" className="w-full">
                         <Github className="mr-2 h-4 w-4" />
-                        View on GitHub
+                        View on GitHub (Placeholder)
                     </Button>
                 </a>
             </CardContent>

@@ -270,5 +270,3 @@ export function AddBreedingRecordDialog({ isOpen, onOpenChange, pairs, allBirds,
     </Dialog>
   );
 }
-
-    

@@ -98,5 +98,3 @@ export function BreedingRecordCard({ record, allBirds, allPairs, onBirdClick }: 
         </Card>
     )
 }
-
-    

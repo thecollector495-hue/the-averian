@@ -1,5 +1,4 @@
 
-
 export type MedicalRecord = {
   id: string;
   date: string; // YYYY-MM-DD

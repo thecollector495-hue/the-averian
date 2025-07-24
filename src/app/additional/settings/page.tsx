@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from '@/components/ui/button';
-import { Crown, Star, Check, PlusCircle, Trash2, LogIn, LogOut, Send } from 'lucide-react';
+import { Crown, Star, Check, PlusCircle, Trash2, LogIn, LogOut, Send, Github } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurrency, currencies } from "@/context/CurrencyContext";
 import { addDays, format, isFuture, isPast } from 'date-fns';
@@ -133,9 +133,9 @@ export default function SettingsPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <p className="text-sm text-muted-foreground pt-2">
               This will permanently delete the custom item. This action cannot be undone.
-            </AlertDialogDescription>
+            </p>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -147,7 +147,7 @@ export default function SettingsPage() {
       <h1 className="text-3xl font-bold mb-6">Settings</h1>
       
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid h-auto w-full grid-cols-1 md:grid-cols-3">
+        <TabsList className="grid h-auto w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="data">Data</TabsTrigger>
           <TabsTrigger value="subscription">Subscription</TabsTrigger>

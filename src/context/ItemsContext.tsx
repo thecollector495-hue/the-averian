@@ -112,7 +112,7 @@ export const ItemsProvider = ({ children }: { children: ReactNode }) => {
         birdToDelete.offspringIds.forEach(offspringId => {
             const offspring = allBirds.find(b => b.id === offspringId);
             if (offspring) {
-                const updates: Partial<Bird> = { id: offspring.id };
+                const updates: Partial<Bird> = { id: offspringId };
                 if (offspring.fatherId === birdId) updates.fatherId = undefined;
                 if (offspring.motherId === birdId) updates.motherId = undefined;
                 itemsToUpdate.push(updates);

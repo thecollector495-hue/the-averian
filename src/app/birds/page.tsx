@@ -288,7 +288,7 @@ export default function AIAssistantPage() {
         case 'addSpecies': {
             if (!data?.name && !data?.incubationPeriod) return "Add Species: Incomplete data from AI";
             if (!data?.name) return `Add Species: missing name (${data.incubationPeriod} days)`;
-            if (!data?.incubationPeriod) return `Add Species: ${data.name} (missing incubation period)`;
+            if (!data?.incubationPeriod) return `Add Species: ${data.name} (${data.incubationPeriod} days)`;
             return `Add Species: ${data.name} (${data.incubationPeriod} days)`;
         }
         case 'deleteBird': return `Delete ${data?.ids?.length || 0} bird(s)`;

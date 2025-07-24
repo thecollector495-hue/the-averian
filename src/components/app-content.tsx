@@ -7,7 +7,7 @@ import { BottomNavigation } from './bottom-navigation';
 import { useAuth } from '@/context/AuthContext';
 import { TrialExpiredDialog } from './trial-expired-dialog';
 
-const adminPaths = ['/login', '/dashboard'];
+const adminPaths = ['/login', '/dashboard', '/developer'];
 const SESSION_STORAGE_KEY = 'trial-expired-dialog-shown';
 
 export function AppContent({ children }: { children: React.ReactNode }) {

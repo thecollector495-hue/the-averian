@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { FullPageLoader } from '@/components/full-page-loader';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Bird, LogOut } from 'lucide-react';
+import { Bird, LogOut, Code } from 'lucide-react';
 
 export default function AdminLayout({
   children,
@@ -34,7 +34,13 @@ export default function AdminLayout({
                 <Bird className="h-6 w-6" />
                 <span>The Avarian - Admin</span>
             </Link>
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex items-center gap-4">
+                <Button variant="outline" size="sm" asChild>
+                    <Link href="/developer">
+                        <Code className="mr-2 h-4 w-4" />
+                        Developer
+                    </Link>
+                </Button>
                 <Button variant="outline" size="sm" onClick={logout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Logout

@@ -3,7 +3,10 @@
 
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
-import { Github, Download } from 'lucide-react';
+import { Github } from 'lucide-react';
+import { Terminal } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 export default function DeveloperPage() {
     
@@ -12,74 +15,71 @@ export default function DeveloperPage() {
             title: "Prerequisites",
             items: [
                 "**Node.js**: Make sure you have Node.js (version 18 or newer) installed. You can download it from [nodejs.org](https://nodejs.org/).",
-                "**Git**: You need Git to clone the repository. Download it from [git-scm.com](https://git-scm.com/).",
-                "**Visual Studio Code**: While you can use any editor, these instructions are for VS Code. Download it from [code.visualstudio.com](https://code.visualstudio.com/)."
+                "**Visual Studio Code**: This project is built for VS Code, not Visual Studio 2022. You can download it for free from [code.visualstudio.com](https://code.visualstudio.com/)."
             ]
         },
         {
-            title: "Step 1: Get the Source Code",
+            title: "Step 1: Set Up Your Local Project Folder",
             items: [
-                "First, you need to create your own repository on [GitHub](https://github.com/new). Once created, you can push the project source code to it.",
-                "Clone your repository to your local machine using the following command in your terminal (replace the URL with your own):",
-                "```bash\ngit clone https://github.com/your-username/your-repository-name.git\n```",
-                "Navigate into the project directory:",
-                "```bash\ncd your-repository-name\n```"
+                "Create a new folder on your computer for the project. For example: `C:\\dev\\the-avarian-app` or `~/dev/the-avarian-app`.",
+                "Open Visual Studio Code.",
+                "Go to `File` > `Open Folder...` and select the folder you just created."
             ]
         },
         {
-            title: "Step 2: Install Dependencies",
+            title: "Step 2: Create the Project Files",
             items: [
-                "Open the project in Visual Studio Code.",
-                "Open the built-in terminal in VS Code (`View` > `Terminal`).",
-                "Run the following command to install all the necessary packages:",
-                "```bash\nnpm install\n```"
+                 "You will need to manually recreate the project structure. Use the VS Code file explorer to create each folder and file.",
+                 "The 'File Dump' I've provided contains the full path and content for every file you need to create.",
+                 "For example, for the file `/src/app/page.tsx`, you would first create the `src` folder, then the `app` folder inside `src`, and finally the `page.tsx` file inside `app`.",
+                 "Copy and paste the exact content from the file dump into each corresponding file you create. This is the most critical step."
             ]
         },
         {
-            title: "Step 3: Set Up Environment Variables",
+            title: "Step 3: Install Dependencies",
             items: [
-                "In the root of the project, create a new file named `.env`.",
-                "Copy the necessary keys for this project. For local testing, the file should look like this (replace with your actual keys):",
-                "```\nNEXT_PUBLIC_VAPID_PUBLIC_KEY=YourPublicKeyHere\nVAPID_PRIVATE_KEY=YourPrivateKeyHere\nVAPID_SUBJECT=mailto:your-email@example.com\n```"
+                "Once all files are created and saved, open the VS Code terminal (`View` > `Terminal`).",
+                "Run the following command to install all the necessary packages defined in `package.json`:",
+                "```bash\nnpm install\n```",
+                "This will create a `node_modules` folder and a `package-lock.json` file. This might take a few minutes."
             ]
         },
         {
             title: "Step 4: Run the Application",
             items: [
-                "In the VS Code terminal, run the development server:",
+                "After the installation is complete, run the development server:",
                 "```bash\nnpm run dev\n```",
-                "The application should now be running locally. Open your browser and go to `http://localhost:9002` to see it."
+                "Open your web browser and navigate to `http://localhost:9002`. You should see the application running locally!"
+            ]
+        },
+         {
+            title: "Step 5 (Optional): Push to GitHub",
+            items: [
+                "Once your local project is working, you can follow the instructions on the official [GitHub Docs](https://docs.github.com/en/get-started/importing-your-projects-to-github/importing-source-code-to-github/adding-locally-hosted-code-to-github) to publish your local repository."
             ]
         }
     ];
 
   return (
-    <div className="p-4 sm:p-6 md:p-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold">Developer Zone</h1>
-        <p className="text-muted-foreground">Access source code and setup instructions.</p>
+    <div className="p-4 sm:p-6 md:p-8 max-w-4xl mx-auto">
+      <div className="mb-8 text-center">
+        <h1 className="text-4xl font-bold">Developer Setup</h1>
+        <p className="text-muted-foreground mt-2">Get the project running on your local machine.</p>
       </div>
       
       <div className="space-y-8">
-        <Card>
-            <CardHeader>
-                <CardTitle>Source Code</CardTitle>
-                <CardDescription>This application is open-source. Once you host the code on GitHub, you can link to it here for easy access.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <a href="https://github.com/your-username/your-repository-name" target="_blank" rel="noopener noreferrer">
-                    <Button variant="outline" className="w-full">
-                        <Github className="mr-2 h-4 w-4" />
-                        View on GitHub (Placeholder)
-                    </Button>
-                </a>
-            </CardContent>
-        </Card>
+        <Alert>
+            <Terminal className="h-4 w-4" />
+            <AlertTitle>Important Note</AlertTitle>
+            <AlertDescription>
+                There is no automatic "zip and download" feature. You must manually create the files on your computer using the complete source code provided to you in the chat.
+            </AlertDescription>
+        </Alert>
 
         <Card>
             <CardHeader>
                 <CardTitle>Local Setup Instructions</CardTitle>
-                <CardDescription>Follow these steps to get a copy of the project up and running on your local machine for development and testing purposes.</CardDescription>
+                <CardDescription>Follow these steps carefully to ensure the project runs correctly.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
                 {steps.map((step, index) => (

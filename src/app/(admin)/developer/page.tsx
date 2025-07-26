@@ -1,8 +1,9 @@
+
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Github, ExternalLink } from 'lucide-react';
+import { Github, ExternalLink, Globe } from 'lucide-react';
 import Link from 'next/link';
 
 export default function DeveloperPage() {
@@ -18,14 +19,14 @@ export default function DeveloperPage() {
           <CardHeader>
             <CardTitle>Get The Source Code</CardTitle>
             <CardDescription>
-              This project's source code is available on GitHub. You can clone it or download it as a ZIP file to get started.
+              First, you'll need to create your own Git repository and upload the source code. The project code is available on GitHub to clone or download.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild>
                 <Link href="https://github.com/your-username/your-repository-name" target="_blank">
                     <Github className="mr-2 h-4 w-4" />
-                    View on GitHub
+                    View on GitHub (Replace with your repo link)
                 </Link>
             </Button>
           </CardContent>
@@ -86,6 +87,45 @@ export default function DeveloperPage() {
               <p>Once the installation is complete, start the local development server:</p>
               <pre className="bg-muted p-3 rounded-md"><code>npm run dev</code></pre>
               <p>The application should now be running! You can view it by opening your web browser and navigating to <Link href="http://localhost:9002" target="_blank" className="text-primary underline">http://localhost:9002</Link>.</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Globe className="h-6 w-6" /> Hosting Recommendations</CardTitle>
+            <CardDescription>Once your app is on GitHub, you can easily deploy it for free using one of these recommended services.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+                <h3 className="font-semibold">Vercel (Recommended)</h3>
+                <p className="text-muted-foreground text-sm mb-2">As the creators of Next.js, Vercel offers the most seamless one-click deployment experience. Simply import your GitHub repository and it will be live in minutes.</p>
+                 <Button asChild variant="outline" size="sm">
+                    <Link href="https://vercel.com/new" target="_blank">
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Deploy on Vercel
+                    </Link>
+                </Button>
+            </div>
+             <div>
+                <h3 className="font-semibold">Firebase Hosting</h3>
+                <p className="text-muted-foreground text-sm mb-2">A great choice if you plan to use other Firebase services. Deployment is handled via the Firebase CLI and is well-integrated with the ecosystem.</p>
+                 <Button asChild variant="outline" size="sm">
+                    <Link href="https://firebase.google.com/docs/hosting" target="_blank">
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Learn about Firebase Hosting
+                    </Link>
+                </Button>
+            </div>
+             <div>
+                <h3 className="font-semibold">Netlify</h3>
+                <p className="text-muted-foreground text-sm mb-2">Another excellent, easy-to-use platform with a generous free tier and a great GitHub integration. A strong alternative to Vercel.</p>
+                 <Button asChild variant="outline" size="sm">
+                    <Link href="https://app.netlify.com/start" target="_blank">
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Deploy on Netlify
+                    </Link>
+                </Button>
             </div>
           </CardContent>
         </Card>

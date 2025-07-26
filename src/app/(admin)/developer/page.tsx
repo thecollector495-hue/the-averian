@@ -108,16 +108,6 @@ export default function DeveloperPage() {
                 </Button>
             </div>
              <div>
-                <h3 className="font-semibold">Firebase Hosting</h3>
-                <p className="text-muted-foreground text-sm mb-2">A great choice if you plan to use other Firebase services. Deployment is handled via the Firebase CLI and is well-integrated with the ecosystem.</p>
-                 <Button asChild variant="outline" size="sm">
-                    <Link href="https://firebase.google.com/docs/hosting" target="_blank">
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        Learn about Firebase Hosting
-                    </Link>
-                </Button>
-            </div>
-             <div>
                 <h3 className="font-semibold">Netlify</h3>
                 <p className="text-muted-foreground text-sm mb-2">Another excellent, easy-to-use platform with a generous free tier and a great GitHub integration. A strong alternative to Vercel.</p>
                  <Button asChild variant="outline" size="sm">

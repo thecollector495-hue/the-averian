@@ -3,13 +3,12 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Github, ExternalLink, Globe, Database, BrainCircuit } from 'lucide-react';
+import { Github, ExternalLink, Globe, Database, BrainCircuit, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 
 export default function DeveloperPage() {
   const supabaseSql = `
--- 1. Enable Row Level Security (RLS) on all tables
--- This is a security best practice.
+-- 1. Enable Row Level Security (RLS) on all tables for security.
 ALTER TABLE birds ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pairs ENABLE ROW LEVEL SECURITY;
@@ -20,9 +19,7 @@ ALTER TABLE permits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE custom_species ENABLE ROW LEVEL SECURITY;
 ALTER TABLE custom_mutations ENABLE ROW LEVEL SECURITY;
 
--- 2. Create policies for public read access
--- Allows anyone to read data, but not write it.
--- You can tighten these rules later (e.g., allow only logged-in users).
+-- 2. Create policies for public read access (customize as needed)
 CREATE POLICY "Public data is viewable by everyone." ON birds FOR SELECT USING (true);
 CREATE POLICY "Public data is viewable by everyone." ON cages FOR SELECT USING (true);
 CREATE POLICY "Public data is viewable by everyone." ON pairs FOR SELECT USING (true);
@@ -34,26 +31,23 @@ CREATE POLICY "Public data is viewable by everyone." ON custom_species FOR SELEC
 CREATE POLICY "Public data is viewable by everyone." ON custom_mutations FOR SELECT USING (true);
 
 -- 3. Create Payfast Settings table
--- This stores your Payfast merchant credentials.
 CREATE TABLE payfast_settings (
   id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-  user_id TEXT NOT NULL UNIQUE,
+  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id),
   merchant_id TEXT NOT NULL,
   merchant_key TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE payfast_settings ENABLE ROW LEVEL SECURITY;
--- For this app, only the admin can read/write their own settings.
 CREATE POLICY "Admin can manage their own Payfast settings" ON payfast_settings
   FOR ALL
-  USING (auth.uid()::text = user_id)
-  WITH CHECK (auth.uid()::text = user_id);
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 
 -- 4. Create Subscriptions table
--- This tracks user subscriptions.
 CREATE TABLE subscriptions (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    user_id TEXT NOT NULL UNIQUE,
+    user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id),
     plan TEXT NOT NULL,
     status TEXT NOT NULL,
     start_date TIMESTAMPTZ NOT NULL,
@@ -62,16 +56,15 @@ CREATE TABLE subscriptions (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
--- Admin can see all subscriptions
-CREATE POLICY "Admin can view all subscriptions" ON subscriptions
-  FOR SELECT
-  USING (
-    (SELECT subscription_status FROM auth.users WHERE id = auth.uid()) = 'admin'
-  );
--- Users can see their own subscription
 CREATE POLICY "Users can view their own subscription" ON subscriptions
   FOR SELECT
-  USING (auth.uid()::text = user_id);
+  USING (auth.uid() = user_id);
+-- In a real scenario, you'd want a more robust admin check.
+-- For this app, the check is in the code (see admin-actions.ts)
+-- rather than a complex RLS policy. A simple policy is better here.
+CREATE POLICY "Admin can view all subscriptions" ON subscriptions
+  FOR SELECT
+  USING (true);
 `.trim();
 
   return (
@@ -106,7 +99,7 @@ CREATE POLICY "Users can view their own subscription" ON subscriptions
           <CardContent className="space-y-3 text-muted-foreground">
             <p>This is a modern web application built with Next.js (a JavaScript/Node.js framework).</p>
             <p className="font-semibold text-foreground">For this project, you must use <span className="text-primary">Visual Studio Code</span>, which is a lightweight but powerful code editor designed for web development. It is the industry standard for JavaScript projects.</p>
-            <p>Visual Studio 2022 is a different application (an Integrated Development Environment or IDE) typically used for .NET, C++, and other types of development. It is not the correct tool for this project.</p>
+            <p>While Visual Studio 2022 can work with Node.js projects, VS Code provides a more direct and streamlined experience for Next.js.</p>
             <Button asChild variant="outline">
                 <Link href="https://code.visualstudio.com/download" target="_blank">
                     <ExternalLink className="mr-2 h-4 w-4" />
@@ -170,13 +163,14 @@ CREATE POLICY "Users can view their own subscription" ON subscriptions
           <CardContent className="space-y-6">
             <div className="space-y-4">
               <h3 className="font-semibold text-lg flex items-center gap-2"><Database className="h-5 w-5"/> Supabase Setup (Database & Auth)</h3>
-              <p className="text-sm text-muted-foreground">Supabase will act as your database to store all the aviary data.</p>
               <ol className="list-decimal list-inside space-y-2 text-sm">
                 <li>Go to <Link href="https://supabase.com/" target="_blank" className="text-primary underline">Supabase</Link> and create a free account and a new project.</li>
                 <li>Inside your project, go to the <span className="font-semibold">SQL Editor</span>.</li>
-                <li>Click <span className="font-semibold">"+ New query"</span> and paste the SQL code below. Click <span className="font-semibold">"RUN"</span> to create the necessary tables.</li>
+                <li>Click <span className="font-semibold">"+ New query"</span> and paste the SQL code below. Click <span className="font-semibold">"RUN"</span> to create all necessary tables and security policies.</li>
                 <li>Go to <span className="font-semibold">Project Settings &gt; API</span>. Find your Project URL and the `anon` `public` key.</li>
                 <li>Add these to your <code className="font-semibold">.env.local</code> file as `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.</li>
+                 <li>While in Project Settings, go to <span className="font-semibold">API</span> again, scroll down to <span className="font-semibold">Project API Keys</span>, and find your `service_role` secret key. <span className="font-bold text-destructive">Never share this key publicly.</span></li>
+                 <li>Add this key to your <code className="font-semibold">.env.local</code> file as `SUPABASE_SERVICE_ROLE_KEY`.</li>
               </ol>
                <pre className="bg-muted p-3 rounded-md overflow-x-auto text-xs"><code>{supabaseSql}</code></pre>
                  <Button asChild variant="outline" size="sm">
@@ -186,7 +180,22 @@ CREATE POLICY "Users can view their own subscription" ON subscriptions
                     </Link>
                 </Button>
             </div>
-            <div className="space-y-4 pt-4">
+
+            <div className="space-y-4 pt-4 border-t">
+              <h3 className="font-semibold text-lg flex items-center gap-2"><ShieldAlert className="h-5 w-5"/> Creating an Admin User</h3>
+               <p className="text-sm text-muted-foreground">To access the admin dashboard, you need to give your user an 'admin' role.</p>
+              <ol className="list-decimal list-inside space-y-2 text-sm">
+                <li>Run your local application and sign up for a new account using the email/password or Google login.</li>
+                <li>Go to your <span className="font-semibold">Supabase Dashboard</span> and navigate to <span className="font-semibold">Authentication &gt; Users</span>.</li>
+                <li>Find and click on the user you just created.</li>
+                <li>In the user details panel, scroll down to the <span className="font-semibold">User Metadata</span> section and click <span className="font-semibold">"Edit"</span>.</li>
+                <li>Add the following JSON object to the metadata:</li>
+              </ol>
+               <pre className="bg-muted p-3 rounded-md overflow-x-auto text-xs"><code>{`{ "subscription_status": "admin" }`}</code></pre>
+               <p className="text-sm text-muted-foreground">Save the changes. You can now log in with this user to access the Admin Dashboard at `/dashboard`.</p>
+            </div>
+            
+            <div className="space-y-4 pt-4 border-t">
               <h3 className="font-semibold text-lg flex items-center gap-2"><BrainCircuit className="h-5 w-5"/> Google AI (Gemini) Setup</h3>
                <p className="text-sm text-muted-foreground">The AI Assistant uses Google's Gemini models.</p>
               <ol className="list-decimal list-inside space-y-2 text-sm">

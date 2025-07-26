@@ -100,14 +100,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (userTypeOrEmail: UserType | string, password?: string) => {
     if (isDemoMode) {
       // Mock Login
-      return new Promise<void>((resolve) => {
-        setTimeout(() => {
-          const mockUser = mockUsers[userTypeOrEmail as UserType];
-          setUser(mockUser);
-          sessionStorage.setItem('auth-user', JSON.stringify(mockUser));
-          resolve();
-        }, 500);
-      });
+      const mockUser = mockUsers[userTypeOrEmail as UserType];
+      setUser(mockUser);
+      sessionStorage.setItem('auth-user', JSON.stringify(mockUser));
+      router.push(mockUser.subscriptionStatus === 'admin' ? '/dashboard' : '/');
+      return;
     }
 
     // Real Supabase Login
@@ -140,7 +137,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { error } = await supabase!.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: window.location.origin,
+            redirectTo: `${window.location.origin}/auth/callback`,
             queryParams: {
                 access_type: 'offline',
                 prompt: 'consent',

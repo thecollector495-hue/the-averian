@@ -1,6 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import crypto from 'crypto';
 
@@ -9,7 +9,7 @@ function createSupabaseClient() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    if (!supabaseUrl || !supabaseServiceKey || supabaseUrl.includes('YOUR_SUPABASE_URL_HERE')) {
+    if (!supabaseUrl || !supabaseServiceKey || supabaseUrl.includes('YOUR_SUPABASE_URL')) {
         console.error("Supabase environment variables are not properly set for the ITN handler.");
         return null;
     }
@@ -31,6 +31,7 @@ function createSupabaseClient() {
 export async function POST(req: NextRequest) {
     const supabase = createSupabaseClient();
     if (!supabase) {
+        console.error("ITN endpoint called, but Supabase is not configured. Cannot process payment.");
         return new NextResponse('Server configuration error', { status: 500 });
     }
 

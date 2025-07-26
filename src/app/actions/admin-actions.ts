@@ -1,10 +1,11 @@
 
 'use server';
 
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { z } from 'zod';
 import { startOfMonth, endOfMonth, startOfYesterday, endOfYesterday, subMonths } from 'date-fns';
+import { mockSubscriptions } from '@/lib/admin-data';
 
 const payfastSettingsSchema = z.object({
     userId: z.string(),
@@ -20,10 +21,9 @@ function createSupabaseClient() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-        // In a production environment, you might want to log this error.
-        // For the self-hosted app, returning null or an empty structure is graceful.
-        console.warn("Supabase environment variables are not set. Skipping Supabase client creation.");
+    if (!supabaseUrl || !supabaseServiceKey || supabaseUrl.includes('YOUR_SUPABASE_URL')) {
+        // This indicates that the app is in "demo mode".
+        // Functions calling this should handle the null return gracefully.
         return null;
     }
 
@@ -45,7 +45,7 @@ export async function savePayfastSettings(input: z.infer<typeof payfastSettingsS
     const validatedInput = payfastSettingsSchema.parse(input);
 
     const supabase = createSupabaseClient();
-    if (!supabase) throw new Error('Supabase client is not configured.');
+    if (!supabase) throw new Error('Supabase is not configured. Please add your API keys to the .env.local file to save settings.');
 
     const { data, error } = await supabase
         .from('payfast_settings')
@@ -99,37 +99,9 @@ export type DashboardMetrics = {
     lastMonthTotalIncome: string;
 };
 
-const defaultMetrics: DashboardMetrics = {
-    monthlySubCount: 0,
-    yearlySubCount: 0,
-    totalIncomeThisMonth: '0.00',
-    netProfitThisMonth: '0.00',
-    nextMonthEstimated: '0.00',
-    lastMonthMonthlyIncome: '0.00',
-    lastMonthYearlyIncome: '0.00',
-    lastMonthTotalIncome: '0.00',
-};
-
-export async function getDashboardMetrics(): Promise<DashboardMetrics> {
-     const supabase = createSupabaseClient();
-     if (!supabase) {
-        console.warn("Supabase not configured. Returning default dashboard metrics.");
-        return defaultMetrics;
-     }
-
-    const { data: subscriptions, error } = await supabase
-        .from('subscriptions')
-        .select('*');
-
-    if (error) {
-        console.error("Error fetching subscriptions for metrics:", error);
-        throw new Error("Could not load subscription data.");
-    }
-    
-    if (!subscriptions) {
-        return defaultMetrics;
-    }
-
+// This function calculates metrics from a given list of subscriptions.
+// It can be used for both mock data and real data.
+function calculateMetrics(subscriptions: any[]): DashboardMetrics {
     const now = new Date();
     const startOfThisMonth = startOfMonth(now);
     
@@ -138,6 +110,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     
     const nextMonthEstimated = activeMonthlySubs.length * MONTHLY_PRICE;
 
+    // For yearly subs, income is only recognized in the month they paid.
     const newYearlySubsThisMonth = subscriptions.filter(s => 
         s.plan === 'yearly' &&
         new Date(s.start_date) >= startOfThisMonth &&
@@ -147,24 +120,26 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     const monthlyIncomeThisMonth = activeMonthlySubs.length * MONTHLY_PRICE;
     const yearlyIncomeThisMonth = newYearlySubsThisMonth.length * YEARLY_PRICE;
     const totalIncomeThisMonth = monthlyIncomeThisMonth + yearlyIncomeThisMonth;
-    const netProfitThisMonth = totalIncomeThisMonth; 
+    const netProfitThisMonth = totalIncomeThisMonth; // Assuming no expenses for simplicity
 
     const lastMonthDate = subMonths(now, 1);
     const startOfLastMonth = startOfMonth(lastMonthDate);
     const endOfLastMonth = endOfMonth(lastMonthDate);
 
-    const monthlySubsPaidLastMonth = subscriptions.filter(s => {
-        const startDate = new Date(s.start_date);
-        return s.plan === 'monthly' && startDate >= startOfLastMonth && startDate <= endOfLastMonth;
-    });
+    // Count monthly subs active during the last month
+    const monthlySubsPaidLastMonth = subscriptions.filter(s => 
+        s.plan === 'monthly' &&
+        new Date(s.start_date) < endOfLastMonth // check they started before the end of last month
+    );
+    const lastMonthMonthlyIncome = monthlySubsPaidLastMonth.length * MONTHLY_PRICE;
+
 
     const yearlySubsPaidLastMonth = subscriptions.filter(s => {
         const startDate = new Date(s.start_date);
         return s.plan === 'yearly' && startDate >= startOfLastMonth && startDate <= endOfLastMonth;
     });
-
-    const lastMonthMonthlyIncome = monthlySubsPaidLastMonth.length * MONTHLY_PRICE;
     const lastMonthYearlyIncome = yearlySubsPaidLastMonth.length * YEARLY_PRICE;
+
     const lastMonthTotalIncome = lastMonthMonthlyIncome + lastMonthYearlyIncome;
 
     return {
@@ -177,4 +152,30 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
         lastMonthYearlyIncome: lastMonthYearlyIncome.toFixed(2),
         lastMonthTotalIncome: lastMonthTotalIncome.toFixed(2),
     };
+}
+
+
+export async function getDashboardMetrics(): Promise<DashboardMetrics> {
+     const supabase = createSupabaseClient();
+
+     // If Supabase is not configured, run in "demo mode" with mock data.
+     if (!supabase) {
+        console.warn("Supabase not configured. Running in DEMO MODE with mock data.");
+        return calculateMetrics(mockSubscriptions);
+     }
+
+    const { data: subscriptions, error } = await supabase
+        .from('subscriptions')
+        .select('*');
+
+    if (error) {
+        console.error("Error fetching subscriptions for metrics:", error);
+        throw new Error("Could not load subscription data.");
+    }
+    
+    if (!subscriptions) {
+        return calculateMetrics([]); // Return zeroed metrics if no subscriptions
+    }
+
+    return calculateMetrics(subscriptions);
 }

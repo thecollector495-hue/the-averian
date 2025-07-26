@@ -1,7 +1,7 @@
 
 'use server';
 
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import crypto from 'crypto';
 import { z } from 'zod';
@@ -20,8 +20,7 @@ function createSupabaseClient() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    if (!supabaseUrl || !supabaseServiceKey || supabaseUrl.includes('YOUR_SUPABASE_URL_HERE')) {
-        console.warn("Supabase environment variables are not properly set.");
+    if (!supabaseUrl || !supabaseServiceKey || supabaseUrl.includes('YOUR_SUPABASE_URL')) {
         return null;
     }
 
@@ -42,7 +41,7 @@ export async function createPayment(input: z.infer<typeof createPaymentSchema>) 
     const validatedInput = createPaymentSchema.parse(input);
 
     const supabase = createSupabaseClient();
-    if (!supabase) throw new Error('Supabase client is not configured. Please set up API keys in .env.local');
+    if (!supabase) throw new Error('Supabase is not configured. Please add your API keys to the .env.local file to enable payments.');
 
     const { data: settings, error: settingsError } = await supabase
         .from('payfast_settings')
@@ -52,7 +51,7 @@ export async function createPayment(input: z.infer<typeof createPaymentSchema>) 
     
     if (settingsError || !settings) {
         console.error('Payfast settings not found in DB', settingsError);
-        throw new Error('Payfast integration is not configured. Please contact support.');
+        throw new Error('Payfast integration is not configured. Please enter API keys in the Admin Dashboard.');
     }
 
     const payfastUrl = 'https://sandbox.payfast.co.za/eng/process'; // Use www.payfast.co.za for production

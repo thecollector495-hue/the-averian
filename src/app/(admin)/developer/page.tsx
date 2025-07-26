@@ -3,10 +3,28 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Github, ExternalLink, Globe } from 'lucide-react';
+import { Github, ExternalLink, Globe, Database, BrainCircuit } from 'lucide-react';
 import Link from 'next/link';
 
 export default function DeveloperPage() {
+  const supabaseSql = `
+-- Enable Row Level Security (RLS) on all tables
+ALTER TABLE birds ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pairs ENABLE ROW LEVEL SECURITY;
+-- Add other tables as needed
+
+-- Create policies for public access (adjust as needed for your app's auth)
+CREATE POLICY "Public birds are viewable by everyone." ON birds FOR SELECT USING (true);
+CREATE POLICY "Public cages are viewable by everyone." ON cages FOR SELECT USING (true);
+CREATE POLICY "Public pairs are viewable by everyone." ON pairs FOR SELECT USING (true);
+
+-- You would also need policies for INSERT, UPDATE, DELETE
+-- that are restricted to authenticated users.
+-- e.g., CREATE POLICY "Users can insert their own birds." ON birds FOR INSERT WITH CHECK (auth.uid() = user_id);
+-- This requires a user_id column on your tables linked to auth.users.
+`.trim();
+
   return (
     <div className="p-4 sm:p-6 md:p-8">
       <div className="mb-8">
@@ -82,8 +100,12 @@ export default function DeveloperPage() {
               <pre className="bg-muted p-3 rounded-md"><code>npm install</code></pre>
               <p className="text-xs text-muted-foreground">This command reads the `package.json` file and downloads all the libraries the project needs to run.</p>
             </div>
+            <div>
+                <h3 className="font-semibold text-lg mb-2">Step 5: Set Up Environment Variables</h3>
+                <p>In the root of your project, create a new file named <code className="font-semibold">.env.local</code>. Copy the contents of the existing <code className="font-semibold">.env</code> file into it. You will fill this file with your API keys in the next section.</p>
+            </div>
              <div>
-              <h3 className="font-semibold text-lg mb-2">Step 5: Run the Development Server</h3>
+              <h3 className="font-semibold text-lg mb-2">Step 6: Run the Development Server</h3>
               <p>Once the installation is complete, start the local development server:</p>
               <pre className="bg-muted p-3 rounded-md"><code>npm run dev</code></pre>
               <p>The application should now be running! You can view it by opening your web browser and navigating to <Link href="http://localhost:9002" target="_blank" className="text-primary underline">http://localhost:9002</Link>.</p>
@@ -93,8 +115,50 @@ export default function DeveloperPage() {
 
         <Card>
           <CardHeader>
+            <CardTitle>Backend &amp; AI Setup</CardTitle>
+            <CardDescription>To use features like data persistence and the AI assistant, you need to connect to external services. This app is designed to work with Supabase and Google Gemini.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg flex items-center gap-2"><Database className="h-5 w-5"/> Supabase Setup (Database & Auth)</h3>
+              <p className="text-sm text-muted-foreground">Supabase will act as your database to store all the aviary data.</p>
+              <ol className="list-decimal list-inside space-y-2 text-sm">
+                <li>Go to <Link href="https://supabase.com/" target="_blank" className="text-primary underline">Supabase</Link> and create a free account and a new project.</li>
+                <li>Inside your project, go to the <span className="font-semibold">SQL Editor</span>.</li>
+                <li>Copy and run the SQL code below to create the necessary tables. <span className="font-bold">Note: This is a simplified schema. You'll need to expand it to include all fields from the app.</span></li>
+                <li>Go to <span className="font-semibold">Project Settings &gt; API</span>. Find your Project URL and the `anon` `public` key.</li>
+                <li>Add these to your <code className="font-semibold">.env.local</code> file as `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.</li>
+              </ol>
+               <pre className="bg-muted p-3 rounded-md overflow-x-auto text-xs"><code>{supabaseSql}</code></pre>
+                 <Button asChild variant="outline" size="sm">
+                    <Link href="https://supabase.com" target="_blank">
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Go to Supabase
+                    </Link>
+                </Button>
+            </div>
+            <div className="space-y-4 pt-4">
+              <h3 className="font-semibold text-lg flex items-center gap-2"><BrainCircuit className="h-5 w-5"/> Google AI (Gemini) Setup</h3>
+               <p className="text-sm text-muted-foreground">The AI Assistant uses Google's Gemini models.</p>
+              <ol className="list-decimal list-inside space-y-2 text-sm">
+                <li>Go to <Link href="https://aistudio.google.com/app/apikey" target="_blank" className="text-primary underline">Google AI Studio</Link>.</li>
+                <li>Click <span className="font-semibold">"Create API key"</span> to get your free key.</li>
+                <li>Add this key to your <code className="font-semibold">.env.local</code> file as `GEMINI_API_KEY`.</li>
+              </ol>
+               <Button asChild variant="outline" size="sm">
+                    <Link href="https://aistudio.google.com/app/apikey" target="_blank">
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Get Gemini API Key
+                    </Link>
+                </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle className="flex items-center gap-2"><Globe className="h-6 w-6" /> Hosting Recommendations</CardTitle>
-            <CardDescription>Once your app is on GitHub, you can easily deploy it for free using one of these recommended services.</CardDescription>
+            <CardDescription>Once your app is on GitHub and connected to Supabase, you can easily deploy it for free using one of these recommended services.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>

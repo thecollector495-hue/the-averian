@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from '@/components/ui/button';
-import { Crown, Star, Check, PlusCircle, Trash2, LogIn, LogOut, Send, Github } from 'lucide-react';
+import { Crown, Star, Check, PlusCircle, Trash2, LogIn, LogOut, Send, Github, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurrency, currencies } from "@/context/CurrencyContext";
 import { addDays, format, isFuture, isPast } from 'date-fns';
@@ -23,6 +23,7 @@ import { useTheme } from 'next-themes';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
+import { createPayment } from '@/app/actions/payment-actions';
 
 const AddMutationDialog = dynamic(() => import('@/components/add-mutation-dialog').then(mod => mod.AddMutationDialog), { ssr: false });
 const AddSpeciesDialog = dynamic(() => import('@/components/add-species-dialog').then(mod => mod.AddSpeciesDialog), { ssr: false });
@@ -46,6 +47,7 @@ export default function SettingsPage() {
   const [isMutationDialogOpen, setIsMutationDialogOpen] = useState(false);
   const [isSpeciesDialogOpen, setIsSpeciesDialogOpen] = useState(false);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
+  const [isSubscribing, setIsSubscribing] = useState<string | null>(null);
 
   const customMutations = items.filter((item): item is CustomMutation => item.category === 'CustomMutation');
   const customSpecies = items.filter((item): item is CustomSpecies => item.category === 'CustomSpecies');
@@ -105,6 +107,38 @@ export default function SettingsPage() {
     toast({ title: "Item Deleted", description: "The custom data has been removed." });
     setDeletingItemId(null);
   };
+
+  const handleSubscribe = async (plan: 'monthly' | 'yearly', amount: number) => {
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Not logged in', description: 'You must be logged in to subscribe.' });
+        return;
+    }
+    setIsSubscribing(plan);
+    try {
+        const paymentUrl = await createPayment({
+            userId: user.uid,
+            userEmail: user.email,
+            plan: plan,
+            amount: amount,
+            itemName: `${plan.charAt(0).toUpperCase() + plan.slice(1)} Subscription`,
+            itemDescription: `Full access to The Avarian for one ${plan === 'monthly' ? 'month' : 'year'}.`
+        });
+        
+        if (paymentUrl) {
+            window.location.href = paymentUrl;
+        } else {
+            throw new Error('Could not generate payment link.');
+        }
+
+    } catch (error: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Subscription Failed',
+            description: error.message || 'Could not initiate the subscription process. Please try again.'
+        });
+        setIsSubscribing(null);
+    }
+  }
 
   if (!isMounted) {
     return null;
@@ -296,12 +330,14 @@ export default function SettingsPage() {
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2"><Crown className="text-muted-foreground"/> Monthly</CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-4">
+                                <CardContent className="space-y-4 flex flex-col">
                                     <p className="text-3xl font-bold">R35 <span className="text-lg font-normal text-muted-foreground">/ month</span></p>
                                     <ul className="text-sm text-muted-foreground space-y-2 flex-grow">
                                         {premiumFeatures.map(feature => <li key={feature} className="flex items-start gap-2"><Check className="h-4 w-4 mt-0.5 text-green-500 shrink-0"/><span>{feature}</span></li>)}
                                     </ul>
-                                    <Button className="w-full" variant="outline">Subscribe</Button>
+                                    <Button className="w-full mt-auto" variant="outline" onClick={() => handleSubscribe('monthly', 35)} disabled={!!isSubscribing}>
+                                        {isSubscribing === 'monthly' ? <Loader2 className="h-4 w-4 animate-spin"/> : 'Subscribe'}
+                                    </Button>
                                 </CardContent>
                             </Card>
                              <Card className="border-primary border-2 relative">
@@ -309,13 +345,15 @@ export default function SettingsPage() {
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2"><Star className="text-primary"/> Yearly</CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-4">
+                                <CardContent className="space-y-4 flex flex-col">
                                      <p className="text-3xl font-bold">R300 <span className="text-lg font-normal text-muted-foreground">/ year</span></p>
                                      <p className="text-sm text-green-500 font-medium">Save R120 per year!</p>
                                      <ul className="text-sm text-muted-foreground space-y-2 flex-grow">
                                         {premiumFeatures.map(feature => <li key={feature} className="flex items-start gap-2"><Check className="h-4 w-4 mt-0.5 text-green-500 shrink-0"/><span>{feature}</span></li>)}
                                      </ul>
-                                    <Button className="w-full">Subscribe</Button>
+                                    <Button className="w-full mt-auto" onClick={() => handleSubscribe('yearly', 300)} disabled={!!isSubscribing}>
+                                       {isSubscribing === 'yearly' ? <Loader2 className="h-4 w-4 animate-spin"/> : 'Subscribe'}
+                                    </Button>
                                 </CardContent>
                             </Card>
                         </div>

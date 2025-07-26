@@ -8,21 +8,70 @@ import Link from 'next/link';
 
 export default function DeveloperPage() {
   const supabaseSql = `
--- Enable Row Level Security (RLS) on all tables
+-- 1. Enable Row Level Security (RLS) on all tables
+-- This is a security best practice.
 ALTER TABLE birds ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pairs ENABLE ROW LEVEL SECURITY;
--- Add other tables as needed
+ALTER TABLE breeding_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE permits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE custom_species ENABLE ROW LEVEL SECURITY;
+ALTER TABLE custom_mutations ENABLE ROW LEVEL SECURITY;
 
--- Create policies for public access (adjust as needed for your app's auth)
-CREATE POLICY "Public birds are viewable by everyone." ON birds FOR SELECT USING (true);
-CREATE POLICY "Public cages are viewable by everyone." ON cages FOR SELECT USING (true);
-CREATE POLICY "Public pairs are viewable by everyone." ON pairs FOR SELECT USING (true);
+-- 2. Create policies for public read access
+-- Allows anyone to read data, but not write it.
+-- You can tighten these rules later (e.g., allow only logged-in users).
+CREATE POLICY "Public data is viewable by everyone." ON birds FOR SELECT USING (true);
+CREATE POLICY "Public data is viewable by everyone." ON cages FOR SELECT USING (true);
+CREATE POLICY "Public data is viewable by everyone." ON pairs FOR SELECT USING (true);
+CREATE POLICY "Public data is viewable by everyone." ON breeding_records FOR SELECT USING (true);
+CREATE POLICY "Public data is viewable by everyone." ON notes FOR SELECT USING (true);
+CREATE POLICY "Public data is viewable by everyone." ON transactions FOR SELECT USING (true);
+CREATE POLICY "Public data is viewable by everyone." ON permits FOR SELECT USING (true);
+CREATE POLICY "Public data is viewable by everyone." ON custom_species FOR SELECT USING (true);
+CREATE POLICY "Public data is viewable by everyone." ON custom_mutations FOR SELECT USING (true);
 
--- You would also need policies for INSERT, UPDATE, DELETE
--- that are restricted to authenticated users.
--- e.g., CREATE POLICY "Users can insert their own birds." ON birds FOR INSERT WITH CHECK (auth.uid() = user_id);
--- This requires a user_id column on your tables linked to auth.users.
+-- 3. Create Payfast Settings table
+-- This stores your Payfast merchant credentials.
+CREATE TABLE payfast_settings (
+  id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  user_id TEXT NOT NULL UNIQUE,
+  merchant_id TEXT NOT NULL,
+  merchant_key TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE payfast_settings ENABLE ROW LEVEL SECURITY;
+-- For this app, only the admin can read/write their own settings.
+CREATE POLICY "Admin can manage their own Payfast settings" ON payfast_settings
+  FOR ALL
+  USING (auth.uid()::text = user_id)
+  WITH CHECK (auth.uid()::text = user_id);
+
+-- 4. Create Subscriptions table
+-- This tracks user subscriptions.
+CREATE TABLE subscriptions (
+    id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    user_id TEXT NOT NULL UNIQUE,
+    plan TEXT NOT NULL,
+    status TEXT NOT NULL,
+    start_date TIMESTAMPTZ NOT NULL,
+    end_date TIMESTAMPTZ,
+    payfast_payment_id TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+-- Admin can see all subscriptions
+CREATE POLICY "Admin can view all subscriptions" ON subscriptions
+  FOR SELECT
+  USING (
+    (SELECT subscription_status FROM auth.users WHERE id = auth.uid()) = 'admin'
+  );
+-- Users can see their own subscription
+CREATE POLICY "Users can view their own subscription" ON subscriptions
+  FOR SELECT
+  USING (auth.uid()::text = user_id);
 `.trim();
 
   return (
@@ -125,7 +174,7 @@ CREATE POLICY "Public pairs are viewable by everyone." ON pairs FOR SELECT USING
               <ol className="list-decimal list-inside space-y-2 text-sm">
                 <li>Go to <Link href="https://supabase.com/" target="_blank" className="text-primary underline">Supabase</Link> and create a free account and a new project.</li>
                 <li>Inside your project, go to the <span className="font-semibold">SQL Editor</span>.</li>
-                <li>Copy and run the SQL code below to create the necessary tables. <span className="font-bold">Note: This is a simplified schema. You'll need to expand it to include all fields from the app.</span></li>
+                <li>Click <span className="font-semibold">"+ New query"</span> and paste the SQL code below. Click <span className="font-semibold">"RUN"</span> to create the necessary tables.</li>
                 <li>Go to <span className="font-semibold">Project Settings &gt; API</span>. Find your Project URL and the `anon` `public` key.</li>
                 <li>Add these to your <code className="font-semibold">.env.local</code> file as `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.</li>
               </ol>

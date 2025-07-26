@@ -1,71 +1,16 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, use } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthContext";
-import { mockSubscriptions, Subscription } from '@/lib/admin-data';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-
-const MONTHLY_PRICE = 35;
-const YEARLY_PRICE = 300;
-
-// Helper function to calculate metrics
-const calculateMetrics = (subscriptions: Subscription[]) => {
-  const now = new Date();
-  const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-  // --- Current & Future Metrics ---
-  const activeMonthlySubs = subscriptions.filter(s => s.plan === 'monthly' && s.status === 'active');
-  const activeYearlySubs = subscriptions.filter(s => s.plan === 'yearly' && s.status === 'active');
-  const nextMonthEstimated = activeMonthlySubs.length * MONTHLY_PRICE;
-
-  const newYearlySubsThisMonth = subscriptions.filter(s => 
-    s.plan === 'yearly' && 
-    new Date(s.startDate) >= startOfThisMonth &&
-    new Date(s.startDate) <= now
-  );
-
-  const totalIncomeThisMonth = (activeMonthlySubs.length * MONTHLY_PRICE) + (newYearlySubsThisMonth.length * YEARLY_PRICE);
-  const netProfitThisMonth = totalIncomeThisMonth; // Assuming expenses are 0 for now
-
-  // --- Previous Month Metrics ---
-  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const startOfLastMonth = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1);
-  const endOfLastMonth = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
-
-  const monthlySubsActiveLastMonth = subscriptions.filter(s => {
-    const startDate = new Date(s.startDate);
-    // Was active last month if it's a monthly plan AND it started before the end of last month AND its status is currently active (a simplification for this mock data)
-    return s.plan === 'monthly' && startDate <= endOfLastMonth && s.status === 'active';
-  });
-
-  const newYearlySubsLastMonth = subscriptions.filter(s => {
-      const startDate = new Date(s.startDate);
-      // Was a new yearly sub last month if it started within last month's interval
-      return s.plan === 'yearly' && startDate >= startOfLastMonth && startDate <= endOfLastMonth;
-  });
-
-  const lastMonthMonthlyIncome = monthlySubsActiveLastMonth.length * MONTHLY_PRICE;
-  const lastMonthYearlyIncome = newYearlySubsLastMonth.length * YEARLY_PRICE;
-  const lastMonthTotalIncome = lastMonthMonthlyIncome + lastMonthYearlyIncome;
-  
-
-  return {
-    monthlySubCount: activeMonthlySubs.length,
-    yearlySubCount: activeYearlySubs.length,
-    totalIncomeThisMonth: totalIncomeThisMonth.toFixed(2),
-    netProfitThisMonth: netProfitThisMonth.toFixed(2),
-    nextMonthEstimated: nextMonthEstimated.toFixed(2),
-    lastMonthMonthlyIncome: lastMonthMonthlyIncome.toFixed(2),
-    lastMonthYearlyIncome: lastMonthYearlyIncome.toFixed(2),
-    lastMonthTotalIncome: lastMonthTotalIncome.toFixed(2),
-  };
-};
+import { getPayfastSettings, savePayfastSettings, getDashboardMetrics, DashboardMetrics } from '@/app/actions/admin-actions';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -73,22 +18,62 @@ export default function DashboardPage() {
   const [payfastMerchantId, setPayfastMerchantId] = useState('');
   const [payfastMerchantKey, setPayfastMerchantKey] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
 
-  // In a real app, this data would come from a database
-  const metrics = calculateMetrics(mockSubscriptions);
+  useEffect(() => {
+    const loadInitialData = async () => {
+        if (!user) return;
+        setIsLoading(true);
+        try {
+            const [settings, dashboardMetrics] = await Promise.all([
+                getPayfastSettings(),
+                getDashboardMetrics()
+            ]);
+
+            if (settings) {
+                setPayfastMerchantId(settings.merchant_id);
+                setPayfastMerchantKey(settings.merchant_key);
+            }
+            setMetrics(dashboardMetrics);
+
+        } catch (error) {
+            console.error("Failed to load dashboard data", error);
+            toast({
+                variant: 'destructive',
+                title: "Error",
+                description: "Could not load dashboard data.",
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    loadInitialData();
+  }, [user, toast]);
   
-  const handleSaveSettings = (e: React.FormEvent) => {
+  const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return;
     setIsSaving(true);
-    // Placeholder save logic
-    setTimeout(() => {
-        console.log('Saving Payfast settings:', { payfastMerchantId, payfastMerchantKey });
+    try {
+        await savePayfastSettings({
+            userId: user.uid,
+            merchantId: payfastMerchantId,
+            merchantKey: payfastMerchantKey
+        });
         toast({
             title: "Settings Saved",
             description: "Your Payfast API settings have been updated.",
         });
+    } catch (error: any) {
+         toast({
+            variant: 'destructive',
+            title: "Error Saving Settings",
+            description: error.message,
+        });
+    } finally {
         setIsSaving(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -99,64 +84,75 @@ export default function DashboardPage() {
       </div>
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Monthly Subs</CardTitle>
-            <CardDescription>Active monthly plans</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold">{metrics.monthlySubCount}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Yearly Subs</CardTitle>
-            <CardDescription>Active yearly plans</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold">{metrics.yearlySubCount}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Income (This Month)</CardTitle>
-            <CardDescription>Actual cash flow this month</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold">R{metrics.totalIncomeThisMonth}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Next Month's Est. Income</CardTitle>
-            <CardDescription>From monthly subs only</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold">R{metrics.nextMonthEstimated}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Net Profit (Month)</CardTitle>
-            <CardDescription>Income minus expenses</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold text-green-500">R{metrics.netProfitThisMonth}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Previous Month Income</CardTitle>
-            <CardDescription>Breakdown of last month's revenue</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <p className="text-3xl font-bold">R{metrics.lastMonthTotalIncome}</p>
-            <p className="text-sm text-muted-foreground">
-                Monthly: R{metrics.lastMonthMonthlyIncome}<br/>
-                Yearly: R{metrics.lastMonthYearlyIncome}
-            </p>
-          </CardContent>
-        </Card>
+        {isLoading || !metrics ? (
+            Array.from({ length: 6 }).map((_, i) => (
+                <Card key={i}>
+                    <CardHeader><Skeleton className="h-5 w-2/3" /></CardHeader>
+                    <CardContent><Skeleton className="h-10 w-1/2" /></CardContent>
+                </Card>
+            ))
+        ) : (
+            <>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Monthly Subs</CardTitle>
+                    <CardDescription>Active monthly plans</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-4xl font-bold">{metrics.monthlySubCount}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Yearly Subs</CardTitle>
+                    <CardDescription>Active yearly plans</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-4xl font-bold">{metrics.yearlySubCount}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Income (This Month)</CardTitle>
+                    <CardDescription>Actual cash flow this month</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-4xl font-bold">R{metrics.totalIncomeThisMonth}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Next Month's Est. Income</CardTitle>
+                    <CardDescription>From monthly subs only</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-4xl font-bold">R{metrics.nextMonthEstimated}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Net Profit (Month)</CardTitle>
+                    <CardDescription>Income minus expenses</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-4xl font-bold text-green-500">R{metrics.netProfitThisMonth}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Previous Month Income</CardTitle>
+                    <CardDescription>Breakdown of last month's revenue</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <p className="text-3xl font-bold">R{metrics.lastMonthTotalIncome}</p>
+                    <p className="text-sm text-muted-foreground">
+                        Monthly: R{metrics.lastMonthMonthlyIncome}<br/>
+                        Yearly: R{metrics.lastMonthYearlyIncome}
+                    </p>
+                  </CardContent>
+                </Card>
+            </>
+        )}
       </div>
 
       <Card>
@@ -174,6 +170,7 @@ export default function DashboardPage() {
                         value={payfastMerchantId}
                         onChange={(e) => setPayfastMerchantId(e.target.value)}
                         required
+                        disabled={isLoading}
                     />
                  </div>
                  <div className="space-y-2">
@@ -185,11 +182,12 @@ export default function DashboardPage() {
                         value={payfastMerchantKey}
                         onChange={(e) => setPayfastMerchantKey(e.target.value)}
                         required
+                        disabled={isLoading}
                     />
                  </div>
             </CardContent>
             <CardFooter>
-                 <Button type="submit" disabled={isSaving}>
+                 <Button type="submit" disabled={isSaving || isLoading}>
                     {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                     Save Settings
                 </Button>

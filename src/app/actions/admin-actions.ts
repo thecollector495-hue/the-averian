@@ -15,13 +15,21 @@ const payfastSettingsSchema = z.object({
 const MONTHLY_PRICE = 35;
 const YEARLY_PRICE = 300;
 
-export async function savePayfastSettings(input: z.infer<typeof payfastSettingsSchema>) {
-    const validatedInput = payfastSettingsSchema.parse(input);
+function createSupabaseClient() {
+    const cookieStore = cookies();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    const cookieStore = cookies()
-    const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    if (!supabaseUrl || !supabaseServiceKey) {
+        // In a production environment, you might want to log this error.
+        // For the self-hosted app, returning null or an empty structure is graceful.
+        console.warn("Supabase environment variables are not set. Skipping Supabase client creation.");
+        return null;
+    }
+
+    return createServerClient(
+        supabaseUrl,
+        supabaseServiceKey,
         {
             cookies: {
                 get(name: string) {
@@ -29,7 +37,15 @@ export async function savePayfastSettings(input: z.infer<typeof payfastSettingsS
                 },
             },
         }
-    )
+    );
+}
+
+
+export async function savePayfastSettings(input: z.infer<typeof payfastSettingsSchema>) {
+    const validatedInput = payfastSettingsSchema.parse(input);
+
+    const supabase = createSupabaseClient();
+    if (!supabase) throw new Error('Supabase client is not configured.');
 
     const { data, error } = await supabase
         .from('payfast_settings')
@@ -49,18 +65,8 @@ export async function savePayfastSettings(input: z.infer<typeof payfastSettingsS
 }
 
 export async function getPayfastSettings() {
-    const cookieStore = cookies()
-    const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-         {
-            cookies: {
-                get(name: string) {
-                    return cookieStore.get(name)?.value
-                },
-            },
-        }
-    )
+    const supabase = createSupabaseClient();
+    if (!supabase) return null;
 
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -93,19 +99,23 @@ export type DashboardMetrics = {
     lastMonthTotalIncome: string;
 };
 
+const defaultMetrics: DashboardMetrics = {
+    monthlySubCount: 0,
+    yearlySubCount: 0,
+    totalIncomeThisMonth: '0.00',
+    netProfitThisMonth: '0.00',
+    nextMonthEstimated: '0.00',
+    lastMonthMonthlyIncome: '0.00',
+    lastMonthYearlyIncome: '0.00',
+    lastMonthTotalIncome: '0.00',
+};
+
 export async function getDashboardMetrics(): Promise<DashboardMetrics> {
-     const cookieStore = cookies()
-     const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-            cookies: {
-                get(name: string) {
-                    return cookieStore.get(name)?.value
-                },
-            },
-        }
-    )
+     const supabase = createSupabaseClient();
+     if (!supabase) {
+        console.warn("Supabase not configured. Returning default dashboard metrics.");
+        return defaultMetrics;
+     }
 
     const { data: subscriptions, error } = await supabase
         .from('subscriptions')
@@ -116,6 +126,10 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
         throw new Error("Could not load subscription data.");
     }
     
+    if (!subscriptions) {
+        return defaultMetrics;
+    }
+
     const now = new Date();
     const startOfThisMonth = startOfMonth(now);
     

@@ -15,13 +15,19 @@ const createPaymentSchema = z.object({
     itemDescription: z.string(),
 });
 
-export async function createPayment(input: z.infer<typeof createPaymentSchema>) {
-    const validatedInput = createPaymentSchema.parse(input);
+function createSupabaseClient() {
+    const cookieStore = cookies();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    const cookieStore = cookies()
-    const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    if (!supabaseUrl || !supabaseServiceKey || supabaseUrl.includes('YOUR_SUPABASE_URL_HERE')) {
+        console.warn("Supabase environment variables are not properly set.");
+        return null;
+    }
+
+    return createServerClient(
+        supabaseUrl,
+        supabaseServiceKey,
         {
             cookies: {
                 get(name: string) {
@@ -29,7 +35,14 @@ export async function createPayment(input: z.infer<typeof createPaymentSchema>) 
                 },
             },
         }
-    )
+    );
+}
+
+export async function createPayment(input: z.infer<typeof createPaymentSchema>) {
+    const validatedInput = createPaymentSchema.parse(input);
+
+    const supabase = createSupabaseClient();
+    if (!supabase) throw new Error('Supabase client is not configured. Please set up API keys in .env.local');
 
     const { data: settings, error: settingsError } = await supabase
         .from('payfast_settings')

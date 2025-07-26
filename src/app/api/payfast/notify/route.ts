@@ -4,11 +4,19 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import crypto from 'crypto';
 
-export async function POST(req: NextRequest) {
-    const cookieStore = cookies()
-    const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+function createSupabaseClient() {
+    const cookieStore = cookies();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey || supabaseUrl.includes('YOUR_SUPABASE_URL_HERE')) {
+        console.error("Supabase environment variables are not properly set for the ITN handler.");
+        return null;
+    }
+
+    return createServerClient(
+        supabaseUrl,
+        supabaseServiceKey,
         {
             cookies: {
                 get(name: string) {
@@ -16,7 +24,15 @@ export async function POST(req: NextRequest) {
                 },
             },
         }
-    )
+    );
+}
+
+
+export async function POST(req: NextRequest) {
+    const supabase = createSupabaseClient();
+    if (!supabase) {
+        return new NextResponse('Server configuration error', { status: 500 });
+    }
 
     try {
         const formData = await req.formData();

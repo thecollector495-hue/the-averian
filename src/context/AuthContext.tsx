@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { FullPageLoader } from '@/components/full-page-loader';
-import { createBrowserClient, User as SupabaseUser } from '@supabase/ssr';
+import { createBrowserClient, User as SupabaseUser, SignUpWithPasswordCredentials } from '@supabase/ssr';
 import { useToast } from '@/hooks/use-toast';
 
 export type UserType = 'admin' | 'monthly' | 'trial' | 'expired';
@@ -19,7 +19,7 @@ interface AuthContextType {
   user: AppUser | null;
   loading: boolean;
   login: (userTypeOrEmail: UserType | string, password?: string) => Promise<void>;
-  signup: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string) => Promise<{ user: SupabaseUser | null, error: any }>;
   logout: () => void;
   isReadOnly: boolean;
   isDemoMode: boolean;
@@ -128,7 +128,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
       });
       if (error) throw error;
-      return data;
+      return { user: data.user, error };
   }
 
   const logout = async () => {

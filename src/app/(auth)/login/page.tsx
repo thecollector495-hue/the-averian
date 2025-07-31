@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
+import { User } from '@supabase/supabase-js';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -34,8 +35,18 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     try {
-        await signup(email, password);
-        toast({ title: 'Confirmation Email Sent', description: 'Please check your inbox to verify your account.' });
+        const data = await signup(email, password);
+        // Supabase returns a user object. If the user's email is not confirmed,
+        // the `identities` array will be empty.
+        const requiresConfirmation = data.user && data.user.identities && data.user.identities.length === 0;
+
+        if (requiresConfirmation) {
+            toast({ title: 'Confirmation Email Sent', description: 'Please check your inbox to verify your account.' });
+        } else {
+            // If no confirmation is needed, log the user in immediately.
+            await login(email, password);
+            toast({ title: 'Account Created!', description: "You've been successfully signed up and logged in." });
+        }
     } catch(error: any) {
         toast({ variant: 'destructive', title: 'Signup Failed', description: error.message });
     } finally {

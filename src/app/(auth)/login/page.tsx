@@ -12,28 +12,25 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { User } from '@supabase/supabase-js';
+import { FullPageLoader } from '@/components/full-page-loader';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, signup, user } = useAuth();
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isPageLoading, setIsPageLoading] = useState(true);
-
+  const { login, signup, user, loading: authLoading } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const router = useRouter();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user) {
+    if (!authLoading && user) {
       router.push(user.subscriptionStatus === 'admin' ? '/dashboard' : '/');
-    } else {
-      setIsPageLoading(false);
     }
-  }, [user, router]);
-  
+  }, [user, authLoading, router]);
+
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
         const { user: newUser, error } = await signup(email, password);
         if (error) throw error;
@@ -53,19 +50,20 @@ export default function LoginPage() {
     } catch(error: any) {
         toast({ variant: 'destructive', title: 'Signup Failed', description: error.message });
     } finally {
-        setIsLoading(false);
+        setIsSubmitting(false);
     }
   }
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
         await login(email, password);
+        // Let the useEffect handle redirection
     } catch(error: any) {
         toast({ variant: 'destructive', title: 'Login Failed', description: error.message });
     } finally {
-        setIsLoading(false);
+        setIsSubmitting(false);
     }
   }
 
@@ -76,12 +74,8 @@ export default function LoginPage() {
     { icon: Banknote, text: "Detailed financial tracking and reports" },
   ];
 
-  if (isPageLoading) {
-      return (
-          <div className="flex min-h-screen items-center justify-center bg-background p-4">
-              <Loader2 className="h-10 w-10 animate-spin" />
-          </div>
-      )
+  if (authLoading || user) {
+      return <FullPageLoader />;
   }
 
   return (
@@ -103,21 +97,21 @@ export default function LoginPage() {
           <CardContent className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading}/>
+              <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={isSubmitting}/>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading}/>
+              <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isSubmitting}/>
             </div>
           </CardContent>
           <CardFooter className="flex-col gap-4">
               <div className='flex w-full gap-2'>
-                   <Button onClick={handleEmailLogin} className="w-full" disabled={isLoading}>
-                      {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <LogIn className="mr-2 h-4 w-4" />}
+                   <Button onClick={handleEmailLogin} className="w-full" disabled={isSubmitting}>
+                      {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <LogIn className="mr-2 h-4 w-4" />}
                       Sign In
                   </Button>
-                  <Button onClick={handleEmailSignup} variant="secondary" className="w-full" disabled={isLoading}>
-                      {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <UserPlus className="mr-2 h-4 w-4" />}
+                  <Button onClick={handleEmailSignup} variant="secondary" className="w-full" disabled={isSubmitting}>
+                      {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <UserPlus className="mr-2 h-4 w-4" />}
                       Sign Up
                   </Button>
               </div>

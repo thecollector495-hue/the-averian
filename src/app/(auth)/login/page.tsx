@@ -6,11 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useAuth, UserType } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { Loader2, UserPlus, Shield, Crown, Calendar, CalendarX, KeyRound, LogIn, Mail } from 'lucide-react';
+import { Loader2, UserPlus, LogIn, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -38,7 +38,6 @@ export default function LoginPage() {
         title: "Login Successful",
         description: `You are now logged in as: ${userType}.`,
       });
-      // Context will redirect
     } catch (err: any) {
       toast({ variant: 'destructive', title: "Login Failed", description: err.message });
       setIsLoading(null);
@@ -63,7 +62,6 @@ export default function LoginPage() {
     setIsLoading('email');
     try {
         await login(email, password);
-        // The context will handle redirection
     } catch(error: any) {
         toast({ variant: 'destructive', title: 'Login Failed', description: error.message });
     } finally {
@@ -73,9 +71,6 @@ export default function LoginPage() {
 
   const loginOptions: { type: UserType; label: string; icon: React.ElementType }[] = [
       { type: 'admin', label: 'Admin', icon: Shield },
-      { type: 'monthly', label: 'Monthly Subscriber', icon: Crown },
-      { type: 'trial', label: '7-Day Trial', icon: Calendar },
-      { type: 'expired', label: 'Expired Trial', icon: CalendarX },
   ];
 
   if (isPageLoading) {
@@ -139,7 +134,23 @@ export default function LoginPage() {
                     Sign Up
                 </Button>
             </div>
-            <p className="text-xs text-muted-foreground">Signing up agrees to our (non-existent) Terms of Service.</p>
+            <p className="px-8 text-center text-xs text-muted-foreground">
+              By clicking continue, you agree to our{' '}
+              <Link
+                href="/legal/terms"
+                className="underline underline-offset-4 hover:text-primary"
+              >
+                Terms of Service
+              </Link>{' '}
+              and{' '}
+              <Link
+                href="/legal/privacy"
+                className="underline underline-offset-4 hover:text-primary"
+              >
+                Privacy Policy
+              </Link>
+              .
+            </p>
         </CardFooter>
       </Card>
     </div>

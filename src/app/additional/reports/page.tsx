@@ -71,7 +71,7 @@ export default function ReportsPage() {
 
       <div className="grid gap-6 md:grid-cols-3 mb-6">
         <Card>
-          <CardHeader><CardTitle>Total Income</CardHeader></CardHeader>
+          <CardHeader><CardTitle>Total Income</CardTitle></CardHeader>
           <CardContent><p className="text-3xl font-bold text-green-500">{formatCurrency(totalIncome)}</p></CardContent>
         </Card>
         <Card>
@@ -79,7 +79,7 @@ export default function ReportsPage() {
           <CardContent><p className="text-3xl font-bold text-red-500">{formatCurrency(totalExpenses)}</p></CardContent>
         </Card>
         <Card className={netProfit >= 0 ? 'border-green-500/50' : 'border-red-500/50'}>
-          <CardHeader><CardTitle>Net Profit</CardHeader></CardHeader>
+          <CardHeader><CardTitle>Net Profit</CardTitle></CardHeader>
           <CardContent><p className={`text-3xl font-bold ${netProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>{formatCurrency(netProfit)}</p></CardContent>
         </Card>
       </div>

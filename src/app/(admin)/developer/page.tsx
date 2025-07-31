@@ -18,17 +18,10 @@ WHERE email = 'thecollector495@gmail.com';
 -- This script creates all tables and Row Level Security (RLS) policies needed for the application.
 -- It's designed to be run once in your Supabase SQL Editor.
 
--- Helper function to get the current user's ID
-CREATE OR REPLACE FUNCTION auth.get_user_id() RETURNS uuid
-  LANGUAGE sql STABLE
-  AS $$
-  select nullif(current_setting('request.jwt.claims', true)::json->>'sub', '')::uuid;
-$$;
-
 -- 1. Create all application tables
 CREATE TABLE IF NOT EXISTS birds (
     id TEXT PRIMARY KEY,
-    user_id UUID NOT NULL DEFAULT auth.get_user_id(),
+    user_id UUID NOT NULL DEFAULT auth.uid(),
     category TEXT,
     species TEXT,
     subspecies TEXT,
@@ -54,7 +47,7 @@ CREATE TABLE IF NOT EXISTS birds (
 
 CREATE TABLE IF NOT EXISTS cages (
     id TEXT PRIMARY KEY,
-    user_id UUID NOT NULL DEFAULT auth.get_user_id(),
+    user_id UUID NOT NULL DEFAULT auth.uid(),
     category TEXT,
     name TEXT,
     bird_ids TEXT[],
@@ -64,7 +57,7 @@ CREATE TABLE IF NOT EXISTS cages (
 
 CREATE TABLE IF NOT EXISTS pairs (
     id TEXT PRIMARY KEY,
-    user_id UUID NOT NULL DEFAULT auth.get_user_id(),
+    user_id UUID NOT NULL DEFAULT auth.uid(),
     category TEXT,
     male_id TEXT,
     female_id TEXT,
@@ -74,7 +67,7 @@ CREATE TABLE IF NOT EXISTS pairs (
 
 CREATE TABLE IF NOT EXISTS breeding_records (
     id TEXT PRIMARY KEY,
-    user_id UUID NOT NULL DEFAULT auth.get_user_id(),
+    user_id UUID NOT NULL DEFAULT auth.uid(),
     category TEXT,
     pair_id TEXT,
     start_date DATE,
@@ -85,7 +78,7 @@ CREATE TABLE IF NOT EXISTS breeding_records (
 
 CREATE TABLE IF NOT EXISTS notes (
     id TEXT PRIMARY KEY,
-    user_id UUID NOT NULL DEFAULT auth.get_user_id(),
+    user_id UUID NOT NULL DEFAULT auth.uid(),
     category TEXT,
     title TEXT,
     content TEXT,
@@ -101,7 +94,7 @@ CREATE TABLE IF NOT EXISTS notes (
 
 CREATE TABLE IF NOT EXISTS transactions (
     id TEXT PRIMARY KEY,
-    user_id UUID NOT NULL DEFAULT auth.get_user_id(),
+    user_id UUID NOT NULL DEFAULT auth.uid(),
     category TEXT,
     type TEXT,
     date DATE,
@@ -113,7 +106,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 
 CREATE TABLE IF NOT EXISTS permits (
     id TEXT PRIMARY KEY,
-    user_id UUID NOT NULL DEFAULT auth.get_user_id(),
+    user_id UUID NOT NULL DEFAULT auth.uid(),
     category TEXT,
     permit_number TEXT,
     issuing_authority TEXT,
@@ -124,7 +117,7 @@ CREATE TABLE IF NOT EXISTS permits (
 
 CREATE TABLE IF NOT EXISTS custom_species (
     id TEXT PRIMARY KEY,
-    user_id UUID NOT NULL DEFAULT auth.get_user_id(),
+    user_id UUID NOT NULL DEFAULT auth.uid(),
     category TEXT,
     name TEXT UNIQUE,
     incubation_period INTEGER,
@@ -134,7 +127,7 @@ CREATE TABLE IF NOT EXISTS custom_species (
 
 CREATE TABLE IF NOT EXISTS custom_mutations (
     id TEXT PRIMARY KEY,
-    user_id UUID NOT NULL DEFAULT auth.get_user_id(),
+    user_id UUID NOT NULL DEFAULT auth.uid(),
     category TEXT,
     name TEXT,
     inheritance TEXT,
@@ -152,17 +145,28 @@ ALTER TABLE permits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE custom_species ENABLE ROW LEVEL SECURITY;
 ALTER TABLE custom_mutations ENABLE ROW LEVEL SECURITY;
 
--- 3. Create RLS policies for all tables
+-- Drop old policies if they exist to avoid conflicts
+DROP POLICY IF EXISTS "Users can manage their own birds" ON birds;
+DROP POLICY IF EXISTS "Users can manage their own cages" ON cages;
+DROP POLICY IF EXISTS "Users can manage their own pairs" ON pairs;
+DROP POLICY IF EXISTS "Users can manage their own breeding records" ON breeding_records;
+DROP POLICY IF EXISTS "Users can manage their own notes" ON notes;
+DROP POLICY IF EXISTS "Users can manage their own transactions" ON transactions;
+DROP POLICY IF EXISTS "Users can manage their own permits" ON permits;
+DROP POLICY IF EXISTS "Users can manage their own custom species" ON custom_species;
+DROP POLICY IF EXISTS "Users can manage their own custom mutations" ON custom_mutations;
+
+-- 3. Create RLS policies for all tables using the built-in auth.uid() function
 -- This ensures that users can only access their own data.
-CREATE POLICY "Users can manage their own birds" ON birds FOR ALL USING (auth.get_user_id() = user_id);
-CREATE POLICY "Users can manage their own cages" ON cages FOR ALL USING (auth.get_user_id() = user_id);
-CREATE POLICY "Users can manage their own pairs" ON pairs FOR ALL USING (auth.get_user_id() = user_id);
-CREATE POLICY "Users can manage their own breeding records" ON breeding_records FOR ALL USING (auth.get_user_id() = user_id);
-CREATE POLICY "Users can manage their own notes" ON notes FOR ALL USING (auth.get_user_id() = user_id);
-CREATE POLICY "Users can manage their own transactions" ON transactions FOR ALL USING (auth.get_user_id() = user_id);
-CREATE POLICY "Users can manage their own permits" ON permits FOR ALL USING (auth.get_user_id() = user_id);
-CREATE POLICY "Users can manage their own custom species" ON custom_species FOR ALL USING (auth.get_user_id() = user_id);
-CREATE POLICY "Users can manage their own custom mutations" ON custom_mutations FOR ALL USING (auth.get_user_id() = user_id);
+CREATE POLICY "Users can manage their own birds" ON birds FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can manage their own cages" ON cages FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can manage their own pairs" ON pairs FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can manage their own breeding records" ON breeding_records FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can manage their own notes" ON notes FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can manage their own transactions" ON transactions FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can manage their own permits" ON permits FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can manage their own custom species" ON custom_species FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can manage their own custom mutations" ON custom_mutations FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 
 -- 4. Create Payfast Settings table and policies
@@ -174,6 +178,7 @@ CREATE TABLE IF NOT EXISTS payfast_settings (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE payfast_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Admin can manage their own Payfast settings" ON payfast_settings;
 CREATE POLICY "Admin can manage their own Payfast settings" ON payfast_settings
   FOR ALL
   USING (auth.uid() = user_id)
@@ -191,15 +196,14 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view their own subscription" ON subscriptions;
+DROP POLICY IF EXISTS "Admin can view all subscriptions" ON subscriptions;
 CREATE POLICY "Users can view their own subscription" ON subscriptions
   FOR SELECT
   USING (auth.uid() = user_id);
--- In a real scenario, you'd want a more robust admin check.
--- For this app, the check is in the code (see admin-actions.ts)
--- rather than a complex RLS policy. A simple policy is better here.
 CREATE POLICY "Admin can view all subscriptions" ON subscriptions
   FOR SELECT
-  USING (true);
+  USING (true); -- This is intentionally broad for the admin view.
 `.trim();
 
   return (
@@ -378,5 +382,7 @@ CREATE POLICY "Admin can view all subscriptions" ON subscriptions
     </div>
   );
 }
+
+    
 
     

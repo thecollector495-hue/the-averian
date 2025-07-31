@@ -15,7 +15,133 @@ WHERE email = 'thecollector495@gmail.com';
 `.trim();
 
   const supabaseTablesSql = `
--- 1. Enable Row Level Security (RLS) on all tables for security.
+-- This script creates all tables and Row Level Security (RLS) policies needed for the application.
+-- It's designed to be run once in your Supabase SQL Editor.
+
+-- Helper function to get the current user's ID
+CREATE OR REPLACE FUNCTION auth.get_user_id() RETURNS uuid
+  LANGUAGE sql STABLE
+  AS $$
+  select nullif(current_setting('request.jwt.claims', true)::json->>'sub', '')::uuid;
+$$;
+
+-- 1. Create all application tables
+CREATE TABLE IF NOT EXISTS birds (
+    id TEXT PRIMARY KEY,
+    user_id UUID NOT NULL DEFAULT auth.get_user_id(),
+    category TEXT,
+    species TEXT,
+    subspecies TEXT,
+    sex TEXT,
+    ring_number TEXT,
+    unbanded BOOLEAN,
+    birth_date DATE,
+    image_url TEXT,
+    visual_mutations TEXT[],
+    split_mutations TEXT[],
+    father_id TEXT,
+    mother_id TEXT,
+    mate_id TEXT,
+    offspring_ids TEXT[],
+    paid_price NUMERIC,
+    estimated_value NUMERIC,
+    status TEXT,
+    permit_id TEXT,
+    sale_details JSONB,
+    medical_records JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS cages (
+    id TEXT PRIMARY KEY,
+    user_id UUID NOT NULL DEFAULT auth.get_user_id(),
+    category TEXT,
+    name TEXT,
+    bird_ids TEXT[],
+    cost NUMERIC,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS pairs (
+    id TEXT PRIMARY KEY,
+    user_id UUID NOT NULL DEFAULT auth.get_user_id(),
+    category TEXT,
+    male_id TEXT,
+    female_id TEXT,
+    image_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS breeding_records (
+    id TEXT PRIMARY KEY,
+    user_id UUID NOT NULL DEFAULT auth.get_user_id(),
+    category TEXT,
+    pair_id TEXT,
+    start_date DATE,
+    eggs JSONB,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS notes (
+    id TEXT PRIMARY KEY,
+    user_id UUID NOT NULL DEFAULT auth.get_user_id(),
+    category TEXT,
+    title TEXT,
+    content TEXT,
+    is_reminder BOOLEAN,
+    reminder_date DATE,
+    is_recurring BOOLEAN,
+    recurrence_pattern TEXT,
+    associated_bird_ids TEXT[],
+    sub_tasks JSONB,
+    completed BOOLEAN,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS transactions (
+    id TEXT PRIMARY KEY,
+    user_id UUID NOT NULL DEFAULT auth.get_user_id(),
+    category TEXT,
+    type TEXT,
+    date DATE,
+    description TEXT,
+    amount NUMERIC,
+    related_bird_id TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS permits (
+    id TEXT PRIMARY KEY,
+    user_id UUID NOT NULL DEFAULT auth.get_user_id(),
+    category TEXT,
+    permit_number TEXT,
+    issuing_authority TEXT,
+    issue_date DATE,
+    expiry_date DATE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS custom_species (
+    id TEXT PRIMARY KEY,
+    user_id UUID NOT NULL DEFAULT auth.get_user_id(),
+    category TEXT,
+    name TEXT UNIQUE,
+    incubation_period INTEGER,
+    subspecies TEXT[],
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS custom_mutations (
+    id TEXT PRIMARY KEY,
+    user_id UUID NOT NULL DEFAULT auth.get_user_id(),
+    category TEXT,
+    name TEXT,
+    inheritance TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. Enable Row Level Security (RLS) for all tables
 ALTER TABLE birds ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pairs ENABLE ROW LEVEL SECURITY;
@@ -26,19 +152,21 @@ ALTER TABLE permits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE custom_species ENABLE ROW LEVEL SECURITY;
 ALTER TABLE custom_mutations ENABLE ROW LEVEL SECURITY;
 
--- 2. Create policies for public read access (customize as needed)
-CREATE POLICY "Public data is viewable by everyone." ON birds FOR SELECT USING (true);
-CREATE POLICY "Public data is viewable by everyone." ON cages FOR SELECT USING (true);
-CREATE POLICY "Public data is viewable by everyone." ON pairs FOR SELECT USING (true);
-CREATE POLICY "Public data is viewable by everyone." ON breeding_records FOR SELECT USING (true);
-CREATE POLICY "Public data is viewable by everyone." ON notes FOR SELECT USING (true);
-CREATE POLICY "Public data is viewable by everyone." ON transactions FOR SELECT USING (true);
-CREATE POLICY "Public data is viewable by everyone." ON permits FOR SELECT USING (true);
-CREATE POLICY "Public data is viewable by everyone." ON custom_species FOR SELECT USING (true);
-CREATE POLICY "Public data is viewable by everyone." ON custom_mutations FOR SELECT USING (true);
+-- 3. Create RLS policies for all tables
+-- This ensures that users can only access their own data.
+CREATE POLICY "Users can manage their own birds" ON birds FOR ALL USING (auth.get_user_id() = user_id);
+CREATE POLICY "Users can manage their own cages" ON cages FOR ALL USING (auth.get_user_id() = user_id);
+CREATE POLICY "Users can manage their own pairs" ON pairs FOR ALL USING (auth.get_user_id() = user_id);
+CREATE POLICY "Users can manage their own breeding records" ON breeding_records FOR ALL USING (auth.get_user_id() = user_id);
+CREATE POLICY "Users can manage their own notes" ON notes FOR ALL USING (auth.get_user_id() = user_id);
+CREATE POLICY "Users can manage their own transactions" ON transactions FOR ALL USING (auth.get_user_id() = user_id);
+CREATE POLICY "Users can manage their own permits" ON permits FOR ALL USING (auth.get_user_id() = user_id);
+CREATE POLICY "Users can manage their own custom species" ON custom_species FOR ALL USING (auth.get_user_id() = user_id);
+CREATE POLICY "Users can manage their own custom mutations" ON custom_mutations FOR ALL USING (auth.get_user_id() = user_id);
 
--- 3. Create Payfast Settings table
-CREATE TABLE payfast_settings (
+
+-- 4. Create Payfast Settings table and policies
+CREATE TABLE IF NOT EXISTS payfast_settings (
   id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
   user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id),
   merchant_id TEXT NOT NULL,
@@ -51,8 +179,8 @@ CREATE POLICY "Admin can manage their own Payfast settings" ON payfast_settings
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
--- 4. Create Subscriptions table
-CREATE TABLE subscriptions (
+-- 5. Create Subscriptions table and policies
+CREATE TABLE IF NOT EXISTS subscriptions (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id),
     plan TEXT NOT NULL,
@@ -250,3 +378,5 @@ CREATE POLICY "Admin can view all subscriptions" ON subscriptions
     </div>
   );
 }
+
+    

@@ -1,8 +1,9 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { Search, PlusCircle, Pencil, Trash2 } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,6 +21,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ImageLightbox } from '@/components/image-lightbox';
 import { AddPairFormValues } from '@/components/add-pair-dialog';
 import { useAuth } from '@/context/AuthContext';
+import { FullPageLoader } from '@/components/full-page-loader';
 
 const AddCageDialog = dynamic(() => import('@/components/add-cage-dialog').then(mod => mod.AddCageDialog), { ssr: false });
 const BirdFormDialog = dynamic(() => import('@/components/bird-form-dialog').then(mod => mod.BirdFormDialog), { ssr: false });
@@ -28,7 +30,9 @@ const BreedingRecordDetailsDialog = dynamic(() => import('@/components/breeding-
 
 export default function HomePage() {
   const { items, addItem, addItems, updateItem, updateItems, deleteItem, deleteBirdItem } = useItems();
-  const { isReadOnly } = useAuth();
+  const { isReadOnly, user, loading } = useAuth();
+  const router = useRouter();
+
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('Bird');
   const [isBirdFormOpen, setIsBirdFormOpen] = useState(false);
@@ -45,6 +49,12 @@ export default function HomePage() {
   const [deletingPairId, setDeletingPairId] = useState<string | null>(null);
 
   const { toast } = useToast();
+  
+   useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
   
   const {
     allBirds,
@@ -479,6 +489,10 @@ export default function HomePage() {
 
   const categories = ['Bird', 'Cage', 'Pair'];
 
+  if (loading || !user) {
+    return <FullPageLoader />;
+  }
+
   return (
     <div className="container mx-auto p-4 sm:p-6 md:p-8">
       {lightboxImage && <ImageLightbox imageUrl={lightboxImage} onClose={() => setLightboxImage(null)} />}
@@ -639,3 +653,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    

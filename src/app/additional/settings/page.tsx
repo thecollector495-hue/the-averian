@@ -326,35 +326,39 @@ export default function SettingsPage() {
                      <div className="space-y-4">
                         <h3 className="font-semibold">Choose Your Plan</h3>
                         <div className="grid md:grid-cols-2 gap-4">
-                            <Card>
+                            <Card className="flex flex-col">
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2"><Crown className="text-muted-foreground"/> Monthly</CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-4 flex flex-col">
+                                <CardContent className="space-y-4 flex-grow">
                                     <p className="text-3xl font-bold">R35 <span className="text-lg font-normal text-muted-foreground">/ month</span></p>
                                     <ul className="text-sm text-muted-foreground space-y-2 flex-grow">
                                         {premiumFeatures.map(feature => <li key={feature} className="flex items-start gap-2"><Check className="h-4 w-4 mt-0.5 text-green-500 shrink-0"/><span>{feature}</span></li>)}
                                     </ul>
-                                    <Button className="w-full mt-auto" variant="outline" onClick={() => handleSubscribe('monthly', 35)} disabled={!!isSubscribing}>
+                                </CardContent>
+                                <CardFooter>
+                                    <Button className="w-full" variant="outline" onClick={() => handleSubscribe('monthly', 35)} disabled={!!isSubscribing}>
                                         {isSubscribing === 'monthly' ? <Loader2 className="h-4 w-4 animate-spin"/> : 'Subscribe'}
                                     </Button>
-                                </CardContent>
+                                </CardFooter>
                             </Card>
-                             <Card className="border-primary border-2 relative">
+                             <Card className="border-primary border-2 relative flex flex-col">
                                 <Badge className="absolute -top-3 right-4">Best Value</Badge>
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2"><Star className="text-primary"/> Yearly</CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-4 flex flex-col">
+                                <CardContent className="space-y-4 flex-grow">
                                      <p className="text-3xl font-bold">R300 <span className="text-lg font-normal text-muted-foreground">/ year</span></p>
                                      <p className="text-sm text-green-500 font-medium">Save R120 per year!</p>
                                      <ul className="text-sm text-muted-foreground space-y-2 flex-grow">
                                         {premiumFeatures.map(feature => <li key={feature} className="flex items-start gap-2"><Check className="h-4 w-4 mt-0.5 text-green-500 shrink-0"/><span>{feature}</span></li>)}
                                      </ul>
-                                    <Button className="w-full mt-auto" onClick={() => handleSubscribe('yearly', 300)} disabled={!!isSubscribing}>
+                                </CardContent>
+                                <CardFooter>
+                                    <Button className="w-full" onClick={() => handleSubscribe('yearly', 300)} disabled={!!isSubscribing}>
                                        {isSubscribing === 'yearly' ? <Loader2 className="h-4 w-4 animate-spin"/> : 'Subscribe'}
                                     </Button>
-                                </CardContent>
+                                </CardFooter>
                             </Card>
                         </div>
                      </div>

@@ -32,23 +32,21 @@ export default function LoginPage() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-        const { user: newUser, error } = await signup(email, password);
-        if (error) throw error;
-        
-        // Supabase returns a user object on successful signup.
-        // If the user's email is not confirmed, the `identities` array will be empty.
-        // This is a reliable way to check if confirmation is required.
-        const requiresConfirmation = newUser && newUser.identities && newUser.identities.length === 0;
+        const { error } = await signup(email, password);
 
-        if (requiresConfirmation) {
-            toast({ title: 'Confirmation Email Sent', description: 'Please check your inbox to verify your account.' });
-        } else {
-            // If no confirmation is needed, log the user in immediately.
-            await login(email, password);
-            toast({ title: 'Account Created!', description: "You've been successfully signed up and logged in." });
+        // If Supabase returns an error, it's a definite failure (e.g., password too short, user exists).
+        if (error) {
+            throw error;
         }
+
+        // If signup was successful (no error), immediately try to log in.
+        // This handles cases where email confirmation is off but Supabase still flags the email as unconfirmed initially.
+        await login(email, password);
+        toast({ title: 'Account Created!', description: "You've been successfully signed up and logged in." });
+        // The useEffect will handle redirection.
+
     } catch(error: any) {
-        toast({ variant: 'destructive', title: 'Signup Failed', description: error.message });
+        toast({ variant: 'destructive', title: 'Signup Failed', description: error.message || "An unexpected error occurred." });
     } finally {
         setIsSubmitting(false);
     }
@@ -74,7 +72,7 @@ export default function LoginPage() {
     { icon: Banknote, text: "Detailed financial tracking and reports" },
   ];
 
-  if (authLoading || user) {
+  if (authLoading || (!isSubmitting && user)) {
       return <FullPageLoader />;
   }
 
@@ -137,7 +135,7 @@ export default function LoginPage() {
 
         <div className="mt-8 text-center">
             <h3 className="text-lg font-semibold mb-4">Key Features</h3>
-            <ul className="space-y-4 text-sm inline-block text-left">
+            <ul className="space-y-4 text-sm inline-block text-left max-w-xs mx-auto">
                 {featureList.map((feature, index) => (
                 <li key={index} className="flex items-start gap-3">
                     <feature.icon className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />

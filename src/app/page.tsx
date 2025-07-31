@@ -582,7 +582,7 @@ export default function HomePage() {
       </AlertDialog>
 
       <div className="flex flex-col gap-4 mb-8">
-        <h1 className="text-4xl md:text-5xl font-bold font-headline text-center">My Aviary</h1>
+        <h1 className="text-4xl md:text-5xl font-bold font-headline text-center">The Avarian</h1>
         <p className="text-lg text-muted-foreground text-center">Your bird collection at a glance.</p>
         <div className="max-w-4xl mx-auto w-full flex flex-col sm:flex-row items-center gap-4">
           <div className="relative w-full flex-1">

@@ -114,28 +114,18 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
-      <div className="relative hidden flex-col bg-muted p-10 text-white lg:flex">
-        <div className="absolute inset-0 bg-zinc-900" />
-        <div className="relative z-20 flex items-center text-lg font-medium">
-          <Bird className="mr-2 h-6 w-6" />
-          The Avarian
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+      <div className="max-w-md w-full">
+        <div className="text-center mb-8">
+            <div className="flex items-center justify-center text-3xl font-bold mb-2">
+                <Bird className="mr-2 h-8 w-8 text-primary" />
+                The Avarian
+            </div>
+            <h1 className="text-2xl font-semibold">Welcome to The Avarian</h1>
+            <p className="mt-2 text-muted-foreground">Your all-in-one solution for modern aviary management.</p>
         </div>
-        <div className="relative z-20 mt-auto">
-          <h1 className="text-4xl font-bold">Welcome to The Avarian</h1>
-          <p className="mt-4 text-lg text-muted-foreground">Your all-in-one solution for modern aviary management.</p>
-          <ul className="mt-8 space-y-4 text-base">
-            {featureList.map((feature, index) => (
-              <li key={index} className="flex items-start gap-3">
-                <feature.icon className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
-                <span>{feature.text}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-      <div className="flex items-center justify-center py-12 px-4">
-        <Card className="w-full max-w-sm">
+        
+        <Card className="w-full">
           <CardHeader>
             <CardTitle className="text-2xl">Login or Sign Up</CardTitle>
             <CardDescription>Enter your email and password to access your aviary.</CardDescription>
@@ -180,6 +170,18 @@ export default function LoginPage() {
               </p>
           </CardFooter>
         </Card>
+
+        <div className="mt-8 text-left">
+            <h3 className="text-lg font-semibold mb-4 text-center">Key Features</h3>
+            <ul className="space-y-4 text-sm">
+                {featureList.map((feature, index) => (
+                <li key={index} className="flex items-start gap-3">
+                    <feature.icon className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                    <span>{feature.text}</span>
+                </li>
+                ))}
+            </ul>
+        </div>
       </div>
     </div>
   );

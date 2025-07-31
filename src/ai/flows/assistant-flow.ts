@@ -110,7 +110,7 @@ export type AviaryAssistantOutput = z.infer<typeof AviaryAssistantOutputSchema>;
 export async function aviaryAssistant(input: AviaryAssistantInput): Promise<AviaryAssistantOutput> {
   try {
     const output = await assistantFlow(input);
-    if (!output) {
+    if (!output?.response) {
         throw new Error("Received an empty response from the AI model.");
     }
     return output;
@@ -118,7 +118,7 @@ export async function aviaryAssistant(input: AviaryAssistantInput): Promise<Avia
     console.error("Error in assistant flow", e);
     const errorMessage = e.message?.includes('503') || e.message?.includes('overloaded')
         ? "The AI model is currently overloaded. Please try again in a moment."
-        : e.message || "An error occurred while processing your request. Please try again.";
+        : "An unexpected error occurred. Please try again.";
     return {
         actions: [],
         response: errorMessage,

@@ -206,6 +206,13 @@ CREATE POLICY "Admin can view all subscriptions" ON subscriptions
   USING (true); -- This is intentionally broad for the admin view.
 `.trim();
 
+  const envFileContent = `
+NEXT_PUBLIC_SUPABASE_URL=YOUR_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE
+GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+  `.trim();
+
   return (
     <div className="p-4 sm:p-6 md:p-8">
       <div className="mb-8">
@@ -283,8 +290,8 @@ CREATE POLICY "Admin can view all subscriptions" ON subscriptions
             </div>
             <div>
                 <h3 className="font-semibold text-lg mb-2">Step 5: Set Up Environment Variables</h3>
-                <p>In the root of your project, create a new file named <code className="font-semibold">.env.local</code>. You will fill this file with your API keys in the next section. It should look like this:</p>
-                <pre className="bg-muted p-3 rounded-md overflow-x-auto text-xs"><code>{`NEXT_PUBLIC_SUPABASE_URL=YOUR_SUPABASE_URL\nNEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY\nSUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE\nGEMINI_API_KEY=YOUR_GEMINI_API_KEY`}</code></pre>
+                <p>In the root of your project, create a new file named <code className="font-semibold">.env.local</code>. Copy and paste the text below into the file. You will fill this file with your API keys in the next section.</p>
+                <pre className="bg-muted p-3 rounded-md overflow-x-auto text-xs"><code>{envFileContent}</code></pre>
             </div>
              <div>
               <h3 className="font-semibold text-lg mb-2">Step 6: Run the Development Server</h3>

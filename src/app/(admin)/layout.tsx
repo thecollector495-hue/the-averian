@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { FullPageLoader } from '@/components/full-page-loader';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Bird, LogOut, Code } from 'lucide-react';
+import { Bird, LogOut, Database } from 'lucide-react';
 
 export default function AdminLayout({
   children,
@@ -36,9 +36,9 @@ export default function AdminLayout({
             </Link>
             <div className="ml-auto flex items-center gap-4">
                 <Button variant="outline" size="sm" asChild>
-                    <Link href="/developer">
-                        <Code className="mr-2 h-4 w-4" />
-                        Developer
+                    <Link href="/sql-scripts">
+                        <Database className="mr-2 h-4 w-4" />
+                        SQL Scripts
                     </Link>
                 </Button>
                 <Button variant="outline" size="sm" onClick={logout}>

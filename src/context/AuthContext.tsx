@@ -20,7 +20,6 @@ interface AuthContextType {
   loading: boolean;
   login: (userTypeOrEmail: UserType | string, password?: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
   logout: () => void;
   isReadOnly: boolean;
   isDemoMode: boolean;
@@ -132,21 +131,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return data;
   }
 
-  const loginWithGoogle = async () => {
-    if (isDemoMode) throw new Error("Google login is not available in demo mode.");
-    const { error } = await supabase!.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-            redirectTo: `${window.location.origin}/auth/callback`,
-            queryParams: {
-                access_type: 'offline',
-                prompt: 'consent',
-            },
-        },
-    });
-    if (error) throw error;
-  }
-
   const logout = async () => {
     if (isDemoMode) {
       setUser(null);
@@ -165,7 +149,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     loading,
     login,
     signup,
-    loginWithGoogle,
     logout,
     isReadOnly,
     isDemoMode,

@@ -121,11 +121,10 @@ export default function LoginPage() {
                 <Bird className="mr-2 h-8 w-8 text-primary" />
                 The Avarian
             </div>
-            <h1 className="text-2xl font-semibold">Welcome to The Avarian</h1>
             <p className="mt-2 text-muted-foreground">Your all-in-one solution for modern aviary management.</p>
         </div>
         
-        <Card className="w-full">
+        <Card className="w-full text-left">
           <CardHeader>
             <CardTitle className="text-2xl">Login or Sign Up</CardTitle>
             <CardDescription>Enter your email and password to access your aviary.</CardDescription>
@@ -173,7 +172,7 @@ export default function LoginPage() {
 
         <div className="mt-8 text-left">
             <h3 className="text-lg font-semibold mb-4 text-center">Key Features</h3>
-            <ul className="space-y-4 text-sm">
+            <ul className="space-y-4 text-sm max-w-xs mx-auto">
                 {featureList.map((feature, index) => (
                 <li key={index} className="flex items-start gap-3">
                     <feature.icon className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />

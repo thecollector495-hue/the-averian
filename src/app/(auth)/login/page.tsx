@@ -34,13 +34,13 @@ export default function LoginPage() {
     try {
         const { error } = await signup(email, password);
 
-        // If Supabase returns an error, it's a definite failure (e.g., password too short, user exists).
-        if (error) {
+        // If Supabase returns an error, but it's just that the user already exists, we can ignore it
+        // and proceed to log them in. All other errors should be thrown.
+        if (error && error.message !== 'User already registered') {
             throw error;
         }
 
-        // If signup was successful (no error), immediately try to log in.
-        // This handles cases where email confirmation is off but Supabase still flags the email as unconfirmed initially.
+        // Now, attempt to log in, whether the user was just created or already existed.
         await login(email, password);
         toast({ title: 'Account Created!', description: "You've been successfully signed up and logged in." });
         // The useEffect will handle redirection.

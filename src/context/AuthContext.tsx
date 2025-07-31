@@ -117,18 +117,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const signup = async (email: string, password: string) => {
-      if (isDemoMode) throw new Error("Signup is not available in demo mode.");
-      const { data, error } = await supabase!.auth.signUp({
+      if (isDemoMode || !supabase) throw new Error("Signup is not available in demo mode.");
+
+      const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            // This metadata will be set on the user in the 'auth.users' table
             data: {
               subscription_status: 'trial' 
             }
           }
       });
-      // Do not throw here, let the caller handle the error.
+
+      if (error) {
+          return { user: null, error };
+      }
+
+      if (data.user) {
+          // After successful signup, seed the initial data for the new user.
+          const { error: rpcError } = await supabase.rpc('seed_initial_data_for_user', { target_user_id: data.user.id });
+          if (rpcError) {
+              console.error('Failed to seed initial data:', rpcError);
+              // This isn't a fatal error for signup, so we just log it and continue.
+              // The user can still use the app but will need to add species/mutations manually.
+               toast({
+                  variant: 'destructive',
+                  title: 'Data Seeding Failed',
+                  description: 'Your account was created, but we couldn\'t add the default species and mutations. You can add them manually in Settings > Data.',
+               });
+          }
+      }
+
       return { user: data.user, error };
   }
 

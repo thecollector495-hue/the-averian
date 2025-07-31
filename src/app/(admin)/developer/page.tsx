@@ -7,7 +7,14 @@ import { Github, ExternalLink, Globe, Database, BrainCircuit, ShieldAlert } from
 import Link from 'next/link';
 
 export default function DeveloperPage() {
-  const supabaseSql = `
+  const supabaseAdminSql = `
+-- This script finds the user with the specified email and grants them admin privileges.
+UPDATE auth.users
+SET raw_user_meta_data = raw_user_meta_data || '{"subscription_status": "admin"}'
+WHERE email = 'thecollector495@gmail.com';
+`.trim();
+
+  const supabaseTablesSql = `
 -- 1. Enable Row Level Security (RLS) on all tables for security.
 ALTER TABLE birds ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cages ENABLE ROW LEVEL SECURITY;
@@ -166,13 +173,13 @@ CREATE POLICY "Admin can view all subscriptions" ON subscriptions
               <ol className="list-decimal list-inside space-y-2 text-sm">
                 <li>Go to <Link href="https://supabase.com/" target="_blank" className="text-primary underline">Supabase</Link> and create a free account and a new project.</li>
                 <li>Inside your project, go to the <span className="font-semibold">SQL Editor</span>.</li>
-                <li>Click <span className="font-semibold">"+ New query"</span> and paste the SQL code below. Click <span className="font-semibold">"RUN"</span> to create all necessary tables and security policies.</li>
+                <li>Click <span className="font-semibold">"+ New query"</span> and paste the SQL code below to create all necessary tables and security policies. Click <span className="font-semibold">"RUN"</span>.</li>
                 <li>Go to <span className="font-semibold">Project Settings &gt; API</span>. Find your Project URL and the `anon` `public` key.</li>
                 <li>Add these to your <code className="font-semibold">.env.local</code> file as `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.</li>
                  <li>While in Project Settings, go to <span className="font-semibold">API</span> again, scroll down to <span className="font-semibold">Project API Keys</span>, and find your `service_role` secret key. <span className="font-bold text-destructive">Never share this key publicly.</span></li>
                  <li>Add this key to your <code className="font-semibold">.env.local</code> file as `SUPABASE_SERVICE_ROLE_KEY`.</li>
               </ol>
-               <pre className="bg-muted p-3 rounded-md overflow-x-auto text-xs"><code>{supabaseSql}</code></pre>
+               <pre className="bg-muted p-3 rounded-md overflow-x-auto text-xs"><code>{supabaseTablesSql}</code></pre>
                  <Button asChild variant="outline" size="sm">
                     <Link href="https://supabase.com" target="_blank">
                         <ExternalLink className="mr-2 h-4 w-4" />
@@ -185,13 +192,11 @@ CREATE POLICY "Admin can view all subscriptions" ON subscriptions
               <h3 className="font-semibold text-lg flex items-center gap-2"><ShieldAlert className="h-5 w-5"/> Creating an Admin User</h3>
                <p className="text-sm text-muted-foreground">To access the admin dashboard, you need to give your user an 'admin' role.</p>
               <ol className="list-decimal list-inside space-y-2 text-sm">
-                <li>Run your local application and sign up for a new account using the email/password or Google login.</li>
-                <li>Go to your <span className="font-semibold">Supabase Dashboard</span> and navigate to <span className="font-semibold">Authentication &gt; Users</span>.</li>
-                <li>Find and click on the user you just created.</li>
-                <li>In the user details panel, scroll down to the <span className="font-semibold">User Metadata</span> section and click <span className="font-semibold">"Edit"</span>.</li>
-                <li>Add the following JSON object to the metadata:</li>
+                <li>Run your local application and sign up for an account with the email: <code className="font-semibold">thecollector495@gmail.com</code>.</li>
+                <li>Go to your <span className="font-semibold">Supabase Dashboard</span> and navigate to <span className="font-semibold">SQL Editor &gt; + New query</span>.</li>
+                <li>Paste the SQL script below and click <span className="font-semibold">"RUN"</span>. This will securely grant admin rights to your user.</li>
               </ol>
-               <pre className="bg-muted p-3 rounded-md overflow-x-auto text-xs"><code>{`{ "subscription_status": "admin" }`}</code></pre>
+               <pre className="bg-muted p-3 rounded-md overflow-x-auto text-xs"><code>{supabaseAdminSql}</code></pre>
                <p className="text-sm text-muted-foreground">Save the changes. You can now log in with this user to access the Admin Dashboard at `/dashboard`.</p>
             </div>
             

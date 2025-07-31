@@ -29,7 +29,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // --- Mock Data for Demo Mode ---
 const mockUsers: Record<UserType, AppUser> = {
-    admin: { uid: 'admin123', email: 'admin@example.com', subscriptionStatus: 'admin' },
+    admin: { uid: 'admin123', email: 'thecollector495@gmail.com', subscriptionStatus: 'admin' },
     monthly: { uid: 'monthly123', email: 'monthly@example.com', subscriptionStatus: 'monthly' },
     trial: { uid: 'trial123', email: 'trial@example.com', subscriptionStatus: 'trial' },
     expired: { uid: 'expired123', email: 'expired@example.com', subscriptionStatus: 'expired' },

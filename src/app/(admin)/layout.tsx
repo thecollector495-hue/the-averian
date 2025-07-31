@@ -35,12 +35,6 @@ export default function AdminLayout({
                 <span>The Averian - Admin</span>
             </Link>
             <div className="ml-auto flex items-center gap-4">
-                <Button variant="outline" size="sm" asChild>
-                    <Link href="/sql-scripts">
-                        <Database className="mr-2 h-4 w-4" />
-                        SQL Scripts
-                    </Link>
-                </Button>
                 <Button variant="outline" size="sm" onClick={logout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Logout

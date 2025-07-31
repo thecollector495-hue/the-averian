@@ -171,5 +171,8 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
         return zeroMetrics;
     }
 
-    return calculateMetrics(allUsers);
+    // Filter out the admin user from the metrics
+    const nonAdminUsers = allUsers.filter(u => u.user_metadata?.subscription_status !== 'admin');
+
+    return calculateMetrics(nonAdminUsers);
 }

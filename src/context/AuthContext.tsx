@@ -7,7 +7,7 @@ import { FullPageLoader } from '@/components/full-page-loader';
 import { createBrowserClient, User as SupabaseUser, SignUpWithPasswordCredentials } from '@supabase/ssr';
 import { useToast } from '@/hooks/use-toast';
 
-export type UserType = 'admin' | 'monthly' | 'trial' | 'expired';
+export type UserType = 'admin' | 'monthly' | 'yearly' | 'trial' | 'expired';
 
 interface AppUser {
   uid: string;
@@ -31,6 +31,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const mockUsers: Record<UserType, AppUser> = {
     admin: { uid: 'admin123', email: 'thecollector495@gmail.com', subscriptionStatus: 'admin' },
     monthly: { uid: 'monthly123', email: 'monthly@example.com', subscriptionStatus: 'monthly' },
+    yearly: { uid: 'yearly123', email: 'yearly@example.com', subscriptionStatus: 'yearly' },
     trial: { uid: 'trial123', email: 'trial@example.com', subscriptionStatus: 'trial' },
     expired: { uid: 'expired123', email: 'expired@example.com', subscriptionStatus: 'expired' },
 };

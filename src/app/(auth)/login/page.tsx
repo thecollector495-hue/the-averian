@@ -134,15 +134,17 @@ export default function LoginPage() {
         </Card>
 
         <div className="mt-8 text-center">
-            <h3 className="text-lg font-semibold mb-4">Key Features</h3>
-            <ul className="space-y-4 text-sm inline-block text-left max-w-xs mx-auto">
-                {featureList.map((feature, index) => (
-                <li key={index} className="flex items-start gap-3">
-                    <feature.icon className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                    <span>{feature.text}</span>
-                </li>
-                ))}
-            </ul>
+            <div className="inline-block text-left">
+                <h3 className="text-lg font-semibold mb-4">Key Features</h3>
+                <ul className="space-y-4 text-sm">
+                    {featureList.map((feature, index) => (
+                    <li key={index} className="flex items-start gap-3">
+                        <feature.icon className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                        <span>{feature.text}</span>
+                    </li>
+                    ))}
+                </ul>
+            </div>
         </div>
       </div>
     </div>

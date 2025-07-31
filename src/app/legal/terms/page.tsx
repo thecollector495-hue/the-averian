@@ -2,18 +2,18 @@
 export default function TermsOfServicePage() {
   return (
     <div>
-      <h1>Terms of Service for The Avarian</h1>
+      <h1>Terms of Service for The Averian</h1>
 
       <p><strong>Last Updated:</strong> {new Date().toLocaleDateString()}</p>
 
       <h2>1. Acceptance of Terms</h2>
       <p>
-        By accessing or using The Avarian (the "Application"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to all of these Terms, do not use the Application.
+        By accessing or using The Averian (the "Application"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to all of these Terms, do not use the Application.
       </p>
 
       <h2>2. Description of Service</h2>
       <p>
-        The Avarian is an aviary management application designed to help users track information related to their birds, including but not limited to breeding records, finances, and personal notes. The features and services are provided "as is".
+        The Averian is an aviary management application designed to help users track information related to their birds, including but not limited to breeding records, finances, and personal notes. The features and services are provided "as is".
       </p>
       
       <h2>3. User Accounts</h2>

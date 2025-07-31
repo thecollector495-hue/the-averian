@@ -10,7 +10,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { AppContent } from '@/components/app-content';
 
 export const metadata: Metadata = {
-  title: 'The Avarian',
+  title: 'The Averian',
   description: 'Your modern aviary management solution.',
 };
 

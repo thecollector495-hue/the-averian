@@ -2,12 +2,12 @@
 export default function PrivacyPolicyPage() {
   return (
     <div>
-      <h1>Privacy Policy for The Avarian</h1>
+      <h1>Privacy Policy for The Averian</h1>
 
       <p><strong>Last Updated:</strong> {new Date().toLocaleDateString()}</p>
 
       <p>
-        Welcome to The Avarian ("we," "us," or "our"). We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our application.
+        Welcome to The Averian ("we," "us," or "our"). We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our application.
       </p>
 
       <h2>1. Information We Collect</h2>

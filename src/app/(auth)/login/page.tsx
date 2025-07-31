@@ -82,7 +82,7 @@ export default function LoginPage() {
         <div className="text-center mb-8">
             <div className="flex items-center justify-center text-3xl font-bold mb-2">
                 <Bird className="mr-2 h-8 w-8 text-primary" />
-                The Avarian
+                The Averian
             </div>
             <p className="mt-2 text-muted-foreground">Your all-in-one solution for modern aviary management.</p>
         </div>

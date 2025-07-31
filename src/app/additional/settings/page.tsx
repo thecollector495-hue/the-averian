@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -121,7 +121,7 @@ export default function SettingsPage() {
             plan: plan,
             amount: amount,
             itemName: `${plan.charAt(0).toUpperCase() + plan.slice(1)} Subscription`,
-            itemDescription: `Full access to The Avarian for one ${plan === 'monthly' ? 'month' : 'year'}.`
+            itemDescription: `Full access to The Averian for one ${plan === 'monthly' ? 'month' : 'year'}.`
         });
         
         if (paymentUrl) {

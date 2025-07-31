@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Github, ExternalLink, Globe, Database, BrainCircuit, ShieldAlert } from 'lucide-react';
+import { Github, ExternalLink, Globe, Database, BrainCircuit, ShieldAlert, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
 export default function DeveloperPage() {
@@ -15,10 +15,24 @@ WHERE email = 'thecollector495@gmail.com';
 `.trim();
 
   const supabaseTablesSql = `
--- This script creates all tables and Row Level Security (RLS) policies needed for the application.
--- It's designed to be run once in your Supabase SQL Editor.
+-- This script safely drops all existing application tables and then recreates them.
+-- It's designed to be run in your Supabase SQL Editor to reset your database.
 
--- 1. Create all application tables
+-- 1. Drop existing tables if they exist to ensure a clean slate.
+DROP TABLE IF EXISTS "public"."custom_mutations";
+DROP TABLE IF EXISTS "public"."custom_species";
+DROP TABLE IF EXISTS "public"."permits";
+DROP TABLE IF EXISTS "public"."transactions";
+DROP TABLE IF EXISTS "public"."notes";
+DROP TABLE IF EXISTS "public"."breeding_records";
+DROP TABLE IF EXISTS "public"."pairs";
+DROP TABLE IF EXISTS "public"."cages";
+DROP TABLE IF EXISTS "public"."birds";
+DROP TABLE IF EXISTS "public"."payfast_settings";
+DROP TABLE IF EXISTS "public"."subscriptions";
+
+
+-- 2. Create all application tables
 CREATE TABLE IF NOT EXISTS birds (
     id TEXT PRIMARY KEY,
     user_id UUID NOT NULL DEFAULT auth.uid(),
@@ -134,7 +148,7 @@ CREATE TABLE IF NOT EXISTS custom_mutations (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. Enable Row Level Security (RLS) for all tables
+-- 3. Enable Row Level Security (RLS) for all tables
 ALTER TABLE birds ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pairs ENABLE ROW LEVEL SECURITY;
@@ -145,18 +159,8 @@ ALTER TABLE permits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE custom_species ENABLE ROW LEVEL SECURITY;
 ALTER TABLE custom_mutations ENABLE ROW LEVEL SECURITY;
 
--- Drop old policies if they exist to avoid conflicts
-DROP POLICY IF EXISTS "Users can manage their own birds" ON birds;
-DROP POLICY IF EXISTS "Users can manage their own cages" ON cages;
-DROP POLICY IF EXISTS "Users can manage their own pairs" ON pairs;
-DROP POLICY IF EXISTS "Users can manage their own breeding records" ON breeding_records;
-DROP POLICY IF EXISTS "Users can manage their own notes" ON notes;
-DROP POLICY IF EXISTS "Users can manage their own transactions" ON transactions;
-DROP POLICY IF EXISTS "Users can manage their own permits" ON permits;
-DROP POLICY IF EXISTS "Users can manage their own custom species" ON custom_species;
-DROP POLICY IF EXISTS "Users can manage their own custom mutations" ON custom_mutations;
 
--- 3. Create RLS policies for all tables using the built-in auth.uid() function
+-- 4. Create RLS policies for all tables using the built-in auth.uid() function
 -- This ensures that users can only access their own data.
 CREATE POLICY "Users can manage their own birds" ON birds FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can manage their own cages" ON cages FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
@@ -169,7 +173,7 @@ CREATE POLICY "Users can manage their own custom species" ON custom_species FOR 
 CREATE POLICY "Users can manage their own custom mutations" ON custom_mutations FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 
--- 4. Create Payfast Settings table and policies
+-- 5. Create Payfast Settings table and policies
 CREATE TABLE IF NOT EXISTS payfast_settings (
   id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
   user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id),
@@ -178,13 +182,12 @@ CREATE TABLE IF NOT EXISTS payfast_settings (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE payfast_settings ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Admin can manage their own Payfast settings" ON payfast_settings;
 CREATE POLICY "Admin can manage their own Payfast settings" ON payfast_settings
   FOR ALL
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
--- 5. Create Subscriptions table and policies
+-- 6. Create Subscriptions table and policies
 CREATE TABLE IF NOT EXISTS subscriptions (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id),
@@ -196,8 +199,6 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Users can view their own subscription" ON subscriptions;
-DROP POLICY IF EXISTS "Admin can view all subscriptions" ON subscriptions;
 CREATE POLICY "Users can view their own subscription" ON subscriptions
   FOR SELECT
   USING (auth.uid() = user_id);
@@ -205,6 +206,33 @@ CREATE POLICY "Admin can view all subscriptions" ON subscriptions
   FOR SELECT
   USING (true); -- This is intentionally broad for the admin view.
 `.trim();
+
+  const seedDataSql = `
+-- This script populates the 'custom_species' and 'custom_mutations' tables with initial data.
+-- Run this AFTER you have run the main table creation script.
+-- You must be logged in to the application for this to work, as it uses your user ID.
+
+INSERT INTO "public"."custom_species" (id, user_id, category, name, incubation_period, subspecies) VALUES
+('cs_initial_0', auth.uid(), 'CustomSpecies', 'Cockatoo', 26, ARRAY['Sulphur-crested Cockatoo - Cacatua galerita', 'Major Mitchell''s Cockatoo - Lophochroa leadbeateri', 'Galah / Rose-breasted Cockatoo - Eolophus roseicapilla', 'Cockatiel - Nymphicus hollandicus', 'Umbrella Cockatoo - Cacatua alba', 'Moluccan Cockatoo - Cacatua moluccensis']),
+('cs_initial_1', auth.uid(), 'CustomSpecies', 'Macaw', 28, ARRAY['Blue-and-gold Macaw - Ara ararauna', 'Green-winged Macaw - Ara chloropterus', 'Scarlet Macaw - Ara macao', 'Hyacinth Macaw - Anodorhynchus hyacinthinus', 'Hahn''s Macaw - Diopsittaca nobilis nobilis', 'Severe Macaw - Ara severus']),
+('cs_initial_2', auth.uid(), 'CustomSpecies', 'Conure', 24, ARRAY['Sun Conure - Aratinga solstitialis', 'Jenday Conure - Aratinga jandaya', 'Green-cheeked Conure - Pyrrhura molinae', 'Nanday Conure - Aratinga nenday', 'Blue-crowned Conure - Thectocercus acuticaudatus', 'Patagonian Conure - Cyanoliseus patagonus']),
+('cs_initial_3', auth.uid(), 'CustomSpecies', 'African Grey Parrot', 28, ARRAY['Congo African Grey - Psittacus erithacus', 'Timneh African Grey - Psittacus timneh']),
+('cs_initial_4', auth.uid(), 'CustomSpecies', 'Poicephalus', 26, ARRAY['Senegal Parrot - Poicephalus senegalus', 'Meyer''s Parrot - Poicephalus meyeri', 'Red-bellied Parrot - Poicephalus rufiventris', 'Cape Parrot - Poicephalus robustus']),
+('cs_initial_5', auth.uid(), 'CustomSpecies', 'Lovebird', 23, ARRAY['Peach-faced Lovebird - Agapornis roseicollis', 'Fischer''s Lovebird - Agapornis fischeri', 'Masked Lovebird - Agapornis personatus', 'Nyasa Lovebird - Agapornis lilianae']),
+('cs_initial_6', auth.uid(), 'CustomSpecies', 'Amazon Parrot', 27, ARRAY['Blue-fronted Amazon - Amazona aestiva', 'Yellow-naped Amazon - Amazona auropalliata', 'Double Yellow-headed Amazon - Amazona oratrix', 'Orange-winged Amazon - Amazona amazonica', 'Lilac-crowned Amazon - Amazona finschi']),
+('cs_initial_7', auth.uid(), 'CustomSpecies', 'Lory & Lorikeet', 25, ARRAY['Rainbow Lorikeet - Trichoglossus moluccanus', 'Chattering Lory - Lorius garrulus', 'Black-capped Lory - Lorius lory', 'Red Lory - Eos bornea']),
+('cs_initial_8', auth.uid(), 'CustomSpecies', 'Australian Parakeet', 18, ARRAY['Budgerigar - Melopsittacus undulatus', 'Eastern Rosella - Platycercus eximius', 'Princess Parrot - Polytelis alexandrae', 'Red-rumped Parrot - Psephotus haematonotus']),
+('cs_initial_9', auth.uid(), 'CustomSpecies', 'Asiatic Parakeet', 23, ARRAY['Indian Ringneck Parakeet - Psittacula krameri manillensis', 'Alexandrine Parakeet - Psittacula eupatria', 'Plum-headed Parakeet - Psittacula cyanocephala', 'Moustached Parakeet - Psittacula alexandri']),
+('cs_initial_10', auth.uid(), 'CustomSpecies', 'Eclectus Parrot', 28, ARRAY['Solomon Island Eclectus - Eclectus roratus solomonensis', 'Vosmaeri Eclectus - Eclectus roratus vosmaeri', 'Red-sided Eclectus - Eclectus roratus polychloros']),
+('cs_initial_11', auth.uid(), 'CustomSpecies', 'Caique', 26, ARRAY['Black-headed Caique - Pionites melanocephalus', 'White-bellied Caique - Pionites leucogaster'])
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO "public"."custom_mutations" (id, user_id, category, name, inheritance) VALUES
+('cm1', auth.uid(), 'CustomMutation', 'Lutino', 'Sex-Linked Recessive'),
+('cm2', auth.uid(), 'CustomMutation', 'Cinnamon', 'Sex-Linked Recessive'),
+('cm3', auth.uid(), 'CustomMutation', 'Pied', 'Autosomal Recessive')
+ON CONFLICT (id) DO NOTHING;
+  `.trim();
 
   const envFileContent = `
 NEXT_PUBLIC_SUPABASE_URL=YOUR_SUPABASE_URL
@@ -313,7 +341,7 @@ GEMINI_API_KEY=YOUR_GEMINI_API_KEY
               <ol className="list-decimal list-inside space-y-2 text-sm">
                 <li>Go to <Link href="https://supabase.com/" target="_blank" className="text-primary underline">Supabase</Link> and create a free account and a new project.</li>
                 <li>Inside your project, go to the <span className="font-semibold">SQL Editor</span>.</li>
-                <li>Click <span className="font-semibold">"+ New query"</span> and paste the SQL code below to create all necessary tables and security policies. Click <span className="font-semibold">"RUN"</span>.</li>
+                <li>Click <span className="font-semibold">"+ New query"</span> and paste the "Reset Database" SQL code below. This will delete old tables and create the correct new ones. Click <span className="font-semibold">"RUN"</span>.</li>
                 <li>Go to <span className="font-semibold">Project Settings &gt; API</span>. Find your Project URL and the `anon` `public` key.</li>
                 <li>Add these to your <code className="font-semibold">.env.local</code> file as `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.</li>
                  <li>While in Project Settings, go to <span className="font-semibold">API</span> again, scroll down to <span className="font-semibold">Project API Keys</span>, and find your `service_role` secret key. <span className="font-bold text-destructive">Never share this key publicly.</span></li>
@@ -326,6 +354,18 @@ GEMINI_API_KEY=YOUR_GEMINI_API_KEY
                         Go to Supabase
                     </Link>
                 </Button>
+            </div>
+            
+            <div className="space-y-4 pt-4 border-t">
+              <h3 className="font-semibold text-lg flex items-center gap-2"><Sparkles className="h-5 w-5"/> Seed Initial Data</h3>
+               <p className="text-sm text-muted-foreground">After creating your tables, run this second script to populate your database with the default species and mutations.</p>
+              <ol className="list-decimal list-inside space-y-2 text-sm">
+                <li>Log into your running local application. This ensures you are authenticated.</li>
+                <li>Go back to the <span className="font-semibold">Supabase SQL Editor &gt; + New query</span>.</li>
+                <li>Paste the "Seed Data" SQL script below and click <span className="font-semibold">"RUN"</span>.</li>
+              </ol>
+               <pre className="bg-muted p-3 rounded-md overflow-x-auto text-xs"><code>{seedDataSql}</code></pre>
+               <p className="text-sm text-muted-foreground">Your database is now set up with the starter data.</p>
             </div>
 
             <div className="space-y-4 pt-4 border-t">
@@ -390,5 +430,7 @@ GEMINI_API_KEY=YOUR_GEMINI_API_KEY
     </div>
   );
 }
+
+    
 
     

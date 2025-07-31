@@ -4,8 +4,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { z } from 'zod';
-import { startOfMonth, endOfMonth, startOfYesterday, endOfYesterday, subMonths } from 'date-fns';
-import { mockSubscriptions } from '@/lib/admin-data';
+import { startOfMonth, startOfToday, subMonths, endOfMonth } from 'date-fns';
 
 const payfastSettingsSchema = z.object({
     userId: z.string(),
@@ -22,8 +21,7 @@ function createSupabaseClient() {
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseServiceKey || supabaseUrl.includes('YOUR_SUPABASE_URL')) {
-        // This indicates that the app is in "demo mode".
-        // Functions calling this should handle the null return gracefully.
+        console.warn("Supabase is not configured. Metrics will be zero.");
         return null;
     }
 
@@ -89,93 +87,89 @@ export async function getPayfastSettings() {
 }
 
 export type DashboardMetrics = {
-    monthlySubCount: number;
-    yearlySubCount: number;
-    totalIncomeThisMonth: string;
-    netProfitThisMonth: string;
-    nextMonthEstimated: string;
-    lastMonthMonthlyIncome: string;
-    lastMonthYearlyIncome: string;
-    lastMonthTotalIncome: string;
+    freeUserCount: number;
+    subscribedUserCount: number;
+    totalUserCount: number;
+    estimatedMonthlyIncome: string;
+    newUsersThisMonth: number;
+    newUsersToday: number;
 };
 
-// This function calculates metrics from a given list of subscriptions.
-// It can be used for both mock data and real data.
-function calculateMetrics(subscriptions: any[]): DashboardMetrics {
+// This function calculates metrics from a given list of users.
+function calculateMetrics(users: any[]): DashboardMetrics {
     const now = new Date();
     const startOfThisMonth = startOfMonth(now);
+    const startOfThisDay = startOfToday();
     
-    const activeMonthlySubs = subscriptions.filter(s => s.plan === 'monthly' && s.status === 'active');
-    const activeYearlySubs = subscriptions.filter(s => s.plan === 'yearly' && s.status === 'active');
+    const freeUserCount = users.filter(u => u.user_metadata?.subscription_status === 'trial' || u.user_metadata?.subscription_status === 'expired' || !u.user_metadata?.subscription_status).length;
+    const monthlySubCount = users.filter(u => u.user_metadata?.subscription_status === 'monthly').length;
+    const yearlySubCount = users.filter(u => u.user_metadata?.subscription_status === 'yearly').length;
+
+    const subscribedUserCount = monthlySubCount + yearlySubCount;
+    const totalUserCount = users.length;
     
-    const nextMonthEstimated = activeMonthlySubs.length * MONTHLY_PRICE;
-
-    // For yearly subs, income is only recognized in the month they paid.
-    const newYearlySubsThisMonth = subscriptions.filter(s => 
-        s.plan === 'yearly' &&
-        new Date(s.start_date) >= startOfThisMonth &&
-        new Date(s.start_date) <= now
-    );
-
-    const monthlyIncomeThisMonth = activeMonthlySubs.length * MONTHLY_PRICE;
-    const yearlyIncomeThisMonth = newYearlySubsThisMonth.length * YEARLY_PRICE;
-    const totalIncomeThisMonth = monthlyIncomeThisMonth + yearlyIncomeThisMonth;
-    const netProfitThisMonth = totalIncomeThisMonth; // Assuming no expenses for simplicity
-
-    const lastMonthDate = subMonths(now, 1);
-    const startOfLastMonth = startOfMonth(lastMonthDate);
-    const endOfLastMonth = endOfMonth(lastMonthDate);
-
-    // Count monthly subs active during the last month
-    const monthlySubsPaidLastMonth = subscriptions.filter(s => 
-        s.plan === 'monthly' &&
-        new Date(s.start_date) < endOfLastMonth // check they started before the end of last month
-    );
-    const lastMonthMonthlyIncome = monthlySubsPaidLastMonth.length * MONTHLY_PRICE;
-
-
-    const yearlySubsPaidLastMonth = subscriptions.filter(s => {
-        const startDate = new Date(s.start_date);
-        return s.plan === 'yearly' && startDate >= startOfLastMonth && startDate <= endOfLastMonth;
-    });
-    const lastMonthYearlyIncome = yearlySubsPaidLastMonth.length * YEARLY_PRICE;
-
-    const lastMonthTotalIncome = lastMonthMonthlyIncome + lastMonthYearlyIncome;
+    // Yearly price is divided by 12 to get a monthly estimate
+    const estimatedMonthlyIncome = (monthlySubCount * MONTHLY_PRICE) + (yearlySubCount * YEARLY_PRICE / 12);
+    
+    const newUsersThisMonth = users.filter(u => new Date(u.created_at) >= startOfThisMonth).length;
+    const newUsersToday = users.filter(u => new Date(u.created_at) >= startOfThisDay).length;
 
     return {
-        monthlySubCount: activeMonthlySubs.length,
-        yearlySubCount: activeYearlySubs.length,
-        totalIncomeThisMonth: totalIncomeThisMonth.toFixed(2),
-        netProfitThisMonth: netProfitThisMonth.toFixed(2),
-        nextMonthEstimated: nextMonthEstimated.toFixed(2),
-        lastMonthMonthlyIncome: lastMonthMonthlyIncome.toFixed(2),
-        lastMonthYearlyIncome: lastMonthYearlyIncome.toFixed(2),
-        lastMonthTotalIncome: lastMonthTotalIncome.toFixed(2),
+        freeUserCount,
+        subscribedUserCount,
+        totalUserCount,
+        estimatedMonthlyIncome: estimatedMonthlyIncome.toFixed(2),
+        newUsersThisMonth,
+        newUsersToday,
     };
 }
 
 
 export async function getDashboardMetrics(): Promise<DashboardMetrics> {
      const supabase = createSupabaseClient();
+     const zeroMetrics: DashboardMetrics = {
+         freeUserCount: 0,
+         subscribedUserCount: 0,
+         totalUserCount: 0,
+         estimatedMonthlyIncome: '0.00',
+         newUsersThisMonth: 0,
+         newUsersToday: 0,
+     };
 
-     // If Supabase is not configured, run in "demo mode" with mock data.
      if (!supabase) {
-        console.warn("Supabase not configured. Running in DEMO MODE with mock data.");
-        return calculateMetrics(mockSubscriptions);
+        console.warn("Supabase not configured. Returning zeroed metrics.");
+        return zeroMetrics;
      }
 
-    const { data: subscriptions, error } = await supabase
-        .from('subscriptions')
-        .select('*');
+    // Supabase returns a max of 50 users by default from auth.admin.listUsers().
+    // We need to paginate to get all of them.
+    let allUsers = [];
+    let page = 0;
+    const pageSize = 1000; // Max page size
+    let hasMore = true;
 
-    if (error) {
-        console.error("Error fetching subscriptions for metrics:", error);
-        throw new Error("Could not load subscription data.");
+    while(hasMore) {
+        const { data: { users }, error } = await supabase.auth.admin.listUsers({
+            page: page,
+            perPage: pageSize,
+        });
+
+        if (error) {
+            console.error("Error fetching users for metrics:", error);
+            throw new Error("Could not load user data.");
+        }
+
+        if (users.length > 0) {
+            allUsers.push(...users);
+            page++;
+        } else {
+            hasMore = false;
+        }
     }
     
-    if (!subscriptions) {
-        return calculateMetrics([]); // Return zeroed metrics if no subscriptions
+    if (!allUsers) {
+        return zeroMetrics;
     }
 
-    return calculateMetrics(subscriptions);
+    return calculateMetrics(allUsers);
 }

@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Users, Crown, Users2, TrendingUp, UserPlus } from 'lucide-react';
 import { getPayfastSettings, savePayfastSettings, getDashboardMetrics, DashboardMetrics } from '@/app/actions/admin-actions';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -76,6 +76,15 @@ export default function DashboardPage() {
     }
   };
 
+  const metricCards = [
+    { title: 'Subscribed Users', value: metrics?.subscribedUserCount, description: 'Total paying users', icon: Crown },
+    { title: 'Free Users', value: metrics?.freeUserCount, description: "Users on a trial plan", icon: Users },
+    { title: 'Total Users', value: metrics?.totalUserCount, description: 'All registered users', icon: Users2 },
+    { title: 'Est. Monthly Income', value: `R${metrics?.estimatedMonthlyIncome}`, description: 'From all active subs', icon: TrendingUp },
+    { title: 'New Users (Month)', value: metrics?.newUsersThisMonth, description: 'New signups this month', icon: UserPlus },
+    { title: 'New Users (Today)', value: metrics?.newUsersToday, description: 'New signups today', icon: UserPlus },
+  ];
+
   return (
     <div className="p-4 sm:p-6 md:p-8">
       <div className="mb-8">
@@ -87,70 +96,30 @@ export default function DashboardPage() {
         {isLoading || !metrics ? (
             Array.from({ length: 6 }).map((_, i) => (
                 <Card key={i}>
-                    <CardHeader><Skeleton className="h-5 w-2/3" /></CardHeader>
-                    <CardContent><Skeleton className="h-10 w-1/2" /></CardContent>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <Skeleton className="h-5 w-2/3" />
+                        <Skeleton className="h-6 w-6" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-10 w-1/2" />
+                        <Skeleton className="h-4 w-full mt-2" />
+                    </CardContent>
                 </Card>
             ))
         ) : (
             <>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Monthly Subs</CardTitle>
-                    <CardDescription>Active monthly plans</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-4xl font-bold">{metrics.monthlySubCount}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Yearly Subs</CardTitle>
-                    <CardDescription>Active yearly plans</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-4xl font-bold">{metrics.yearlySubCount}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Income (This Month)</CardTitle>
-                    <CardDescription>Actual cash flow this month</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-4xl font-bold">R{metrics.totalIncomeThisMonth}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Next Month's Est. Income</CardTitle>
-                    <CardDescription>From monthly subs only</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-4xl font-bold">R{metrics.nextMonthEstimated}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Net Profit (Month)</CardTitle>
-                    <CardDescription>Income minus expenses</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-4xl font-bold text-green-500">R{metrics.netProfitThisMonth}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Previous Month Income</CardTitle>
-                    <CardDescription>Breakdown of last month's revenue</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <p className="text-3xl font-bold">R{metrics.lastMonthTotalIncome}</p>
-                    <p className="text-sm text-muted-foreground">
-                        Monthly: R{metrics.lastMonthMonthlyIncome}<br/>
-                        Yearly: R{metrics.lastMonthYearlyIncome}
-                    </p>
-                  </CardContent>
-                </Card>
+                {metricCards.map(card => (
+                    <Card key={card.title}>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+                        <card.icon className="h-5 w-5 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-4xl font-bold">{card.value}</div>
+                        <p className="text-xs text-muted-foreground">{card.description}</p>
+                      </CardContent>
+                    </Card>
+                ))}
             </>
         )}
       </div>

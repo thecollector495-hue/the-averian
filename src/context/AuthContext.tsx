@@ -127,7 +127,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
           }
       });
-      if (error) throw error;
+      // Do not throw here, let the caller handle the error.
       return { user: data.user, error };
   }
 

@@ -35,10 +35,13 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     try {
-        const data = await signup(email, password);
-        // Supabase returns a user object. If the user's email is not confirmed,
-        // the `identities` array will be empty.
-        const requiresConfirmation = data.user && data.user.identities && data.user.identities.length === 0;
+        const { user: newUser, error } = await signup(email, password);
+        if (error) throw error;
+        
+        // Supabase returns a user object on successful signup.
+        // If the user's email is not confirmed, the `identities` array will be empty.
+        // This is a reliable way to check if confirmation is required.
+        const requiresConfirmation = newUser && newUser.identities && newUser.identities.length === 0;
 
         if (requiresConfirmation) {
             toast({ title: 'Confirmation Email Sent', description: 'Please check your inbox to verify your account.' });
